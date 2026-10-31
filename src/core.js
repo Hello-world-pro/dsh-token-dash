@@ -326,6 +326,7 @@ export function buildSummary(state, prefs, now, balance) {
     breakdown: { models: rows },
     balance,
     showBalance: prefs?.showBalance !== false,
+    showMonthTokens: prefs?.showMonthTokens !== false,
     updatedAt: now,
     stale: false,
   }

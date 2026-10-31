@@ -97,12 +97,14 @@ try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
   await page.goto(`${base}/?token=${token}`, { waitUntil: 'domcontentloaded' })
   await page.getByRole('button', { name: '继续' }).click({ timeout: 5000 }).catch(() => {})
+  const pill = page.locator('[data-testid=token-dash-pill]')
+  await pill.waitFor({ timeout: 20000 })
+  assert.ok(await pill.isVisible(), '未发消息的首页也应显示 Pill')
   const input = page.locator('[contenteditable=true]')
   await input.waitFor({ timeout: 15000 })
   await input.pressSequentially('e2e', { delay: 10 })
   await input.press('Enter')
 
-  const pill = page.locator('[data-testid=token-dash-pill]')
   await pill.waitFor({ timeout: 20000 })
   const pillText = await pill.innerText()
   assert.match(pillText, /预算/)
@@ -302,7 +304,8 @@ try {
   assert.equal(await settings.getByRole('link').count(), 3)
   assert.match(await settings.innerText(), /查看明细/)
 
-  const toggle = settings.getByRole('switch')
+  assert.equal(await settings.getByRole('switch').count(), 2)
+  const toggle = settings.getByRole('switch').first()
   assert.equal(await toggle.getAttribute('aria-checked'), 'true')
   await toggle.click()
   await page.waitForTimeout(500)
@@ -325,6 +328,25 @@ try {
     ),
   )
   assert.deepEqual(hiddenAligns, ['left', 'right'])
+
+  await panel.getByRole('button', { name: '设置' }).click()
+  await settings.waitFor({ timeout: 8000 })
+  const monthToggle = settings.getByRole('switch').nth(1)
+  assert.equal(await monthToggle.getAttribute('aria-checked'), 'true')
+  await monthToggle.click()
+  await page.waitForTimeout(500)
+  await settings.getByRole('button', { name: '← 返回' }).click()
+  await panel.waitFor({ timeout: 8000 })
+  await page.waitForFunction(
+    () => !document.querySelector('[data-testid=token-dash-pill]')?.innerText.includes('本月'),
+    null,
+    { timeout: 8000 },
+  )
+  const pillAfter = await pill.innerText()
+  assert.ok(!pillAfter.includes('余额'), '关闭余额后 Pill 不应显示余额段')
+  assert.ok(!pillAfter.includes('本月'), '关闭本月 Token 后 Pill 不应显示本月段')
+  assert.match(pillAfter, /预算/)
+  assert.match(pillAfter, /今日/)
 
   await panel.getByRole('button', { name: '关闭' }).click()
   await panel.waitFor({ state: 'detached', timeout: 5000 })

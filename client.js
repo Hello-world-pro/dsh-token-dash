@@ -64,6 +64,29 @@ window.__ModuleLoader__.load({
         border: '1px solid var(--dsh-border, rgba(128,128,128,.25))',
         color: 'var(--dsh-text, inherit)',
       },
+      pillWrap: {
+        position: 'relative',
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        width: '100%',
+        padding: '2px 12px',
+        boxSizing: 'border-box',
+      },
+      pillHover: { background: 'rgba(127,127,127,.12)' },
+      hint: {
+        position: 'absolute',
+        right: 12,
+        bottom: 30,
+        padding: '5px 8px',
+        borderRadius: 6,
+        background: 'var(--dsh-bg-elevated, #2a2a2a)',
+        border: '1px solid var(--dsh-border, rgba(128,128,128,.25))',
+        fontSize: 11,
+        whiteSpace: 'nowrap',
+        boxShadow: '0 4px 16px rgba(0,0,0,.25)',
+      },
+      chevron: { marginLeft: 6, fontSize: 10, opacity: 0.65 },
       sep: { width: 1, height: 12, background: 'currentColor', opacity: 0.2 },
       num: { fontWeight: 600 },
       panel: {
@@ -178,6 +201,16 @@ window.__ModuleLoader__.load({
       const [refreshMs, setRefreshMs] = useState(60000)
       const [view, setView] = useState('dashboard')
       const [refreshing, setRefreshing] = useState(false)
+      const [hover, setHover] = useState(false)
+      const [hint, setHint] = useState(false)
+
+      useEffect(() => {
+        try {
+          if (window.localStorage.getItem('token-dash-hint-seen') !== '1') setHint(true)
+        } catch {
+          // localStorage unavailable: skip coach mark
+        }
+      }, [])
 
       const load = useCallback(async () => {
         setRefreshing(true)
@@ -204,7 +237,16 @@ window.__ModuleLoader__.load({
         return () => clearInterval(timer)
       }, [load, refreshMs])
 
+      const dismissHint = () => {
+        setHint(false)
+        try {
+          window.localStorage.setItem('token-dash-hint-seen', '1')
+        } catch {
+          // ignore
+        }
+      }
       const toggle = () => {
+        dismissHint()
         setOpen((value) => {
           if (!value) setView('dashboard')
           return !value
@@ -213,30 +255,52 @@ window.__ModuleLoader__.load({
       const percent = summary?.budget?.state === 'unset' ? '设置预算' : fmtPct(summary?.budget?.percent)
       const monthTokens = fmtM(summary?.tokens?.total)
       const balanceHidden = summary?.showBalance === false || summary?.balance?.status === 'hidden'
+      const monthHidden = summary?.showMonthTokens === false
+      const segments = [
+        h('span', { key: 'budget' }, '预算 ', h('b', { style: styles.num }, percent)),
+        ...(balanceHidden ? [] : [h('span', { key: 'balance' }, h(BalanceText, { balance: summary?.balance }))]),
+        h('span', { key: 'today' }, '今日 ', h('b', { style: styles.num }, fmtMoney(summary?.today?.cost))),
+        ...(monthHidden ? [] : [h('span', { key: 'month' }, '本月 ', h('b', { style: styles.num }, monthTokens))]),
+      ]
+      const children = []
+      segments.forEach((segment, index) => {
+        if (index > 0) children.push(h('span', { key: `sep-${index}`, style: styles.sep }))
+        children.push(segment)
+      })
+      children.push(h('span', { key: 'chevron', style: styles.chevron }, open ? '⌄' : '⌃'))
       return h(
         React.Fragment,
         null,
         h(
-          'span',
-          {
-            'data-testid': 'token-dash-pill',
-            style: styles.pill,
-            onClick: toggle,
-            onKeyDown: (event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                toggle()
-              }
+          'div',
+          { style: styles.pillWrap },
+          hint && !open
+            ? h('span', { style: styles.hint, role: 'status' }, '点击查看 Token 看板')
+            : null,
+          h(
+            'span',
+            {
+              'data-testid': 'token-dash-pill',
+              style: { ...styles.pill, ...(hover || open ? styles.pillHover : {}) },
+              onClick: toggle,
+              onMouseEnter: () => setHover(true),
+              onMouseLeave: () => setHover(false),
+              onFocus: () => setHover(true),
+              onBlur: () => setHover(false),
+              onKeyDown: (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  toggle()
+                }
+              },
+              role: 'button',
+              tabIndex: 0,
+              'aria-expanded': open,
+              'aria-haspopup': 'dialog',
+              title: open ? '收起 Token 看板' : '展开 Token 看板',
             },
-            role: 'button',
-            tabIndex: 0,
-          },
-          h('span', null, '预算 ', h('b', { style: styles.num }, percent)),
-          balanceHidden ? null : h(React.Fragment, null, h('span', { style: styles.sep }), h('span', null, h(BalanceText, { balance: summary?.balance }))),
-          h('span', { style: styles.sep }),
-          h('span', null, '今日 ', h('b', { style: styles.num }, fmtMoney(summary?.today?.cost))),
-          h('span', { style: styles.sep }),
-          h('span', null, '本月 ', h('b', { style: styles.num }, monthTokens)),
+            ...children,
+          ),
         ),
         open
           ? h(Panel, {
@@ -530,6 +594,15 @@ window.__ModuleLoader__.load({
         h(
           'div',
           { style: styles.row },
+          h('span', null, '本月 Token'),
+          h(Toggle, {
+            checked: prefs.showMonthTokens !== false,
+            onChange: (next) => savePatch({ showMonthTokens: next }),
+          }),
+        ),
+        h(
+          'div',
+          { style: styles.row },
           h('span', null, '查看明细'),
           h(
             'span',
@@ -553,8 +626,8 @@ window.__ModuleLoader__.load({
       apply(ctx) {
         const slots = typeof ctx.get === 'function' ? ctx.get('slots') : ctx.slots
         if (slots === undefined || typeof slots.inject !== 'function') return
-        slots.inject('conversation.composer.dock', () =>
-          slots.register({ name: 'conversation.composer.dock', id: 'token-dash', order: 10 }, Pill),
+        slots.inject('shell.bottom', () =>
+          slots.register({ name: 'shell.bottom', id: 'token-dash', order: 10 }, Pill),
         )
       },
     }

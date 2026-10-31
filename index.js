@@ -58,6 +58,7 @@ function normalizePrefs(input, base) {
     budget: { ...base.budget },
     refreshMs: base.refreshMs,
     showBalance: base.showBalance,
+    showMonthTokens: base.showMonthTokens !== false,
   }
   if (input?.budget !== undefined) {
     const amount = Number(input.budget?.amount)
@@ -70,6 +71,7 @@ function normalizePrefs(input, base) {
     prefs.refreshMs = refresh
   }
   if (input?.showBalance !== undefined) prefs.showBalance = input.showBalance === true
+  if (input?.showMonthTokens !== undefined) prefs.showMonthTokens = input.showMonthTokens === true
   return prefs
 }
 

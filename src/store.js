@@ -8,6 +8,7 @@ export const DEFAULT_PREFS = {
   budget: { amount: 3500, currency: 'CNY' },
   refreshMs: 60000,
   showBalance: true,
+  showMonthTokens: true,
 }
 
 export function resolveHome(ctx) {
