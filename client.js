@@ -7,7 +7,7 @@ window.__ModuleLoader__.load({
   factory(require) {
     const React = require('react')
     const h = React.createElement
-    const { useEffect, useMemo, useState } = React
+    const { useCallback, useEffect, useMemo, useState } = React
 
     const API = '/token-dash/api'
     const PKG = 'dsh-token-dash'
@@ -108,6 +108,17 @@ window.__ModuleLoader__.load({
       const [open, setOpen] = useState(false)
       const [error, setError] = useState(false)
       const [refreshMs, setRefreshMs] = useState(60000)
+      const [view, setView] = useState('dashboard')
+
+      const load = useCallback(async () => {
+        try {
+          const data = await getJson('/summary')
+          setSummary(data)
+          setError(false)
+        } catch {
+          setError(true)
+        }
+      }, [])
 
       useEffect(() => {
         getJson('/prefs')
@@ -116,37 +127,55 @@ window.__ModuleLoader__.load({
       }, [])
 
       useEffect(() => {
-        let alive = true
-        const load = () => {
-          getJson('/summary')
-            .then((data) => {
-              if (!alive) return
-              setSummary(data)
-              setError(false)
-            })
-            .catch(() => alive && setError(true))
-        }
         load()
         const timer = setInterval(load, refreshMs)
-        return () => {
-          alive = false
-          clearInterval(timer)
-        }
-      }, [refreshMs])
+        return () => clearInterval(timer)
+      }, [load, refreshMs])
 
+      const toggle = () => {
+        setOpen((value) => {
+          if (!value) setView('dashboard')
+          return !value
+        })
+      }
       const percent = summary?.budget?.state === 'unset' ? '设置预算' : fmtPct(summary?.budget?.percent)
       const monthTokens = fmtM(summary?.tokens?.total)
       return h(
-        'span',
-        { 'data-testid': 'token-dash-pill', style: styles.pill, onClick: () => setOpen((v) => !v), role: 'button', tabIndex: 0 },
-        h('span', null, '预算 ', h('b', { style: styles.num }, percent)),
-        h('span', { style: styles.sep }),
-        h('span', null, h(BalanceText, { balance: summary?.balance })),
-        h('span', { style: styles.sep }),
-        h('span', null, '今日 ', h('b', { style: styles.num }, fmtMoney(summary?.today?.cost))),
-        h('span', { style: styles.sep }),
-        h('span', null, '本月 ', h('b', { style: styles.num }, monthTokens)),
-        open ? h(Panel, { summary, error, onClose: () => setOpen(false) }) : null,
+        React.Fragment,
+        null,
+        h(
+          'span',
+          {
+            'data-testid': 'token-dash-pill',
+            style: styles.pill,
+            onClick: toggle,
+            onKeyDown: (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                toggle()
+              }
+            },
+            role: 'button',
+            tabIndex: 0,
+          },
+          h('span', null, '预算 ', h('b', { style: styles.num }, percent)),
+          h('span', { style: styles.sep }),
+          h('span', null, h(BalanceText, { balance: summary?.balance })),
+          h('span', { style: styles.sep }),
+          h('span', null, '今日 ', h('b', { style: styles.num }, fmtMoney(summary?.today?.cost))),
+          h('span', { style: styles.sep }),
+          h('span', null, '本月 ', h('b', { style: styles.num }, monthTokens)),
+        ),
+        open
+          ? h(Panel, {
+              summary,
+              error,
+              view,
+              onView: setView,
+              onRefresh: load,
+              onClose: () => setOpen(false),
+            })
+          : null,
       )
     }
 
@@ -226,7 +255,14 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function Panel({ summary, error, onClose }) {
+    function Panel({ summary, error, view, onView, onRefresh, onClose }) {
+      if (view === 'settings') {
+        return h(
+          'div',
+          { 'data-testid': 'token-dash-panel', style: styles.panel },
+          h(Settings, { onBack: () => onView('dashboard'), onClose }),
+        )
+      }
       const models = summary?.breakdown?.models ?? []
       const openLink = (url) => window.open(url, '_blank', 'noopener')
       return h(
@@ -239,7 +275,8 @@ window.__ModuleLoader__.load({
           h(
             'span',
             null,
-            h('button', { style: styles.button, onClick: () => getJson('/summary').then(() => window.location.reload()).catch(() => {}) }, '刷新'),
+            h('button', { style: styles.button, onClick: onRefresh }, '刷新'),
+            h('button', { style: { ...styles.button, marginLeft: 8 }, onClick: () => onView('settings') }, '设置'),
             h('button', { style: { ...styles.button, marginLeft: 8 }, onClick: onClose }, '关闭'),
           ),
         ),
@@ -260,13 +297,26 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function Settings() {
+    function Settings({ onBack, onClose }) {
       const [prefs, setPrefs] = useState(null)
       const [status, setStatus] = useState('')
+      const header = h(
+        'div',
+        { style: styles.row },
+        h('button', { style: styles.button, onClick: onBack }, '← 返回'),
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+          h('b', null, 'Token 看板'),
+          h('button', { style: styles.button, onClick: onClose }, '关闭'),
+        ),
+      )
       useEffect(() => {
         getJson('/prefs').then(setPrefs).catch(() => setStatus('读取失败'))
       }, [])
-      if (prefs === null) return h('div', { 'data-testid': 'token-dash-settings' }, 'Token 看板加载中…')
+      if (prefs === null) {
+        return h('div', { 'data-testid': 'token-dash-settings', style: { fontSize: 12, display: 'grid', gap: 10 } }, header, 'Token 看板加载中…')
+      }
 
       const save = () => {
         putPrefs(prefs)
@@ -281,7 +331,7 @@ window.__ModuleLoader__.load({
       return h(
         'div',
         { 'data-testid': 'token-dash-settings', style: { fontSize: 12, display: 'grid', gap: 10 } },
-        h('b', null, 'Token 看板'),
+        header,
         h(
           'label',
           { style: styles.row },
@@ -324,9 +374,6 @@ window.__ModuleLoader__.load({
         if (slots === undefined || typeof slots.inject !== 'function') return
         slots.inject('conversation.composer.dock', () =>
           slots.register({ name: 'conversation.composer.dock', id: 'token-dash', order: 10 }, Pill),
-        )
-        slots.inject('settings.section', () =>
-          slots.register({ name: 'settings.section', id: 'token-dash', order: 40, label: () => 'Token 看板' }, Settings),
         )
       },
     }

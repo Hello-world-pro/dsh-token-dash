@@ -30,6 +30,22 @@ test('闲时 Flash 1M + 1M = 6', () => {
   assert.ok(Math.abs(cost - 6) < 1e-9)
 })
 
+test('费用占比不超过 100%', () => {
+  const state = emptyState()
+  const now = Date.UTC(2026, 9, 30, 2, 0, 0) // 北京时间 10:00，高峰
+  addRecord(state, { ts: now, model: 'deepseek-v4-flash', input: 10_000, cacheRead: 0, cacheWrite: 0, output: 1_000 })
+  const summary = buildSummary(state, { budget: { amount: 0 }, showBalance: false }, now, {
+    provider: 'unknown',
+    amount: null,
+    currency: 'CNY',
+    status: 'unsupported',
+    updatedAt: now,
+  })
+  const row = summary.breakdown.models[0]
+  assert.equal(row.cost, 0.04)
+  assert.ok(row.share <= 1, `share=${row.share}`)
+})
+
 test('月汇总：预算、剩余、按模型请求数', () => {
   const state = emptyState()
   const now = new Date(2026, 9, 31, 12, 0, 0).getTime()

@@ -145,12 +145,16 @@ export function buildSummary(state, prefs, now, balance) {
         ? entry.cacheRead / (entry.input + entry.cacheWrite + entry.cacheRead)
         : null
     entry.cost = round2(cost)
+    entry.rawCost = cost
     entry.share = 0
     totalCost += cost
     return entry
   })
   rows.sort((a, b) => b.cost - a.cost)
-  for (const row of rows) row.share = totalCost > 0 ? row.cost / totalCost : 0
+  for (const row of rows) {
+    row.share = totalCost > 0 ? Math.min(1, row.rawCost / totalCost) : 0
+    delete row.rawCost
+  }
   totalCost = round2(totalCost)
 
   const totals = sumRows([...models.values()])

@@ -112,13 +112,12 @@ try {
   const panel = page.locator('[data-testid=token-dash-panel]')
   await panel.waitFor({ timeout: 8000 })
   assert.match(await panel.innerText(), /本月费用与额度/)
+  await panel.getByRole('button', { name: '刷新' }).click()
+  await page.waitForTimeout(300)
+  assert.ok(await panel.isVisible(), '刷新后浮层应保持打开')
 
-  await page.getByRole('button', { name: '账号菜单' }).click()
-  await page.getByRole('menuitem', { name: /设置/ }).click()
+  await panel.getByRole('button', { name: '设置' }).click()
   const settings = page.locator('[data-testid=token-dash-settings]')
-  if ((await settings.count()) === 0) {
-    await page.locator('span', { hasText: 'Token 看板' }).last().click({ force: true })
-  }
   await settings.waitFor({ timeout: 8000 })
   await page.waitForFunction(
     () => document.querySelector('[data-testid=token-dash-settings]')?.innerText.includes('月度预算'),
@@ -126,6 +125,11 @@ try {
     { timeout: 8000 },
   )
   assert.match(await settings.innerText(), /月度预算/)
+  await settings.getByRole('button', { name: '← 返回' }).click()
+  await panel.waitFor({ timeout: 8000 })
+  await panel.getByRole('button', { name: '关闭' }).click()
+  await panel.waitFor({ state: 'detached', timeout: 5000 })
+  assert.ok(await pill.isVisible(), '关闭后 Pill 应保留')
 
   mkdirSync(join(tmpRoot, 'e2e'), { recursive: true })
   await page.screenshot({ path: join(tmpRoot, 'e2e', 'ui.png'), fullPage: true })
