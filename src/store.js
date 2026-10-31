@@ -6,9 +6,12 @@ import { emptyState } from './core.js'
 export const DEFAULT_PREFS = {
   version: 1,
   budget: { amount: 3500, currency: 'CNY' },
+  budgets: {},
+  billingModes: {},
   refreshMs: 60000,
   showBalance: true,
   showMonthTokens: true,
+  logLevel: 'info',
 }
 
 export function resolveHome(ctx) {
@@ -28,6 +31,10 @@ export function resolveHome(ctx) {
 
 export function dataDir(ctx) {
   return join(resolveHome(ctx), 'dsh-token-dash')
+}
+
+export function logsDir(ctx) {
+  return join(resolveHome(ctx), 'logs', 'dsh-token-dash')
 }
 
 async function readJson(file, fallback) {
@@ -56,6 +63,7 @@ export async function loadState(dir) {
     }
   }
   state.watermarks ??= {}
+  state.currentProvider ??= null
   return state
 }
 
@@ -65,6 +73,9 @@ export async function loadPrefs(dir) {
     ...DEFAULT_PREFS,
     ...prefs,
     budget: { ...DEFAULT_PREFS.budget, ...(prefs?.budget ?? {}) },
+    budgets: { ...(prefs?.budgets ?? {}) },
+    billingModes: { ...(prefs?.billingModes ?? {}) },
+    logLevel: prefs?.logLevel === 'debug' ? 'debug' : 'info',
   }
 }
 

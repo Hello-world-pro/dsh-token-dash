@@ -1,7 +1,7 @@
 {
   "name": "dsh-token-dash",
-  "version": "0.1.0",
-  "description": "DSH 底栏 Token 看板：月度预算、模型费用/用量、账户余额与官方 usage 入口。",
+  "version": "0.2.0",
+  "description": "DSH Token 看板：API/订阅动态 provider、预算、配额、模型费用/用量与诊断日志。",
   "type": "module",
   "main": "./index.js",
   "exports": {
@@ -13,6 +13,7 @@
     "index.js",
     "client.js",
     "src",
+    "catalog.json",
     "locale",
     "cordis.patch.yml",
     "README.md",

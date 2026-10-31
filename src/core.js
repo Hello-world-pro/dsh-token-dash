@@ -1,9 +1,15 @@
 /**
- * 纯函数：日键、模型归一、峰谷价、费用与月汇总。
- * 不读文件、不读时钟；`now` 由调用方注入，便于单测。
+ * Pure aggregation: day/month keys, provider/model buckets, budgets, currencies.
+ * No file or clock reads; `now` is injected.
  */
-
-const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000
+import { priceFor } from './pricing.js'
+import {
+  modelLabel,
+  normalizeModel,
+  normalizeProvider,
+  providerCurrency,
+  providerLabel,
+} from './providers.js'
 
 export function num(value) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0
@@ -21,134 +27,34 @@ export function localMonthKey(ts) {
   return localDayKey(ts).slice(0, 7)
 }
 
-/** 官方峰谷按北京时间：9-12、14-18 为高峰。 */
+/** Kept for compatibility; priceFor handles peak/off-peak internally. */
 export function isPeak(ts) {
-  const hour = new Date(ts + BEIJING_OFFSET_MS).getUTCHours()
+  const hour = new Date(ts + 8 * 60 * 60 * 1000).getUTCHours()
   return (hour >= 9 && hour < 12) || (hour >= 14 && hour < 18)
 }
 
-const PROVIDER_ALIASES = {
-  'deepseek-account': 'deepseek-official',
-  'deepseek-official': 'deepseek-official',
-  glm: 'zhipu',
-  zhipu: 'zhipu',
-  'z.ai': 'zhipu',
-  kimi: 'moonshot',
-  moonshot: 'moonshot',
-  qwen: 'qwen',
-  dashscope: 'qwen',
-  aliyun: 'qwen',
-  doubao: 'doubao',
-  volcengine: 'doubao',
-  ark: 'doubao',
-  openai: 'openai',
-  openrouter: 'openrouter',
-  anthropic: 'anthropic',
-  google: 'google',
+export { normalizeProvider, providerLabel, normalizeModel, priceFor }
+export const displayModel = modelLabel
+
+export function priceForRecord(provider, model, ts) {
+  return priceFor(provider, model, ts)
 }
 
-const PROVIDER_NAMES = {
-  'deepseek-official': 'DeepSeek 官方',
-  deepseek: 'DeepSeek',
-  zhipu: '智谱 AI',
-  moonshot: 'Kimi',
-  qwen: '通义',
-  doubao: '豆包',
-  openai: 'OpenAI',
-  openrouter: 'OpenRouter',
-  anthropic: 'Anthropic',
-  google: 'Google',
-  unknown: '未知来源',
-}
-
-const OFFICIAL_PROVIDERS = new Set(['deepseek-official'])
-
-export function normalizeProvider(raw) {
-  const id = String(raw ?? '').trim().toLowerCase()
-  if (id === '') return 'unknown'
-  return PROVIDER_ALIASES[id] ?? id
-}
-
-export function providerLabel(raw) {
-  const id = normalizeProvider(raw)
-  return PROVIDER_NAMES[id] ?? id
-}
-
-/** 宿主展示名；raw model 仍用于计价。 */
-const MODEL_LABELS = {
-  'deepseek-flash': 'DeepSeek-V4.1-Flash',
-  'deepseek-v4.1-flash': 'DeepSeek-V4.1-Flash',
-  'deepseek-v4.1-flash-ioa': 'DeepSeek-V4.1-Flash',
-  'deepseek-pro': 'DeepSeek-V4.1-Pro',
-  'deepseek-v4-pro': 'DeepSeek-V4.1-Pro',
-  'glm-5.3': 'GLM-5.3',
-  'glm-5.3-flash': 'GLM-5.3-Flash',
-  'kimi-k3': 'Kimi K3',
-  'kimi-k2.7': 'Kimi K2.7',
-}
-
-export function displayModel(raw) {
-  const id = normalizeModel(raw)
-  return MODEL_LABELS[id] ?? id
-}
-
-/** 只归一同名变体，不跨代际合并。 */
-export function normalizeModel(raw) {
-  let name = String(raw ?? '').trim().toLowerCase()
-  if (name === '') return 'unknown'
-  name = name.replace(/^[^/]+\//, '')
-  name = name.replace(/@/g, '-')
-  name = name.replace(/-free\b/g, '')
-  name = name.replace(/-\d{4}-\d{2}-\d{2}\b/g, '')
-  name = name.replace(/-\d{8}\b/g, '')
-  name = name.replace(/\s+/g, '-')
-  return name === '' ? 'unknown' : name
-}
-
-const DEEPSEEK_PRICES = {
-  flash: {
-    peak: { input: 3, cacheRead: 0.1, output: 9 },
-    off: { input: 1.5, cacheRead: 0.05, output: 4.5 },
-  },
-  pro: {
-    peak: { input: 9, cacheRead: 0.3, output: 27 },
-    off: { input: 4.5, cacheRead: 0.15, output: 13.5 },
-  },
-}
-
-/** 第三方目录价（CNY / 1M tokens）；未收录返回 null，不套 DeepSeek 价。 */
-const THIRD_PARTY_PRICES = {
-  'zhipu:glm-5.3': { input: 8, cacheRead: 2, output: 28 },
-  'zhipu:glm-5.3-flash': { input: 0.8, cacheRead: 0.23, output: 2.8 },
-  'moonshot:kimi-k3': { input: 20, cacheRead: 2, output: 100 },
-  'moonshot:kimi-k2.7': { input: 6.5, cacheRead: 1.3, output: 27 },
-}
-
-export function priceFor(provider, model, ts) {
-  const providerId = normalizeProvider(provider)
-  const modelId = normalizeModel(model)
-  if (OFFICIAL_PROVIDERS.has(providerId)) {
-    const tier = modelId.includes('pro') ? 'pro' : 'flash'
-    return DEEPSEEK_PRICES[tier][isPeak(ts) ? 'peak' : 'off']
-  }
-  return THIRD_PARTY_PRICES[`${providerId}:${modelId}`] ?? null
-}
-
-/** 每条记录：未命中输入 + 命中输入 + 输出；无目录价返回 0。 */
+/** Undefined price returns 0; the caller marks `priced=false`. */
 export function costOf(record) {
-  const provider = record.provider ?? (String(record.model ?? '').includes('deepseek') ? 'deepseek-official' : 'unknown')
-  const price = priceFor(provider, record.model, record.ts)
+  const price = priceFor(record.provider ?? 'unknown', record.model, record.ts)
   if (price === null) return 0
   return (
     (num(record.input) * price.input +
       num(record.cacheRead) * price.cacheRead +
+      num(record.cacheWrite) * price.cacheWrite +
       num(record.output) * price.output) /
     1e6
   )
 }
 
 export function emptyState() {
-  return { version: 1, days: {}, watermarks: {} }
+  return { version: 1, days: {}, watermarks: {}, currentProvider: null }
 }
 
 function dayBucket(state, dayKey) {
@@ -156,7 +62,7 @@ function dayBucket(state, dayKey) {
   return state.days[dayKey]
 }
 
-/** 仅当某模型在历史事件里只出现过唯一 provider 时，把旧 unknown 行归因过去。 */
+/** Only attribute old unknown rows when a model appeared under exactly one provider. */
 export function reattributeUnknown(state, providerByModel) {
   for (const bucket of Object.values(state.days ?? {})) {
     const unknown = bucket?.providers?.unknown?.models
@@ -212,39 +118,92 @@ export function addRecord(state, record) {
   const price = priceFor(provider, model, record.ts)
   if (price === null) row.priced = false
   row.cost += costOf({ ...record, provider })
+  state.currentProvider = provider
 }
 
-function sumRows(rows) {
-  const out = { input: 0, cacheRead: 0, cacheWrite: 0, output: 0, requests: 0 }
-  for (const row of rows) {
-    out.input += num(row.input)
-    out.cacheRead += num(row.cacheRead)
-    out.cacheWrite += num(row.cacheWrite)
-    out.output += num(row.output)
-    out.requests += num(row.requests)
+function budgetFor(prefs, providerId, currency) {
+  const map = prefs?.budgets?.[providerId]
+  let amount = num(map?.amount)
+  let state = 'unset'
+  if (map?.amount === 0) state = 'unset'
+  if (amount <= 0 && providerId === 'deepseek-official' && num(prefs?.budget?.amount) > 0) {
+    amount = num(prefs.budget.amount)
   }
-  return out
+  if (map?.amount === 0) amount = 0
+  return {
+    amount,
+    used: 0,
+    remaining: 0,
+    percent: 0,
+    state,
+    currency: map?.currency === 'USD' ? 'USD' : (currency ?? 'CNY'),
+  }
 }
 
-export function buildSummary(state, prefs, now, balance) {
+function providerEmpty(providerId) {
+  return {
+    id: providerId,
+    name: providerLabel(providerId),
+    kind: 'api',
+    currency: providerCurrency(providerId),
+    usage: { todayTokens: 0, monthTokens: 0, todayCost: 0, monthCost: 0, requests: 0 },
+    models: [],
+  }
+}
+
+function normalizeProviderInfo(input) {
+  if (Array.isArray(input)) return input
+  if (input === null || typeof input !== 'object') return []
+  return Object.entries(input).map(([id, value]) => ({ id, ...(value ?? {}) }))
+}
+
+export function buildSummary(state, prefs, now, providerInfoInput) {
   const month = localMonthKey(now)
   const todayKey = localDayKey(now)
-  const models = new Map()
-  let today = { tokens: 0, cost: 0, requests: 0 }
+  const providerMap = new Map()
+  const modelsMap = new Map()
+  const providerInfo = normalizeProviderInfo(providerInfoInput)
+
+  for (const info of providerInfo) {
+    const id = normalizeProvider(info.id ?? info.provider)
+    if (id === 'unknown') continue
+    const base = providerMap.get(id) ?? providerEmpty(id)
+    providerMap.set(id, {
+      ...base,
+      ...info,
+      id,
+      name: info.name ?? providerLabel(id),
+      kind: info.kind === 'subscription' || (info.kind === undefined && Array.isArray(info.plans) && info.plans.length > 0)
+        ? 'subscription'
+        : 'api',
+      currency: info.currency === 'USD' ? 'USD' : (info.currency === 'CNY' ? 'CNY' : providerCurrency(id)),
+      usage: { ...base.usage, ...(info.usage ?? {}) },
+      balance: info.balance ?? base.balance,
+      plans: info.plans ?? base.plans,
+    })
+  }
 
   for (const [dayKey, bucket] of Object.entries(state.days ?? {})) {
     if (!dayKey.startsWith(`${month}-`)) continue
     const providers = bucket.providers ?? { unknown: { models: bucket.models ?? {} } }
-    for (const [providerId, providerBucket] of Object.entries(providers)) {
-      for (const [model, row] of Object.entries(providerBucket.models ?? {})) {
-        const key = `${providerId}:${model}`
-        const entry = models.get(key) ?? {
-          name: model,
-          modelId: model,
+    for (const [rawProvider, providerBucket] of Object.entries(providers)) {
+      const providerId = normalizeProvider(rawProvider)
+      if (providerId === 'unknown') continue
+      const provider = providerMap.get(providerId) ?? providerEmpty(providerId)
+      providerMap.set(providerId, provider)
+      for (const [rawModel, row] of Object.entries(providerBucket.models ?? {})) {
+        const modelId = normalizeModel(rawModel)
+        const key = `${providerId}:${modelId}`
+        const entry = modelsMap.get(key) ?? {
+          name: modelId,
+          modelId,
           providerId,
           providerName: providerLabel(providerId),
-          displayName: displayModel(model),
+          displayName: modelLabel(modelId),
+          kind: provider.kind,
+          currency: provider.currency,
           priced: true,
+          approximate: false,
           requests: 0,
           input: 0,
           cacheRead: 0,
@@ -259,49 +218,105 @@ export function buildSummary(state, prefs, now, balance) {
         entry.output += num(row.output)
         entry.cost += num(row.cost)
         if (row.priced === false) entry.priced = false
-        models.set(key, entry)
+        const price = priceFor(providerId, modelId, now)
+        if (price?.approximate === true) entry.approximate = true
+        modelsMap.set(key, entry)
+        const tokens = num(row.input) + num(row.cacheRead) + num(row.cacheWrite) + num(row.output)
+        provider.usage.monthTokens += tokens
+        provider.usage.monthCost += num(row.cost)
+        provider.usage.requests += num(row.requests)
         if (dayKey === todayKey) {
-          today.tokens += num(row.input) + num(row.cacheRead) + num(row.cacheWrite) + num(row.output)
-          today.requests += num(row.requests)
-          today.cost += num(row.cost)
+          provider.usage.todayTokens += tokens
+          provider.usage.todayCost += num(row.cost)
         }
+        provider.models.push(entry.modelId)
       }
     }
   }
 
-  let totalCost = 0
-  const rows = [...models.values()].map((entry) => {
+  const models = [...modelsMap.values()].map((entry) => {
     const tokens = entry.input + entry.cacheRead + entry.cacheWrite + entry.output
-    const cost = num(entry.cost)
     entry.tokens = { input: entry.input, cacheRead: entry.cacheRead, output: entry.output, total: tokens }
-    entry.hitRate =
-      entry.input + entry.cacheWrite + entry.cacheRead > 0
-        ? entry.cacheRead / (entry.input + entry.cacheWrite + entry.cacheRead)
-        : null
-    entry.cost = round2(cost)
-    entry.rawCost = cost
+    entry.hitRate = entry.input + entry.cacheWrite + entry.cacheRead > 0
+      ? entry.cacheRead / (entry.input + entry.cacheWrite + entry.cacheRead)
+      : null
+    entry.cost = round2(entry.cost)
     entry.share = 0
-    totalCost += cost
     return entry
   })
-  rows.sort((a, b) => b.cost - a.cost)
-  for (const row of rows) {
-    row.share = totalCost > 0 ? Math.min(1, row.rawCost / totalCost) : 0
-    delete row.rawCost
+  models.sort((a, b) => b.cost - a.cost)
+
+  const providers = [...providerMap.values()].map((provider) => {
+    const budget = provider.kind === 'api' ? budgetFor(prefs, provider.id, provider.currency) : undefined
+    if (budget !== undefined) {
+      budget.used = round2(provider.usage.monthCost)
+      budget.remaining = round2(Math.max(0, budget.amount - budget.used))
+      budget.percent = budget.amount > 0 ? Math.min(9.99, budget.used / budget.amount) : 0
+      budget.state = budget.amount <= 0 ? 'unset' : budget.percent >= 1 ? 'over' : budget.percent >= 0.8 ? 'warn' : 'ok'
+    }
+    provider.usage.todayCost = round2(provider.usage.todayCost)
+    provider.usage.monthCost = round2(provider.usage.monthCost)
+    return { ...provider, budget }
+  })
+  providers.sort((a, b) => {
+    if (a.id === state.currentProvider) return -1
+    if (b.id === state.currentProvider) return 1
+    return b.usage.monthCost - a.usage.monthCost
+  })
+
+  const modelsByCurrency = new Map()
+  for (const row of models) {
+    if (row.kind !== 'api') continue
+    const bucket = modelsByCurrency.get(row.currency) ?? { total: 0 }
+    bucket.total += row.cost
+    modelsByCurrency.set(row.currency, bucket)
   }
-  totalCost = round2(totalCost)
+  for (const row of models) {
+    if (row.kind !== 'api') continue
+    const total = modelsByCurrency.get(row.currency)?.total ?? 0
+    row.share = total > 0 ? Math.min(1, row.cost / total) : 0
+  }
 
-  const totals = sumRows([...models.values()])
-  const unpricedModels = rows.filter((row) => row.priced === false).map((row) => `${row.providerId}:${row.modelId}`)
+  const apiTotals = {}
+  for (const provider of providers) {
+    if (provider.kind !== 'api') continue
+    const currency = provider.currency
+    const total = apiTotals[currency] ?? { today: 0, month: 0, budget: 0, remaining: 0 }
+    total.today += provider.usage.todayCost
+    total.month += provider.usage.monthCost
+    total.budget += provider.budget?.amount ?? 0
+    total.remaining += provider.budget?.remaining ?? 0
+    apiTotals[currency] = total
+  }
+  for (const total of Object.values(apiTotals)) {
+    total.today = round2(total.today)
+    total.month = round2(total.month)
+    total.budget = round2(total.budget)
+    total.remaining = round2(total.remaining)
+  }
+
+  const totalCost = round2(models.reduce((sum, row) => sum + (row.kind === 'api' ? row.cost : 0), 0))
+  const unpricedModels = models.filter((row) => row.priced === false).map((row) => `${row.providerId}:${row.modelId}`)
+  const totals = models.reduce((out, row) => ({
+    input: out.input + row.input,
+    cacheRead: out.cacheRead + row.cacheRead,
+    cacheWrite: out.cacheWrite + row.cacheWrite,
+    output: out.output + row.output,
+    requests: out.requests + row.requests,
+  }), { input: 0, cacheRead: 0, cacheWrite: 0, output: 0, requests: 0 })
   const totalTokens = totals.input + totals.cacheRead + totals.cacheWrite + totals.output
-  const hitRate =
-    totals.input + totals.cacheWrite + totals.cacheRead > 0
-      ? totals.cacheRead / (totals.input + totals.cacheWrite + totals.cacheRead)
-      : null
-
-  const amount = num(prefs?.budget?.amount)
-  const percent = amount > 0 ? totalCost / amount : 0
-  const budgetState = amount <= 0 ? 'unset' : percent >= 1 ? 'over' : percent >= 0.8 ? 'warn' : 'ok'
+  const hitRate = totals.input + totals.cacheWrite + totals.cacheRead > 0
+    ? totals.cacheRead / (totals.input + totals.cacheWrite + totals.cacheRead)
+    : null
+  const today = providers.reduce((sum, provider) => ({
+    tokens: sum.tokens + provider.usage.todayTokens,
+    cost: sum.cost + provider.usage.todayCost,
+    requests: sum.requests + provider.usage.requests,
+  }), { tokens: 0, cost: 0, requests: 0 })
+  const legacyAmount = num(prefs?.budget?.amount)
+  const legacyUsed = providers.find((provider) => provider.id === 'deepseek-official')?.usage.monthCost ?? totalCost
+  const legacyPercent = legacyAmount > 0 ? legacyUsed / legacyAmount : 0
+  const current = state.currentProvider ?? providers[0]?.id ?? null
 
   return {
     month,
@@ -317,14 +332,17 @@ export function buildSummary(state, prefs, now, balance) {
     today: { tokens: today.tokens, cost: round2(today.cost), requests: today.requests },
     requests: { month: totals.requests, today: today.requests },
     budget: {
-      amount,
-      used: totalCost,
-      remaining: round2(amount - totalCost),
-      percent: Math.min(percent, 9.99),
-      state: budgetState,
+      amount: legacyAmount,
+      used: round2(legacyUsed),
+      remaining: round2(Math.max(0, legacyAmount - legacyUsed)),
+      percent: Math.min(legacyPercent, 9.99),
+      state: legacyAmount <= 0 ? 'unset' : legacyPercent >= 1 ? 'over' : legacyPercent >= 0.8 ? 'warn' : 'ok',
     },
-    breakdown: { models: rows },
-    balance,
+    providers,
+    apiTotals,
+    currentProviderId: current,
+    breakdown: { models },
+    balance: providers.find((provider) => provider.id === current)?.balance,
     showBalance: prefs?.showBalance !== false,
     showMonthTokens: prefs?.showMonthTokens !== false,
     updatedAt: now,

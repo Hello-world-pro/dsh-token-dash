@@ -1,23 +1,23 @@
 /**
- * dsh-token-dash — host 半：采集、聚合、持久化、同源查询接口。
+ * dsh-token-dash — host half: collect, aggregate, pricing, adapters and routes.
  */
-
 import { readFileSync } from 'node:fs'
 import { buildSummary, emptyState, num } from './src/core.js'
 import { ingest, backfill } from './src/collect.js'
-import { createFlusher, dataDir, loadPrefs, loadState, saveJson } from './src/store.js'
-import { readBalance } from './src/balance.js'
+import { createFlusher, dataDir, loadPrefs, loadState, logsDir, saveJson } from './src/store.js'
+import { readProviders } from './src/adapters.js'
+import { catalogInfo, loadCommunityPricing, loadRouterPricing } from './src/pricing.js'
+import { clearLog, createLogger, exportLog } from './src/diagnostics.js'
 
 export const name = 'dsh-token-dash'
 
 const ROUTE_PREFIX = '/token-dash/api'
 const CURRENT_VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
+const PROVIDER_TTL = 30000
 let updateCache = { at: 0, data: null }
 
 function versionParts(value) {
-  return String(value)
-    .split('.')
-    .map((part) => Number.parseInt(part, 10) || 0)
+  return String(value).split('.').map((part) => Number.parseInt(part, 10) || 0)
 }
 
 function isNewer(latest, current) {
@@ -52,18 +52,41 @@ function readBody(req) {
   })
 }
 
+function budgetPatch(raw, base) {
+  if (raw === null || typeof raw !== 'object') return base
+  const amount = Number(raw.amount)
+  if (!Number.isFinite(amount) || amount < 0 || amount > 9999999.99) throw new Error('invalid-budget')
+  return { amount: Math.round(amount * 100) / 100, currency: raw.currency === 'USD' ? 'USD' : 'CNY' }
+}
+
 function normalizePrefs(input, base) {
   const prefs = {
     version: 1,
     budget: { ...base.budget },
+    budgets: { ...(base.budgets ?? {}) },
+    billingModes: { ...(base.billingModes ?? {}) },
     refreshMs: base.refreshMs,
     showBalance: base.showBalance,
     showMonthTokens: base.showMonthTokens !== false,
+    logLevel: base.logLevel === 'debug' ? 'debug' : 'info',
   }
-  if (input?.budget !== undefined) {
-    const amount = Number(input.budget?.amount)
-    if (!Number.isFinite(amount) || amount < 0 || amount > 9999999.99) throw new Error('invalid-budget')
-    prefs.budget.amount = Math.round(amount * 100) / 100
+  if (input?.budget !== undefined) prefs.budget = budgetPatch(input.budget, prefs.budget)
+  if (input?.budgets !== undefined) {
+    if (input.budgets === null || typeof input.budgets !== 'object') throw new Error('invalid-budgets')
+    const next = {}
+    for (const [id, value] of Object.entries(input.budgets)) {
+      if (typeof id !== 'string' || id === '') continue
+      next[id] = budgetPatch(value, { amount: 0, currency: 'CNY' })
+    }
+    prefs.budgets = next
+  }
+  if (input?.billingModes !== undefined) {
+    if (input.billingModes === null || typeof input.billingModes !== 'object') throw new Error('invalid-modes')
+    const next = {}
+    for (const [id, value] of Object.entries(input.billingModes)) {
+      if (value === 'api' || value === 'subscription') next[id] = value
+    }
+    prefs.billingModes = next
   }
   if (input?.refreshMs !== undefined) {
     const refresh = Number(input.refreshMs)
@@ -72,16 +95,21 @@ function normalizePrefs(input, base) {
   }
   if (input?.showBalance !== undefined) prefs.showBalance = input.showBalance === true
   if (input?.showMonthTokens !== undefined) prefs.showMonthTokens = input.showMonthTokens === true
+  if (input?.logLevel !== undefined) prefs.logLevel = input.logLevel === 'debug' ? 'debug' : 'info'
   return prefs
 }
 
 export function apply(ctx) {
   const dir = dataDir(ctx)
+  const logDir = logsDir(ctx)
+  const logger = createLogger({ dir: logDir, version: CURRENT_VERSION, dshVersion: '0.2.1-rc.5' })
   let prefs
   let state
+  let providerCache = { at: 0, data: [] }
   const ready = Promise.all([loadState(dir), loadPrefs(dir)]).then(([loadedState, loadedPrefs]) => {
     state = loadedState ?? emptyState()
     prefs = loadedPrefs
+    logger.info('boot', 'start', { version: CURRENT_VERSION })
     return { state, prefs }
   })
   const flusher = { schedule() {}, flush: async () => {}, stop() {} }
@@ -89,7 +117,6 @@ export function apply(ctx) {
 
   ctx.effect(() => {
     let disposed = false
-    let timer
     ready
       .then(() => {
         if (disposed) return
@@ -108,28 +135,26 @@ export function apply(ctx) {
     return () => {
       disposed = true
       clearInterval(tick)
-      timer = setTimeout(() => {}, 0)
-      clearTimeout(timer)
       flushReady?.stop?.()
     }
   }, 'dsh-token-dash: store')
 
-  // 历史回填（可选依赖）：失败只记日志，不影响实时采集。
+  // Pricing refresh is best-effort and never blocks summary.
+  ready.then(() => {
+    void loadCommunityPricing().then((info) => logger.info('pricing', 'catalog.loaded', info)).catch(() => {})
+    void loadRouterPricing().then((ok) => logger.info('pricing', 'router.loaded', { ok })).catch(() => {})
+  })
+
   ctx.inject(['sessionPersistence'], (scoped) => {
     ready
       .then(async () => {
         const result = await backfill(scoped, state)
         await flushReady?.flush?.()
-        if (result.degraded !== null) {
-          console.warn(`[TokenDash] backfill degraded=${result.degraded}`)
-        } else {
-          console.info(`[TokenDash] backfill sessions=${result.sessions} records=${result.records}`)
-        }
+        logger.info('collect', result.degraded === null ? 'backfill.done' : 'backfill.degraded', result)
       })
-      .catch((error) => console.warn(`[TokenDash] backfill-failed ${String(error)}`))
+      .catch((error) => logger.warn('collect', 'backfill.failed', { message: String(error) }))
   })
 
-  // 实时入账。
   ctx.on(
     'session/event',
     (session, event) => {
@@ -141,7 +166,6 @@ export function apply(ctx) {
     { global: true },
   )
 
-  // 同源只读接口 + 唯一写端点。
   ctx.inject(['webServer'], (scoped) => {
     const webServer = scoped.webServer
     if (webServer === undefined) return
@@ -153,8 +177,12 @@ export function apply(ctx) {
         try {
           await ready
           if (url.pathname === `${ROUTE_PREFIX}/summary` && req.method === 'GET') {
-            const balance = await readBalance(scoped, prefs)
-            json(res, 200, { ok: true, data: buildSummary(state, prefs, Date.now(), balance) })
+            if (Date.now() - providerCache.at > PROVIDER_TTL) {
+              providerCache = { at: Date.now(), data: await readProviders(scoped, prefs) }
+            }
+            const summary = buildSummary(state, prefs, Date.now(), providerCache.data)
+            logger.info('vm', 'build', { providers: summary.providers.length, api: summary.providers.filter((item) => item.kind === 'api').length, subscription: summary.providers.filter((item) => item.kind === 'subscription').length })
+            json(res, 200, { ok: true, data: summary })
             return
           }
           if (url.pathname === `${ROUTE_PREFIX}/update` && req.method === 'GET') {
@@ -175,12 +203,7 @@ export function apply(ctx) {
             if (!response.ok) throw new Error(`registry-${response.status}`)
             const meta = await response.json()
             if (typeof meta?.version !== 'string') throw new Error('invalid-registry-response')
-            const data = {
-              current: CURRENT_VERSION,
-              latest: meta.version,
-              hasUpdate: isNewer(meta.version, CURRENT_VERSION),
-              published: true,
-            }
+            const data = { current: CURRENT_VERSION, latest: meta.version, hasUpdate: isNewer(meta.version, CURRENT_VERSION), published: true }
             updateCache = { at: Date.now(), data }
             json(res, 200, { ok: true, data })
             return
@@ -193,11 +216,30 @@ export function apply(ctx) {
             const body = JSON.parse((await readBody(req)) || '{}')
             prefs = normalizePrefs(body, prefs)
             await saveJson(dir, 'prefs.json', prefs)
+            providerCache = { at: 0, data: [] }
+            logger.info('config', 'prefs.saved', { budgets: Object.keys(prefs.budgets).length, modes: Object.keys(prefs.billingModes).length })
             json(res, 200, { ok: true, data: prefs })
+            return
+          }
+          if (url.pathname === `${ROUTE_PREFIX}/logs/meta` && req.method === 'GET') {
+            json(res, 200, { ok: true, data: { dir: logDir, file: logger.file } })
+            return
+          }
+          if (url.pathname === `${ROUTE_PREFIX}/logs/export` && req.method === 'GET') {
+            const exported = exportLog(logDir, logger)
+            logger.info('diag', 'export', { bytes: exported.bytes, redacted: exported.redacted === true })
+            json(res, 200, { ok: true, data: { file: exported.file, content: exported.content } })
+            return
+          }
+          if (url.pathname === `${ROUTE_PREFIX}/logs` && req.method === 'DELETE') {
+            clearLog(logDir, logger)
+            logger.info('diag', 'clear', {})
+            json(res, 200, { ok: true, data: { cleared: true } })
             return
           }
           json(res, 404, { ok: false, reason: 'not-found' })
         } catch (error) {
+          logger.error('route', 'failed', { path: url.pathname, message: error instanceof Error ? error.message : String(error) })
           json(res, 400, { ok: false, reason: error instanceof Error ? error.message : String(error) })
         }
       },
