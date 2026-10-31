@@ -120,6 +120,11 @@ try {
     await page.locator('span', { hasText: 'Token 看板' }).last().click({ force: true })
   }
   await settings.waitFor({ timeout: 8000 })
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=token-dash-settings]')?.innerText.includes('月度预算'),
+    null,
+    { timeout: 8000 },
+  )
   assert.match(await settings.innerText(), /月度预算/)
 
   mkdirSync(join(tmpRoot, 'e2e'), { recursive: true })
