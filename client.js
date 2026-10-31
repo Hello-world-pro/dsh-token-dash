@@ -91,7 +91,7 @@ window.__ModuleLoader__.load({
       muted: { opacity: 0.65, fontSize: 11 },
       bar: { height: 6, borderRadius: 3, background: 'rgba(128,128,128,.25)', overflow: 'hidden', margin: '8px 0' },
       barFill: { height: '100%', background: '#f0a020' },
-      cols: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8 },
+      cols: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, marginTop: 8 },
       table: { width: '100%', borderCollapse: 'collapse', marginTop: 6 },
       th: { textAlign: 'left', opacity: 0.6, fontWeight: 400, padding: '4px 8px' },
       thRight: {

@@ -203,6 +203,15 @@ try {
   )
   assert.equal(columnWidths.length, 3)
   assert.ok(Math.max(...columnWidths) - Math.min(...columnWidths) < 1, `列宽不等: ${columnWidths}`)
+  const columnStarts = await page.evaluate(() => {
+    const root = document.querySelector('[data-testid=token-dash-budget-cols]')
+    const base = root.getBoundingClientRect().left
+    return [...root.children].map((node) => node.getBoundingClientRect().left - base)
+  })
+  const third = columnWidths.reduce((sum, width) => sum + width, 0) / 3
+  columnStarts.forEach((start, index) => {
+    assert.ok(Math.abs(start - third * index) < 1, `第 ${index + 1} 列未从三分之一处开始: ${columnStarts}`)
+  })
   assert.match(panelWithProviders, /余额\n¥49\.86/)
   assert.ok(!panelWithProviders.includes('余额\n余额'), '余额列不应重复“余额”前缀')
   assert.ok(await panel.isVisible(), '刷新后浮层应保持打开')
