@@ -4,6 +4,7 @@
  */
 import { priceFor } from './pricing.js'
 import {
+  canBeSubscription,
   modelLabel,
   normalizeModel,
   normalizeProvider,
@@ -145,6 +146,7 @@ function providerEmpty(providerId) {
     id: providerId,
     name: providerLabel(providerId),
     kind: 'api',
+    canSubscribe: canBeSubscription(providerId),
     currency: providerCurrency(providerId),
     usage: { todayTokens: 0, monthTokens: 0, todayCost: 0, monthCost: 0, requests: 0 },
     models: [],
@@ -163,10 +165,16 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
   const providerMap = new Map()
   const modelsMap = new Map()
   const providerInfo = normalizeProviderInfo(providerInfoInput)
+  // billingModes[id] === 'hide' 的 provider 整体不出现在 VM（卡片、费用表、用量表）。
+  const hidden = new Set(
+    Object.entries(prefs?.billingModes ?? {})
+      .filter(([, mode]) => mode === 'hide')
+      .map(([id]) => normalizeProvider(id)),
+  )
 
   for (const info of providerInfo) {
     const id = normalizeProvider(info.id ?? info.provider)
-    if (id === 'unknown') continue
+    if (id === 'unknown' || hidden.has(id)) continue
     const base = providerMap.get(id) ?? providerEmpty(id)
     providerMap.set(id, {
       ...base,
@@ -176,6 +184,7 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
       kind: info.kind === 'subscription' || (info.kind === undefined && Array.isArray(info.plans) && info.plans.length > 0)
         ? 'subscription'
         : 'api',
+      canSubscribe: canBeSubscription(id),
       currency: info.currency === 'USD' ? 'USD' : (info.currency === 'CNY' ? 'CNY' : providerCurrency(id)),
       usage: { ...base.usage, ...(info.usage ?? {}) },
       balance: info.balance ?? base.balance,
@@ -188,7 +197,7 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
     const providers = bucket.providers ?? { unknown: { models: bucket.models ?? {} } }
     for (const [rawProvider, providerBucket] of Object.entries(providers)) {
       const providerId = normalizeProvider(rawProvider)
-      if (providerId === 'unknown') continue
+      if (providerId === 'unknown' || hidden.has(providerId)) continue
       const provider = providerMap.get(providerId) ?? providerEmpty(providerId)
       providerMap.set(providerId, provider)
       for (const [rawModel, row] of Object.entries(providerBucket.models ?? {})) {
@@ -261,7 +270,7 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
   providers.sort((a, b) => {
     if (a.id === state.currentProvider) return -1
     if (b.id === state.currentProvider) return 1
-    return b.usage.monthCost - a.usage.monthCost
+    return b.usage.todayCost - a.usage.todayCost
   })
 
   const modelsByCurrency = new Map()
@@ -313,9 +322,6 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
     cost: sum.cost + provider.usage.todayCost,
     requests: sum.requests + provider.usage.requests,
   }), { tokens: 0, cost: 0, requests: 0 })
-  const legacyAmount = num(prefs?.budget?.amount)
-  const legacyUsed = providers.find((provider) => provider.id === 'deepseek-official')?.usage.monthCost ?? totalCost
-  const legacyPercent = legacyAmount > 0 ? legacyUsed / legacyAmount : 0
   const current = state.currentProvider ?? providers[0]?.id ?? null
 
   return {
@@ -331,18 +337,10 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
     cost: { estimated: totalCost, currency: 'CNY', unpricedModels },
     today: { tokens: today.tokens, cost: round2(today.cost), requests: today.requests },
     requests: { month: totals.requests, today: today.requests },
-    budget: {
-      amount: legacyAmount,
-      used: round2(legacyUsed),
-      remaining: round2(Math.max(0, legacyAmount - legacyUsed)),
-      percent: Math.min(legacyPercent, 9.99),
-      state: legacyAmount <= 0 ? 'unset' : legacyPercent >= 1 ? 'over' : legacyPercent >= 0.8 ? 'warn' : 'ok',
-    },
     providers,
     apiTotals,
     currentProviderId: current,
     breakdown: { models },
-    balance: providers.find((provider) => provider.id === current)?.balance,
     showBalance: prefs?.showBalance !== false,
     showMonthTokens: prefs?.showMonthTokens !== false,
     updatedAt: now,

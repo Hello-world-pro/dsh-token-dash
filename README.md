@@ -19,11 +19,12 @@ dsh plugin --profile web add link:D:/MyProjects/dsh-tokenDash
 
 ## 功能
 
-- 底栏 Pill：预算%、实际余额、今日消费、本月 Token
-- 浮层：预算卡、按模型费用明细、按模型用量明细
-- 设置页：预算、刷新三档、余额开关、版本
-- 余额：DeepSeek / Kimi / GLM；其他显示“第三方不支持”
-- 费用：内置 flash / pro 峰谷价，本地估算
+- 底栏 Pill：预算%（状态色）、今日消费、账户余额；订阅显示 5h/周窗口与重置时间
+- 浮层看板：API 卡（独立预算/进度条）、订阅卡（套餐窗口/重置时间）、按币种分组费用明细、模型用量明细
+- 设置视图：provider 计费模式（按量/订阅/不显示）、月度预算、刷新间隔、余额开关、日志、检查更新
+- 余额：DeepSeek / Kimi / OpenRouter 官方接口；Qwen 不支持余额；关闭开关后不请求
+- 订阅配额：GLM Coding / Kimi Coding 官方接口，支持手动重新检测
+- 费用：内置 catalog + 社区价格表，本地估算
 
 ## 边界
 

@@ -44,7 +44,7 @@ function stopTree(child) {
 
 const now = Date.now()
 const provider = (id, name, kind, currency, budget, plans = [], balance = null) => ({
-  id, name, kind, currency,
+  id, name, kind, currency, canSubscribe: id === 'zhipu' || id === 'moonshot',
   usage: { todayTokens: 12_000, monthTokens: 1_280_000, todayCost: id === 'openrouter' ? 0.12 : 0.04, monthCost: id === 'openrouter' ? 4.68 : 12.34, requests: 12 },
   ...(budget === null ? {} : { budget }),
   ...(balance === null ? {} : { balance }),
@@ -60,16 +60,16 @@ const model = (providerId, providerName, modelId, displayName, kind, currency, c
 const baseProviders = [
   provider('deepseek-official', 'DeepSeek 官方', 'api', 'CNY', apiBudget(100, 'CNY', 12.34, 0.1234), [], { amount: 49.86, status: 'ok', currency: 'CNY', updatedAt: now }),
   provider('openrouter', 'OpenRouter', 'api', 'USD', apiBudget(50, 'USD', 19, 0.38), [], { amount: 7.66, status: 'ok', currency: 'USD', updatedAt: now }),
-  provider('zhipu', '智谱 AI', 'subscription', 'CNY', null, [{ key: '5h', usedPercent: 42.5, resetAt: now }, { key: 'week', usedPercent: 18.2, resetAt: now }]),
-  provider('moonshot', 'Kimi', 'subscription', 'CNY', null, [{ key: '5h', usedPercent: 30, resetAt: now }, { key: 'week', usedPercent: 12, resetAt: now }]),
+  provider('zhipu', 'GLM Coding', 'subscription', 'CNY', null, [{ key: '5h', usedPercent: 42.5, resetAt: now + 3600_000 }, { key: 'week', usedPercent: 18.2, resetAt: now + 3600_000 }]),
+  provider('moonshot', 'Kimi Coding', 'subscription', 'CNY', null, [{ key: '5h', usedPercent: 30, resetAt: now + 3600_000 }, { key: 'week', usedPercent: 12, resetAt: now + 3600_000 }]),
 ]
 const baseModels = [
   model('deepseek-official', 'DeepSeek 官方', 'deepseek-flash', 'DeepSeek-V4.1-Flash', 'api', 'CNY', 12.34),
   model('openrouter', 'OpenRouter', 'deepseek-flash', 'DeepSeek-V4.1-Flash', 'api', 'USD', 4.68),
-  model('zhipu', '智谱 AI', 'glm-5.3', 'GLM-5.3', 'subscription', 'CNY', 0),
-  model('moonshot', 'Kimi', 'kimi-k3', 'Kimi K3', 'subscription', 'CNY', 0),
+  model('zhipu', 'GLM Coding', 'glm-5.3', 'GLM-5.3', 'subscription', 'CNY', 0),
+  model('moonshot', 'Kimi Coding', 'kimi-k3', 'Kimi K3', 'subscription', 'CNY', 0),
 ]
-const baseSummary = { providers: baseProviders, breakdown: { models: baseModels }, showBalance: true, showMonthTokens: true, currentProviderId: 'deepseek-official', updatedAt: now, stale: false }
+const baseSummary = { providers: baseProviders, breakdown: { models: baseModels }, showBalance: true, version: '0.2.0', refreshMs: 60000, currentProviderId: 'deepseek-official', updatedAt: now, stale: false }
 
 const env = { ...process.env, DSH_HOME: home }
 let server
@@ -154,13 +154,19 @@ try {
   assert.match(await panel.innerText(), /订阅套餐（已检测 2）/)
   assert.match(await panel.innerText(), /DeepSeek 官方/)
   assert.match(await panel.innerText(), /OpenRouter/)
-  assert.match(await panel.innerText(), /GLM/)
-  assert.match(await panel.innerText(), /Kimi/)
+  assert.match(await panel.innerText(), /GLM Coding/)
+  assert.match(await panel.innerText(), /Kimi Coding/)
+  assert.match(await panel.innerText(), /重置 \d{2}:\d{2}/)
   assert.match(await panel.innerText(), /API 费用明细/)
   assert.match(await panel.innerText(), /CNY 合计/)
   assert.match(await panel.innerText(), /USD 合计/)
   assert.ok(!(await panel.innerText()).includes('套餐内'))
   assert.match(await panel.innerText(), /模型用量明细/)
+  // 余额 = 账户余额（¥49.86），不是预算剩余（¥87.66）
+  assert.match(await panel.innerText(), /¥49\.86/)
+  assert.ok(!(await panel.innerText()).includes('¥87.66'))
+  // P2 无底栏（刷新时间只在 API/订阅区头，相对时间为“刚刚”）
+  assert.ok(!(await panel.innerText()).includes('分钟前'))
   assert.equal(await page.locator('[data-testid^=token-dash-api-card-]').count(), 2)
   assert.equal(await page.locator('[data-testid^=token-dash-sub-card-]').count(), 2)
 
@@ -190,12 +196,16 @@ try {
   await jsClick(panel.getByRole('button', { name: '设置' }))
   const settings = page.locator('[data-testid=token-dash-settings]')
   await settings.waitFor({ timeout: 8000 })
-  assert.match(await settings.innerText(), /API 计费/)
-  assert.match(await settings.innerText(), /订阅计费/)
+  assert.match(await settings.innerText(), /API 计费（已检测 2）/)
+  assert.match(await settings.innerText(), /订阅计费（已检测 2）/)
   assert.match(await settings.innerText(), /查看日志/)
   assert.ok(!(await settings.innerText()).includes('诊断'))
   assert.ok(!(await settings.innerText()).includes('清空日志'))
+  assert.ok(!(await settings.innerText()).includes('本月 Token'))
   assert.equal(await settings.locator('input[type=text]').count(), 2)
+  assert.equal(await settings.locator('select').count(), 4)
+  assert.equal(await settings.locator('option[value=hide]').count(), 4)
+  assert.equal(await settings.locator('[role=radiogroup] button').count(), 3)
   await page.screenshot({ path: join(tmpRoot, 'e2e', 'settings.png'), fullPage: true })
   assert.equal(await settings.getByRole('link').count(), 5)
 
@@ -213,14 +223,16 @@ try {
   })
   await page.waitForTimeout(800)
   await settings.getByText('已保存').waitFor({ timeout: 8000 })
+
   currentSummary = summaryOf([
     { ...baseProviders[0], budget: apiBudget(500.5, 'CNY', 12.34, 0.0247) },
     baseProviders[1], baseProviders[2], baseProviders[3],
   ], baseModels, 'deepseek-official')
   await jsClick(settings.getByRole('button', { name: '← 返回' }))
   await panel.waitFor({ timeout: 8000 })
-  await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]')?.innerText.includes('¥500.50'), null, { timeout: 8000 })
-  assert.match(await panel.innerText(), /¥500\.50/)
+  await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]')?.innerText.includes('2.5%'), null, { timeout: 8000 })
+  assert.match(await panel.innerText(), /2\.5%/)
+  assert.match(await panel.innerText(), /预算/)
 
   await jsClick(panel.getByRole('button', { name: '设置' }))
   await settings.waitFor({ timeout: 8000 })
@@ -248,6 +260,39 @@ try {
   await panel.waitFor({ timeout: 8000 })
   await jsClick(panel.getByRole('button', { name: '刷新' }))
   await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]')?.innerText.includes('Token 数据不可用'), null, { timeout: 5000 })
+  assert.ok(await panel.getByTestId('token-dash-retry').isVisible(), 'error state has retry button')
+
+  // 重新检测：绕过 TTL 缓存，只触发订阅配额
+  let rescanCalled = 0
+  await page.route('**/token-dash/api/providers/refresh*', async (route) => {
+    rescanCalled += 1
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { refreshed: ['zhipu', 'moonshot'] } }) })
+  })
+  await jsClick(panel.getByTestId('token-dash-rescan'))
+  await page.waitForTimeout(300)
+  assert.equal(rescanCalled, 1)
+
+  // 检查更新：确认 → 安装（P3 内联确认，不弹系统对话框）
+  await jsClick(panel.getByRole('button', { name: '设置' }))
+  await settings.waitFor({ timeout: 8000 })
+  let installCalled = 0
+  await page.route('**/token-dash/api/update/install', async (route) => {
+    installCalled += 1
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { ok: true, command: 'dsh plugin --profile desktop update dsh-token-dash' } }) })
+  })
+  await page.route('**/token-dash/api/update', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { current: '0.2.0', latest: '0.3.0', hasUpdate: true, published: true } }) })
+  })
+  await jsClick(settings.getByRole('button', { name: '检查更新' }))
+  await settings.getByText('发现 0.3.0').waitFor({ timeout: 5000 })
+  await jsClick(settings.getByRole('button', { name: '更新', exact: true }))
+  await settings.getByText('已更新，重启 DSH 后生效').waitFor({ timeout: 5000 })
+  assert.equal(installCalled, 1)
+
+  // 关闭浮层（Esc 按键输入按 D-15 修订不做处理，关闭走右上按钮）
+  await jsClick(settings.getByRole('button', { name: '关闭' }))
+  await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]') === null, null, { timeout: 5000 })
+  // 焦点归还（closePanel 的 setTimeout focus）在 E2E 环境受宿主焦点管理干扰，暂不断言；真实浏览器人工走查
 
   mkdirSync(join(tmpRoot, 'e2e'), { recursive: true })
   await page.screenshot({ path: join(tmpRoot, 'e2e', 'ui.png'), fullPage: true })

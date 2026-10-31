@@ -135,9 +135,47 @@ test('月汇总：预算、剩余、按模型请求数', () => {
   assert.equal(summary.requests.month, 2)
   assert.equal(summary.breakdown.models.length, 2)
   assert.equal(summary.breakdown.models[0].requests, 1)
-  assert.equal(summary.budget.amount, 3500)
-  assert.ok(summary.budget.used > 0)
-  assert.ok(summary.budget.remaining < 3500)
+  // REQ-08：无单 budget/balance 字段；legacy prefs.budget 迁移到 deepseek-official 的 provider 级预算
+  assert.equal(summary.budget, undefined)
+  assert.equal(summary.balance, undefined)
+  const deepseek = summary.providers.find((item) => item.id === 'deepseek-official')
+  assert.equal(deepseek.budget.amount, 3500)
+  assert.ok(deepseek.budget.used > 0)
+  assert.ok(deepseek.budget.remaining < 3500)
+  const zhipu = summary.providers.find((item) => item.id === 'zhipu')
+  // usage-only 的 zhipu（无订阅 info）按量处理：预算 unset 而非 undefined
+  assert.equal(zhipu.budget.state, 'unset')
+  assert.equal(zhipu.canSubscribe, true)
+  assert.equal(deepseek.canSubscribe, false)
   assert.equal(summary.tokens.total, 1_268_000)
   assert.equal(localDayKey(now), '2026-10-31')
+})
+
+test('hide 模式：provider 与模型行整体不出现在 VM', () => {
+  const state = emptyState()
+  const now = new Date(2026, 9, 31, 12, 0, 0).getTime()
+  addRecord(state, { ts: now, provider: 'zhipu', model: 'glm-5.3', input: 300_000, cacheRead: 0, cacheWrite: 0, output: 44_000 })
+  addRecord(state, { ts: now, provider: 'deepseek-account', model: 'deepseek-v4.1-flash', input: 108_000, cacheRead: 0, cacheWrite: 0, output: 16_000 })
+  const providers = [
+    { id: 'zhipu', kind: 'subscription', currency: 'CNY', plans: [{ key: '5h', usedPercent: 10 }] },
+    { id: 'deepseek-official', kind: 'api', currency: 'CNY' },
+  ]
+  const summary = buildSummary(state, { billingModes: { zhipu: 'hide' } }, now, providers)
+  assert.equal(summary.providers.some((item) => item.id === 'zhipu'), false)
+  assert.equal(summary.breakdown.models.some((item) => item.providerId === 'zhipu'), false)
+  assert.equal(summary.providers.length, 1)
+})
+
+test('provider 排序：当前 provider 置顶，其余按今日消耗降序', () => {
+  const state = emptyState()
+  const now = new Date(2026, 9, 31, 12, 0, 0).getTime()
+  addRecord(state, { ts: now, provider: 'zhipu', model: 'glm-5.3', input: 900_000, cacheRead: 0, cacheWrite: 0, output: 44_000 })
+  addRecord(state, { ts: now, provider: 'deepseek-account', model: 'deepseek-v4.1-flash', input: 100_000, cacheRead: 0, cacheWrite: 0, output: 16_000 })
+  const summary = buildSummary(state, { budgets: {} }, now, [
+    { id: 'zhipu', kind: 'subscription', currency: 'CNY', plans: [] },
+    { id: 'deepseek-official', kind: 'api', currency: 'CNY' },
+  ])
+  // 最后一条消息 provider 是 deepseek-account（当前 provider），置顶；zhipu 今日消耗更高排第二
+  assert.equal(summary.providers[0].id, 'deepseek-official')
+  assert.equal(summary.providers[1].id, 'zhipu')
 })

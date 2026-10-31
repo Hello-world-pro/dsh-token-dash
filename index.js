@@ -2,10 +2,13 @@
  * dsh-token-dash — host half: collect, aggregate, pricing, adapters and routes.
  */
 import { readFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
+import { spawn } from 'node:child_process'
+import { dirname, join } from 'node:path'
 import { buildSummary, emptyState, num } from './src/core.js'
 import { ingest, backfill } from './src/collect.js'
 import { createFlusher, dataDir, loadPrefs, loadState, logsDir, saveJson } from './src/store.js'
-import { readProviders } from './src/adapters.js'
+import { readProviders, readSubscriptions } from './src/adapters.js'
 import { catalogInfo, loadCommunityPricing, loadRouterPricing } from './src/pricing.js'
 import { clearLog, createLogger, exportLog } from './src/diagnostics.js'
 
@@ -28,6 +31,53 @@ function isNewer(latest, current) {
     if (diff !== 0) return diff > 0
   }
   return false
+}
+
+/** Locate the bundled dsh CLI (same layout scripts/e2e.mjs relies on). */
+function findDshCli() {
+  const fromEnv = process.env.DSH_CLI
+  if (typeof fromEnv === 'string' && fromEnv !== '' && existsSync(fromEnv)) return fromEnv
+  try {
+    const bundled = join(dirname(process.execPath), 'resources', 'app.asar', 'dsh', 'node_modules', '@deepseek-ai', 'dsh-desktop-host', 'lib', 'cli.js')
+    if (existsSync(bundled)) return bundled
+  } catch {
+    // ignore
+  }
+  return null
+}
+
+/** Run `dsh plugin --profile <p> update dsh-token-dash`; resolves with { ok, reason?, command, output }. */
+function runPluginUpdate(profile) {
+  return new Promise((resolve) => {
+    const command = `dsh plugin --profile ${profile} update dsh-token-dash`
+    const cli = findDshCli()
+    if (cli === null) {
+      resolve({ ok: false, reason: 'cli-not-found', command, output: '' })
+      return
+    }
+    const child = spawn(process.execPath, ['--expose-internals', cli, 'plugin', '--profile', profile, 'update', 'dsh-token-dash'], {
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      windowsHide: true,
+    })
+    let tail = ''
+    const collect = (chunk) => {
+      tail = `${tail}${String(chunk)}`.slice(-2000)
+    }
+    child.stdout?.on('data', collect)
+    child.stderr?.on('data', collect)
+    const timer = setTimeout(() => {
+      try { child.kill() } catch { /* ignore */ }
+    }, 120000)
+    child.on('error', (error) => {
+      clearTimeout(timer)
+      resolve({ ok: false, reason: String(error?.message ?? error), command, output: tail })
+    })
+    child.on('close', (code) => {
+      clearTimeout(timer)
+      if (code === 0) resolve({ ok: true, command, output: tail })
+      else resolve({ ok: false, reason: `exit-${code}`, command, output: tail })
+    })
+  })
 }
 
 function json(res, status, body) {
@@ -84,7 +134,7 @@ function normalizePrefs(input, base) {
     if (input.billingModes === null || typeof input.billingModes !== 'object') throw new Error('invalid-modes')
     const next = {}
     for (const [id, value] of Object.entries(input.billingModes)) {
-      if (value === 'api' || value === 'subscription') next[id] = value
+      if (value === 'api' || value === 'subscription' || value === 'hide') next[id] = value
     }
     prefs.billingModes = next
   }
@@ -181,8 +231,29 @@ export function apply(ctx) {
               providerCache = { at: Date.now(), data: await readProviders(scoped, prefs) }
             }
             const summary = buildSummary(state, prefs, Date.now(), providerCache.data)
+            summary.version = CURRENT_VERSION
+            summary.refreshMs = prefs.refreshMs
             logger.info('vm', 'build', { providers: summary.providers.length, api: summary.providers.filter((item) => item.kind === 'api').length, subscription: summary.providers.filter((item) => item.kind === 'subscription').length })
             json(res, 200, { ok: true, data: summary })
+            return
+          }
+          if (url.pathname === `${ROUTE_PREFIX}/providers/refresh` && req.method === 'POST') {
+            // 仅重查订阅 provider 配额（GLM / Kimi Coding），绕过 TTL 缓存；无 Key 的订阅 provider 从缓存移除。
+            const subs = await readSubscriptions(scoped, prefs)
+            const map = new Map(providerCache.data.map((item) => [item.id, item]))
+            map.delete('zhipu')
+            map.delete('moonshot')
+            for (const item of subs) map.set(item.id, item)
+            providerCache = { at: Date.now(), data: [...map.values()] }
+            logger.info('provider', 'subscriptions.refreshed', { ids: subs.map((item) => item.id) })
+            json(res, 200, { ok: true, data: { refreshed: subs.map((item) => item.id) } })
+            return
+          }
+          if (url.pathname === `${ROUTE_PREFIX}/update/install` && req.method === 'POST') {
+            const profile = typeof process.env.DSH_PROFILE === 'string' && process.env.DSH_PROFILE !== '' ? process.env.DSH_PROFILE : 'desktop'
+            const result = await runPluginUpdate(profile)
+            logger.info('update', result.ok ? 'install.ok' : 'install.fail', { profile, reason: result.reason ?? null })
+            json(res, 200, { ok: result.ok, data: result, ...(result.ok ? {} : { reason: 'install-failed' }) })
             return
           }
           if (url.pathname === `${ROUTE_PREFIX}/update` && req.method === 'GET') {
@@ -217,7 +288,7 @@ export function apply(ctx) {
             prefs = normalizePrefs(body, prefs)
             await saveJson(dir, 'prefs.json', prefs)
             providerCache = { at: 0, data: [] }
-            logger.info('config', 'prefs.saved', { budgets: Object.keys(prefs.budgets).length, modes: Object.keys(prefs.billingModes).length })
+            logger.info('boot', 'prefs.saved', { budgets: Object.keys(prefs.budgets).length, modes: Object.keys(prefs.billingModes).length })
             json(res, 200, { ok: true, data: prefs })
             return
           }
