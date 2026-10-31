@@ -193,9 +193,10 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
     })
   }
 
-  // #41：models 跨月累计（用量/费用明细 = 历史累计估算）；provider.usage 与预算口径保持当月；
-  // unknown 行按模型名前缀视图层归因（不改 daily.json），无匹配前缀的保持不可见
-  const accumulate = (providerId, modelId, row, isCurrentMonth, isToday) => {
+  // #41/#42：unknown 行按模型名前缀视图层归因（不改 daily.json）；models 与 provider.usage 均为当月口径（#42 回退跨月累计）
+  const accumulate = (providerId, modelId, row, isToday) => {
+    const provider = providerMap.get(providerId) ?? providerEmpty(providerId)
+    providerMap.set(providerId, provider)
     const key = `${providerId}:${modelId}`
     const entry = modelsMap.get(key) ?? {
       name: modelId,
@@ -203,8 +204,8 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
       providerId,
       providerName: providerLabel(providerId),
       displayName: modelLabel(modelId),
-      kind: providerMap.get(providerId)?.kind === 'subscription' ? 'subscription' : 'api',
-      currency: providerMap.get(providerId)?.currency ?? providerCurrency(providerId),
+      kind: provider.kind,
+      currency: provider.currency,
       priced: true,
       approximate: false,
       requests: 0,
@@ -224,9 +225,6 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
     const price = priceFor(providerId, modelId, now)
     if (price?.approximate === true) entry.approximate = true
     modelsMap.set(key, entry)
-    if (isCurrentMonth === false) return
-    const provider = providerMap.get(providerId) ?? providerEmpty(providerId)
-    providerMap.set(providerId, provider)
     const tokens = num(row.input) + num(row.cacheRead) + num(row.cacheWrite) + num(row.output)
     provider.usage.monthTokens += tokens
     provider.usage.monthCost += num(row.cost)
@@ -239,7 +237,7 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
   }
 
   for (const [dayKey, bucket] of Object.entries(state.days ?? {})) {
-    const isCurrentMonth = dayKey.startsWith(`${month}-`)
+    if (!dayKey.startsWith(`${month}-`)) continue
     const isToday = dayKey === todayKey
     const providers = bucket.providers ?? { unknown: { models: bucket.models ?? {} } }
     for (const [rawProvider, providerBucket] of Object.entries(providers)) {
@@ -248,13 +246,13 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
         for (const [rawModel, row] of Object.entries(providerBucket.models ?? {})) {
           const owner = providerFromModel(rawModel)
           if (owner === null || hidden.has(owner)) continue
-          accumulate(owner, normalizeModel(rawModel), row, isCurrentMonth, isToday)
+          accumulate(owner, normalizeModel(rawModel), row, isToday)
         }
         continue
       }
       if (hidden.has(providerId)) continue
       for (const [rawModel, row] of Object.entries(providerBucket.models ?? {})) {
-        accumulate(providerId, normalizeModel(rawModel), row, isCurrentMonth, isToday)
+        accumulate(providerId, normalizeModel(rawModel), row, isToday)
       }
     }
   }

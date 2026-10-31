@@ -377,7 +377,7 @@ window.__ModuleLoader__.load({
       if (groups.size === 0) {
         // #40：空态保留表格结构（对齐 #32 用量表空态口径），不再整体隐藏
         return h('div', { 'data-testid': 'token-dash-cost-table', style: styles.card },
-          h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, 'API 费用明细（仅按量供应商）'), h('span', { style: styles.muted }, 'DSH 本机估算')),
+          h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, 'API 费用明细 / 本月'), h('span', { style: styles.muted }, 'DSH 本机估算')),
           h('div', { style: { ...styles.muted, marginTop: 8 } }, `CNY 合计 ${fmtMoney(0, 'CNY')}`),
           h('div', { style: { overflowX: 'auto' } },
             h('table', { style: styles.table },
@@ -388,7 +388,7 @@ window.__ModuleLoader__.load({
                 h('td', { style: styles.tdRight }, fmtMoney(0, 'CNY')))))))
       }
       return h('div', { 'data-testid': 'token-dash-cost-table', style: styles.card },
-        h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, 'API 费用明细（仅按量供应商）'), h('span', { style: styles.muted }, 'DSH 本机估算')),
+        h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, 'API 费用明细 / 本月'), h('span', { style: styles.muted }, 'DSH 本机估算')),
         ...[...groups.entries()].flatMap(([currency, rows]) => [
           h('div', { key: `${currency}-head`, style: { ...styles.muted, marginTop: 8 } }, `${currency} 合计 ${fmtMoney(rows.reduce((sum, row) => sum + row.cost, 0), currency)}`),
           h('div', { key: `${currency}-wrap`, style: { overflowX: 'auto' } },
@@ -413,7 +413,7 @@ window.__ModuleLoader__.load({
             h('td', { style: styles.tdRight }, '—'))
         : null
       return h('div', { 'data-testid': 'token-dash-usage-table', style: styles.card },
-        h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, '模型用量明细（全部供应商）'), h('span', { style: styles.muted }, `合计 ${fmtM(models.reduce((sum, model) => sum + (model.tokens?.total ?? 0), 0))}`)),
+        h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, '模型用量明细 / 本月'), h('span', { style: styles.muted }, `合计 ${fmtM(models.reduce((sum, model) => sum + (model.tokens?.total ?? 0), 0))}`)),
         h('div', { style: { overflowX: 'auto' } },
           h('table', { style: styles.table },
             h('thead', null, h('tr', null,
@@ -483,12 +483,12 @@ window.__ModuleLoader__.load({
         h('div', { style: { ...styles.muted, marginTop: 6 } }, '自动侦测 API Key 类型：DeepSeek / Kimi / GLM / OpenRouter / Qwen'),
         providers.length === 0 ? h('div', { style: { ...styles.muted, marginTop: 10 } }, '未检测到已配置供应商') : null,
         api.length > 0 ? h('div', { 'data-testid': 'token-dash-api-section', style: { marginTop: 8 } },
-          h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, `API 按量（已检测 ${api.length}）`), h('span', { style: styles.muted }, ago)),
+          h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, 'API 按量'), h('span', { style: styles.muted }, `已检测 ${api.length} · ${ago}`)),
           h('div', { style: api.length > 3 ? styles.scrollList : null },
             api.map((provider) => h(ApiCard, { key: provider.id, provider })))) : null,
         subscriptions.length > 0 ? h('div', { 'data-testid': 'token-dash-sub-section', style: { marginTop: 8 } },
           h('div', { style: styles.row },
-            h('b', { style: styles.headerTitle }, `订阅套餐（已检测 ${subscriptions.length}）`),
+            h('b', { style: styles.headerTitle }, '订阅套餐'),
             h('span', { style: styles.rowStart }, api.length === 0 ? h('span', { style: styles.muted }, ago) : null,
               h('button', { 'data-testid': 'token-dash-rescan', style: styles.button, onClick: onRefreshSubs }, '重新检测'))),
           h('div', { style: styles.subGrid }, subscriptions.map((provider) => h(SubscriptionCard, { key: provider.id, provider })))) : null,
