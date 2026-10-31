@@ -198,6 +198,13 @@ try {
   assert.match(panelWithProviders, /OpenRouter \/ DeepSeek-V4\.1-Flash/)
   assert.match(panelWithProviders, /未定价/)
   assert.ok(!panelWithProviders.includes('未知来源'), 'unknown provider 不应显示“未知来源 /”')
+  const columnWidths = await page.evaluate(() =>
+    [...document.querySelector('[data-testid=token-dash-budget-cols]').children].map((node) => node.getBoundingClientRect().width),
+  )
+  assert.equal(columnWidths.length, 3)
+  assert.ok(Math.max(...columnWidths) - Math.min(...columnWidths) < 1, `列宽不等: ${columnWidths}`)
+  assert.match(panelWithProviders, /余额\n¥49\.86/)
+  assert.ok(!panelWithProviders.includes('余额\n余额'), '余额列不应重复“余额”前缀')
   assert.ok(await panel.isVisible(), '刷新后浮层应保持打开')
   await page.unroute(summaryPattern)
 
@@ -262,6 +269,11 @@ try {
     { timeout: 8000 },
   )
   assert.ok(!(await pill.innerText()).includes('余额'), '关闭余额后 Pill 不应显示余额段')
+  const hiddenWidths = await page.evaluate(() =>
+    [...document.querySelector('[data-testid=token-dash-budget-cols]').children].map((node) => node.getBoundingClientRect().width),
+  )
+  assert.equal(hiddenWidths.length, 2)
+  assert.ok(Math.max(...hiddenWidths) - Math.min(...hiddenWidths) < 1, `隐藏余额后列宽不等: ${hiddenWidths}`)
 
   await panel.getByRole('button', { name: '关闭' }).click()
   await panel.waitFor({ state: 'detached', timeout: 5000 })

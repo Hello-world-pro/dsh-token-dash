@@ -134,13 +134,14 @@ window.__ModuleLoader__.load({
       toggleKnobOn: { transform: 'translateX(20px)' },
     }
 
-    function BalanceText({ balance }) {
-      if (balance?.status === 'ok') return `余额 ${fmtMoney(balance.amount)}`
-      if (balance?.status === 'unsupported') return '余额 第三方不支持'
-      if (balance?.status === 'unconfigured') return '余额 待配置'
-      if (balance?.status === 'error') return '余额 查询失败'
+    function BalanceText({ balance, prefix = true }) {
       if (balance?.status === 'hidden') return null
-      return '余额 --'
+      let text = '--'
+      if (balance?.status === 'ok') text = fmtMoney(balance.amount)
+      else if (balance?.status === 'unsupported') text = '第三方不支持'
+      else if (balance?.status === 'unconfigured') text = '待配置'
+      else if (balance?.status === 'error') text = '查询失败'
+      return prefix ? `余额 ${text}` : text
     }
 
     function Toggle({ checked, onChange }) {
@@ -250,10 +251,18 @@ window.__ModuleLoader__.load({
         h('div', { style: styles.bar }, h('div', { style: { ...styles.barFill, width: `${pct * 100}%` } })),
         h(
           'div',
-          { style: { ...styles.cols, gridTemplateColumns: balanceHidden ? '1fr 1fr' : '1fr 1fr 1fr' } },
+          {
+            'data-testid': 'token-dash-budget-cols',
+            style: {
+              ...styles.cols,
+              gridTemplateColumns: balanceHidden ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))',
+            },
+          },
           h('div', null, h('div', { style: styles.muted }, '今日'), h('b', { style: styles.num }, fmtMoney(summary?.today?.cost))),
           h('div', null, h('div', { style: styles.muted }, '剩余'), h('b', { style: styles.num }, fmtMoney(budget.remaining))),
-          balanceHidden ? null : h('div', null, h('div', { style: styles.muted }, '余额'), h(BalanceText, { balance: summary?.balance })),
+          balanceHidden
+            ? null
+            : h('div', null, h('div', { style: styles.muted }, '余额'), h(BalanceText, { balance: summary?.balance, prefix: false })),
         ),
         h('div', { style: { ...styles.muted, marginTop: 8 } }, `估算口径 / ${fmtAgo(summary?.updatedAt)}刷新`),
       )
