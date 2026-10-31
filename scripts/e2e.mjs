@@ -112,6 +112,7 @@ try {
   const panel = page.locator('[data-testid=token-dash-panel]')
   await panel.waitFor({ timeout: 8000 })
   assert.match(await panel.innerText(), /本月费用与额度/)
+  assert.equal(await panel.getByRole('link').count(), 0)
   await panel.getByRole('button', { name: '刷新' }).click()
   await page.waitForTimeout(300)
   assert.ok(await panel.isVisible(), '刷新后浮层应保持打开')
@@ -147,8 +148,22 @@ try {
   )
   assert.equal(await settings.getByRole('button', { name: '检查更新' }).count(), 1)
   assert.equal(await settings.getByRole('button', { name: '保存' }).count(), 0)
+  assert.equal(await settings.getByRole('link').count(), 3)
+  assert.match(await settings.innerText(), /查看明细/)
+
+  const toggle = settings.getByRole('switch')
+  assert.equal(await toggle.getAttribute('aria-checked'), 'true')
+  await toggle.click()
+  await page.waitForTimeout(500)
   await settings.getByRole('button', { name: '← 返回' }).click()
   await panel.waitFor({ timeout: 8000 })
+  await page.waitForFunction(
+    () => !document.querySelector('[data-testid=token-dash-panel]')?.innerText.includes('余额'),
+    null,
+    { timeout: 8000 },
+  )
+  assert.ok(!(await pill.innerText()).includes('余额'), '关闭余额后 Pill 不应显示余额段')
+
   await panel.getByRole('button', { name: '关闭' }).click()
   await panel.waitFor({ state: 'detached', timeout: 5000 })
   assert.ok(await pill.isVisible(), '关闭后 Pill 应保留')

@@ -41,9 +41,11 @@ async function deepseekAccount(ctx, prefs) {
     })
     if (data === null || data === undefined) return result('deepseek', 'unconfigured')
     if (data.status !== 'ready') return result('deepseek', 'error')
-    const wallets = Array.isArray(data.value) ? data.value : Object.values(data.value ?? {})
+    const normal = Array.isArray(data.value) ? data.value : Object.values(data.value ?? {})
+    const bonus = Array.isArray(data.bonusWallets) ? data.bonusWallets : []
     let amount = 0
-    for (const wallet of wallets) {
+    for (const wallet of [...normal, ...bonus]) {
+      if (wallet?.currency !== undefined && wallet.currency !== 'CNY') continue
       const value = Number(wallet?.balance ?? wallet?.amount ?? 0)
       if (Number.isFinite(value)) amount += value
     }
@@ -98,7 +100,7 @@ async function glm(ctx) {
 }
 
 export async function readBalance(ctx, prefs) {
-  if (!prefs.showBalance) return result('unknown', 'unconfigured')
+  if (!prefs.showBalance) return result('unknown', 'hidden')
   return (
     (await deepseekAccount(ctx, prefs)) ??
     (await deepseekKey(ctx)) ??

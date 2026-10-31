@@ -94,13 +94,44 @@ window.__ModuleLoader__.load({
         padding: '2px 8px',
         cursor: 'pointer',
       },
+      toggleTrack: {
+        width: 44,
+        height: 24,
+        borderRadius: 999,
+        border: 'none',
+        padding: 2,
+        display: 'flex',
+        alignItems: 'center',
+        background: 'rgba(128,128,128,.35)',
+        cursor: 'pointer',
+        transition: 'background .15s',
+      },
+      toggleOn: { background: '#2ea36f' },
+      toggleKnob: { width: 20, height: 20, borderRadius: 999, background: '#fff', transition: 'transform .15s' },
+      toggleKnobOn: { transform: 'translateX(20px)' },
     }
 
     function BalanceText({ balance }) {
       if (balance?.status === 'ok') return `余额 ${fmtMoney(balance.amount)}`
       if (balance?.status === 'unsupported') return '余额 第三方不支持'
       if (balance?.status === 'unconfigured') return '余额 待配置'
+      if (balance?.status === 'error') return '余额 查询失败'
+      if (balance?.status === 'hidden') return null
       return '余额 --'
+    }
+
+    function Toggle({ checked, onChange }) {
+      return h(
+        'button',
+        {
+          type: 'button',
+          role: 'switch',
+          'aria-checked': checked,
+          onClick: () => onChange(!checked),
+          style: { ...styles.toggleTrack, ...(checked ? styles.toggleOn : {}) },
+        },
+        h('span', { style: { ...styles.toggleKnob, ...(checked ? styles.toggleKnobOn : {}) } }),
+      )
     }
 
     function Pill() {
@@ -140,6 +171,7 @@ window.__ModuleLoader__.load({
       }
       const percent = summary?.budget?.state === 'unset' ? '设置预算' : fmtPct(summary?.budget?.percent)
       const monthTokens = fmtM(summary?.tokens?.total)
+      const balanceHidden = summary?.balance?.status === 'hidden'
       return h(
         React.Fragment,
         null,
@@ -159,8 +191,7 @@ window.__ModuleLoader__.load({
             tabIndex: 0,
           },
           h('span', null, '预算 ', h('b', { style: styles.num }, percent)),
-          h('span', { style: styles.sep }),
-          h('span', null, h(BalanceText, { balance: summary?.balance })),
+          balanceHidden ? null : h(React.Fragment, null, h('span', { style: styles.sep }), h('span', null, h(BalanceText, { balance: summary?.balance }))),
           h('span', { style: styles.sep }),
           h('span', null, '今日 ', h('b', { style: styles.num }, fmtMoney(summary?.today?.cost))),
           h('span', { style: styles.sep }),
@@ -182,6 +213,7 @@ window.__ModuleLoader__.load({
     function BudgetCard({ summary }) {
       const budget = summary?.budget ?? {}
       const pct = budget.state === 'unset' ? 0 : Math.min(1, budget.percent ?? 0)
+      const balanceHidden = summary?.balance?.status === 'hidden'
       return h(
         'div',
         { style: styles.card },
@@ -190,10 +222,10 @@ window.__ModuleLoader__.load({
         h('div', { style: styles.bar }, h('div', { style: { ...styles.barFill, width: `${pct * 100}%` } })),
         h(
           'div',
-          { style: styles.cols },
+          { style: { ...styles.cols, gridTemplateColumns: balanceHidden ? '1fr 1fr' : '1fr 1fr 1fr' } },
           h('div', null, h('div', { style: styles.muted }, '今日'), h('b', { style: styles.num }, fmtMoney(summary?.today?.cost))),
           h('div', null, h('div', { style: styles.muted }, '剩余'), h('b', { style: styles.num }, fmtMoney(budget.remaining))),
-          h('div', null, h('div', { style: styles.muted }, '余额'), h(BalanceText, { balance: summary?.balance })),
+          balanceHidden ? null : h('div', null, h('div', { style: styles.muted }, '余额'), h(BalanceText, { balance: summary?.balance })),
         ),
         h('div', { style: { ...styles.muted, marginTop: 8 } }, '估算口径 / 1 分钟前刷新'),
       )
@@ -260,11 +292,10 @@ window.__ModuleLoader__.load({
         return h(
           'div',
           { 'data-testid': 'token-dash-panel', style: styles.panel },
-          h(Settings, { onBack: () => onView('dashboard'), onClose }),
+          h(Settings, { onBack: () => onView('dashboard'), onClose, onRefresh }),
         )
       }
       const models = summary?.breakdown?.models ?? []
-      const openLink = (url) => window.open(url, '_blank', 'noopener')
       return h(
         'div',
         { 'data-testid': 'token-dash-panel', style: styles.panel },
@@ -284,20 +315,10 @@ window.__ModuleLoader__.load({
         h(BudgetCard, { summary }),
         h(CostTable, { models }),
         h(UsageTable, { models }),
-        h(
-          'div',
-          { style: { ...styles.row, marginTop: 10 } },
-          h('span', { style: styles.muted }, summary ? '刚刚刷新' : '加载中'),
-          h(
-            'span',
-            null,
-            LINKS.map(([label, url]) => h('a', { key: label, style: styles.link, onClick: () => openLink(url) }, label)),
-          ),
-        ),
       )
     }
 
-    function Settings({ onBack, onClose }) {
+    function Settings({ onBack, onClose, onRefresh }) {
       const [prefs, setPrefs] = useState(null)
       const [budgetText, setBudgetText] = useState('')
       const [status, setStatus] = useState('')
@@ -346,6 +367,7 @@ window.__ModuleLoader__.load({
           .then(() => {
             setStatus('已保存')
             setTimeout(() => setStatus(''), 1500)
+            void onRefresh?.()
           })
           .catch((error) => setStatus(`保存失败：${error.message}`))
       }
@@ -422,14 +444,20 @@ window.__ModuleLoader__.load({
           ),
         ),
         h(
-          'label',
+          'div',
           { style: styles.row },
           h('span', null, '账户余额'),
-          h('input', {
-            type: 'checkbox',
-            checked: prefs.showBalance,
-            onChange: (event) => savePatch({ showBalance: event.target.checked }),
-          }),
+          h(Toggle, { checked: prefs.showBalance, onChange: (next) => savePatch({ showBalance: next }) }),
+        ),
+        h(
+          'div',
+          { style: styles.row },
+          h('span', null, '查看明细'),
+          h(
+            'span',
+            null,
+            LINKS.map(([label, url]) => h('a', { key: label, href: url, target: '_blank', rel: 'noopener', style: styles.link }, label)),
+          ),
         ),
         h(
           'div',
