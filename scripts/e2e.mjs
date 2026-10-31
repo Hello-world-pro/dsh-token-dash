@@ -220,6 +220,31 @@ try {
   assert.deepEqual(columnAligns, ['left', 'center', 'right'])
   assert.match(panelWithProviders, /余额\n¥49\.86/)
   assert.ok(!panelWithProviders.includes('余额\n余额'), '余额列不应重复“余额”前缀')
+  const panelWidth = await panel.evaluate((node) => node.getBoundingClientRect().width)
+  assert.ok(panelWidth >= 380 && panelWidth <= 560.5, `面板宽度越界: ${panelWidth}`)
+  const noWrap = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-testid=token-dash-panel] tbody td')].every(
+      (node) => getComputedStyle(node).whiteSpace === 'nowrap',
+    ),
+  )
+  assert.ok(noWrap, '明细单元格应禁止换行')
+
+  await page.setViewportSize({ width: 360, height: 900 })
+  const narrowPanelWidth = await panel.evaluate((node) => node.getBoundingClientRect().width)
+  assert.ok(narrowPanelWidth <= 329, `窄屏面板超宽: ${narrowPanelWidth}`)
+  const scrollMetrics = await page.evaluate(() => {
+    const wrapper = document.querySelector('[data-testid=token-dash-panel] table')?.parentElement
+    return wrapper === null
+      ? null
+      : {
+          clientWidth: wrapper.clientWidth,
+          scrollWidth: wrapper.scrollWidth,
+          tableWidth: wrapper.querySelector('table').getBoundingClientRect().width,
+          panelWidth: document.querySelector('[data-testid=token-dash-panel]').getBoundingClientRect().width,
+        }
+  })
+  assert.ok(scrollMetrics !== null && scrollMetrics.scrollWidth > scrollMetrics.clientWidth, '窄屏下明细表应可横向滚动')
+  await page.setViewportSize({ width: 1280, height: 900 })
   assert.ok(await panel.isVisible(), '刷新后浮层应保持打开')
   await page.unroute(summaryPattern)
 
