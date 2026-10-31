@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
-import { mkdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
 
@@ -91,10 +91,9 @@ try {
   assert.equal((await putRes.json()).data.budget.amount, 1234.56)
 
   const cachedChromium = join(process.env.LOCALAPPDATA ?? '', 'ms-playwright', 'chromium-1234', 'chrome-win64', 'chrome.exe')
-  const browser = await chromium.launch({
-    headless: true,
-    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ?? cachedChromium,
-  })
+  const executablePath =
+    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ?? (existsSync(cachedChromium) ? cachedChromium : undefined)
+  const browser = await chromium.launch({ headless: true, ...(executablePath === undefined ? {} : { executablePath }) })
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
   await page.goto(`${base}/?token=${token}`, { waitUntil: 'domcontentloaded' })
   await page.getByRole('button', { name: '继续' }).click({ timeout: 5000 }).catch(() => {})
