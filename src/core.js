@@ -27,6 +27,18 @@ export function isPeak(ts) {
   return (hour >= 9 && hour < 12) || (hour >= 14 && hour < 18)
 }
 
+/** 宿主展示名映射；raw model 仍用于计价。 */
+const MODEL_LABELS = {
+  'deepseek-flash': 'v4.1-1019',
+  'deepseek-v4.1-flash': 'v4.1-1019',
+  'deepseek-v4.1-flash-ioa': 'v4.1-1019',
+}
+
+export function displayModel(raw) {
+  const id = normalizeModel(raw)
+  return MODEL_LABELS[id] ?? id
+}
+
 /** 只归一同名变体，不跨代际合并。 */
 export function normalizeModel(raw) {
   let name = String(raw ?? '').trim().toLowerCase()
@@ -113,6 +125,7 @@ export function buildSummary(state, prefs, now, balance) {
     for (const [model, row] of Object.entries(bucket.models ?? {})) {
       const entry = models.get(model) ?? {
         name: model,
+        displayName: displayModel(model),
         requests: 0,
         input: 0,
         cacheRead: 0,
@@ -190,6 +203,7 @@ export function buildSummary(state, prefs, now, balance) {
     },
     breakdown: { models: rows },
     balance,
+    showBalance: prefs?.showBalance !== false,
     updatedAt: now,
     stale: false,
   }

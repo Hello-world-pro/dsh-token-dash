@@ -46,6 +46,22 @@ test('费用占比不超过 100%', () => {
   assert.ok(row.share <= 1, `share=${row.share}`)
 })
 
+test('模型展示名映射到宿主标签', () => {
+  const state = emptyState()
+  const now = new Date(2026, 9, 31, 12, 0, 0).getTime()
+  addRecord(state, { ts: now, model: 'deepseek-flash', input: 10_000, cacheRead: 0, cacheWrite: 0, output: 1_000 })
+  const summary = buildSummary(state, { budget: { amount: 0 }, showBalance: true }, now, {
+    provider: 'unknown',
+    amount: null,
+    currency: 'CNY',
+    status: 'unsupported',
+    updatedAt: now,
+  })
+  assert.equal(summary.breakdown.models[0].name, 'deepseek-flash')
+  assert.equal(summary.breakdown.models[0].displayName, 'v4.1-1019')
+  assert.equal(summary.showBalance, true)
+})
+
 test('月汇总：预算、剩余、按模型请求数', () => {
   const state = emptyState()
   const now = new Date(2026, 9, 31, 12, 0, 0).getTime()

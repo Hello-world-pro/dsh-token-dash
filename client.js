@@ -20,6 +20,13 @@ window.__ModuleLoader__.load({
     const fmtMoney = (value) => `¥${Number(value ?? 0).toFixed(2)}`
     const fmtM = (value) => `${(Number(value ?? 0) / 1e6).toFixed(2)}M`
     const fmtPct = (value) => `${(Number(value ?? 0) * 100).toFixed(1)}%`
+    const fmtAgo = (ts) => {
+      if (!Number.isFinite(ts)) return '加载中'
+      const seconds = Math.max(0, Math.round((Date.now() - ts) / 1000))
+      if (seconds < 60) return '刚刚'
+      if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`
+      return `${Math.floor(seconds / 3600)} 小时前`
+    }
 
     async function getJson(path) {
       const res = await fetch(`${API}${path}`, { headers: { accept: 'application/json' } })
@@ -140,14 +147,18 @@ window.__ModuleLoader__.load({
       const [error, setError] = useState(false)
       const [refreshMs, setRefreshMs] = useState(60000)
       const [view, setView] = useState('dashboard')
+      const [refreshing, setRefreshing] = useState(false)
 
       const load = useCallback(async () => {
+        setRefreshing(true)
         try {
           const data = await getJson('/summary')
           setSummary(data)
           setError(false)
         } catch {
           setError(true)
+        } finally {
+          setRefreshing(false)
         }
       }, [])
 
@@ -171,7 +182,7 @@ window.__ModuleLoader__.load({
       }
       const percent = summary?.budget?.state === 'unset' ? '设置预算' : fmtPct(summary?.budget?.percent)
       const monthTokens = fmtM(summary?.tokens?.total)
-      const balanceHidden = summary?.balance?.status === 'hidden'
+      const balanceHidden = summary?.showBalance === false || summary?.balance?.status === 'hidden'
       return h(
         React.Fragment,
         null,
@@ -202,6 +213,7 @@ window.__ModuleLoader__.load({
               summary,
               error,
               view,
+              refreshing,
               onView: setView,
               onRefresh: load,
               onClose: () => setOpen(false),
@@ -213,7 +225,7 @@ window.__ModuleLoader__.load({
     function BudgetCard({ summary }) {
       const budget = summary?.budget ?? {}
       const pct = budget.state === 'unset' ? 0 : Math.min(1, budget.percent ?? 0)
-      const balanceHidden = summary?.balance?.status === 'hidden'
+      const balanceHidden = summary?.showBalance === false || summary?.balance?.status === 'hidden'
       return h(
         'div',
         { style: styles.card },
@@ -227,7 +239,7 @@ window.__ModuleLoader__.load({
           h('div', null, h('div', { style: styles.muted }, '剩余'), h('b', { style: styles.num }, fmtMoney(budget.remaining))),
           balanceHidden ? null : h('div', null, h('div', { style: styles.muted }, '余额'), h(BalanceText, { balance: summary?.balance })),
         ),
-        h('div', { style: { ...styles.muted, marginTop: 8 } }, '估算口径 / 1 分钟前刷新'),
+        h('div', { style: { ...styles.muted, marginTop: 8 } }, `估算口径 / ${fmtAgo(summary?.updatedAt)}刷新`),
       )
     }
 
@@ -247,7 +259,7 @@ window.__ModuleLoader__.load({
               h(
                 'tr',
                 { key: model.name },
-                h('td', { style: styles.td }, model.name),
+                h('td', { style: styles.td }, model.displayName ?? model.name),
                 h('td', { style: styles.tdRight }, fmtPct(model.share)),
                 h('td', { style: { ...styles.tdRight, fontWeight: 600 } }, fmtMoney(model.cost)),
               ),
@@ -274,7 +286,7 @@ window.__ModuleLoader__.load({
               h(
                 'tr',
                 { key: model.name },
-                h('td', { style: styles.td }, model.name),
+                h('td', { style: styles.td }, model.displayName ?? model.name),
                 h('td', { style: styles.tdRight }, model.requests),
                 h('td', { style: styles.tdRight }, fmtM(model.tokens.input)),
                 h('td', { style: styles.tdRight }, fmtM(model.tokens.cacheRead)),
@@ -287,7 +299,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function Panel({ summary, error, view, onView, onRefresh, onClose }) {
+    function Panel({ summary, error, view, refreshing, onView, onRefresh, onClose }) {
       if (view === 'settings') {
         return h(
           'div',
@@ -306,7 +318,11 @@ window.__ModuleLoader__.load({
           h(
             'span',
             null,
-            h('button', { style: styles.button, onClick: onRefresh }, '刷新'),
+            h(
+              'button',
+              { style: { ...styles.button, opacity: refreshing ? 0.6 : 1 }, disabled: refreshing, onClick: onRefresh },
+              refreshing ? '刷新中…' : '刷新',
+            ),
             h('button', { style: { ...styles.button, marginLeft: 8 }, onClick: () => onView('settings') }, '设置'),
             h('button', { style: { ...styles.button, marginLeft: 8 }, onClick: onClose }, '关闭'),
           ),

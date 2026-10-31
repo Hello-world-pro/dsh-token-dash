@@ -100,7 +100,7 @@ async function glm(ctx) {
 }
 
 export async function readBalance(ctx, prefs) {
-  if (!prefs.showBalance) return result('unknown', 'hidden')
+  if (prefs.showBalance === false) return result('unknown', 'hidden')
   return (
     (await deepseekAccount(ctx, prefs)) ??
     (await deepseekKey(ctx)) ??
