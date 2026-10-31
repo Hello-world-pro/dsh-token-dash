@@ -1,0 +1,62 @@
+{
+  "name": "dsh-token-dash",
+  "version": "0.1.0",
+  "description": "DSH 底栏 Token 看板：月度预算、模型费用/用量、账户余额与官方 usage 入口。",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "src",
+    "locale",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "AGENTS.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "token",
+    "usage",
+    "budget"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spartawhy117/dsh-token-dash.git"
+  },
+  "homepage": "https://github.com/spartawhy117/dsh-token-dash#readme",
+  "bugs": {
+    "url": "https://github.com/spartawhy117/dsh-token-dash/issues"
+  },
+  "scripts": {
+    "test": "node --test test/unit/*.test.mjs",
+    "e2e": "node scripts/e2e.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
+    }
+  },
+  "devDependencies": {
+    "playwright": "1.64.1"
+  }
+}

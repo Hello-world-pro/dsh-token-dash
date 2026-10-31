@@ -1,0 +1,74 @@
+# dsh-token-dash 项目规则
+
+> 面向 AI agent 与维护者。本仓库是 DSH 插件代码仓，与 `Context-Engineer` 文档仓分离；规则以本文件为准。
+
+## 构建与测试
+
+- 包管理器：pnpm；Node `^22.19.0 || >=24.0.0`；纯 ESM。
+- 构建：`tsdown` 双入口（`src/index.ts`、`src/client/index.tsx`），`tsc` 产出 `.d.ts`；所有 `@deepseek-ai/dsh-*` 设为 external，禁止打进产物。
+- 不提交 `lib/`；`prepublishOnly` 必须跑 `build + test`。
+
+```bash
+pnpm build        # tsdown + tsc
+pnpm test         # L1：node --test
+pnpm e2e:host     # L2：临时 DSH_HOME + 路由断言
+pnpm e2e:ui       # L3：Playwright
+pnpm pack:check   # npm pack 白名单与体积检查
+```
+
+## 临时目录
+
+- 统一使用仓库根 `.tmp/`，禁止在仓库根或 `src/` 下创建临时文件。
+- 子目录固定：`.tmp/dsh-home`（隔离 DSH_HOME）、`.tmp/pack`（tgz）、`.tmp/e2e`（截图 / 日志 / summary）。
+- 可用环境变量 `TOKEN_DASH_TMP` 覆盖；E2E 默认 teardown 清理，`--keep` 保留现场。
+- 测试工具脚本放 `scripts/`，本地与 CI 复用，不写进 `tests/`。
+
+## Git 管理边界
+
+### 进入版本管理
+
+| 类别 | 文件 |
+|---|---|
+| 包与配置 | `package.json`、`pnpm-lock.yaml`、`tsconfig.json`、`tsdown.config.ts`、`playwright.config.ts`、`cordis.patch.yml`、`.gitignore` |
+| 源码 | `src/**` |
+| 文案资源 | `locale/**`、`icon.svg` |
+| 测试脚本 | `tests/unit/**`、`tests/e2e/**/*.spec.ts`、`tests/e2e/fixtures/**`（仅合成数据） |
+| 工具脚本 | `scripts/**` |
+| 工程与发布 | `.github/workflows/**`、`README.md`、`LICENSE`、`AGENTS.md`、`CHANGELOG.md` |
+| 文档 | `docs/**`（如有） |
+
+### 不进入版本管理
+
+| 类别 | 文件 |
+|---|---|
+| 依赖与产物 | `node_modules/`、`lib/`、`dist/`、`build/` |
+| 临时目录 | `.tmp/`、`artifacts/`、`coverage/`、`playwright-report/`、`test-results/` |
+| 打包产物 | `*.tgz`、`*.tar.gz` |
+| 日志与缓存 | `*.log`、`.cache/` |
+| 敏感信息 | `.env`、`.env.*`、`*.pem`、`*.key`、`.credentials*` |
+| 系统与编辑器 | `.DS_Store`、`Thumbs.db`、`.vscode/` |
+
+规则：
+
+1. E2E **测试脚本与合成 fixture 必须入库**；截图、日志、报告、trace 一律忽略。
+2. 真实 `$DSH_HOME/sessions`、真实会话 JSONL、任何凭证**永不入库**。
+3. `pnpm-lock.yaml` 必须提交，保证可复现构建。
+4. 提交前至少跑 `pnpm test` 与 `pnpm pack:check`。
+
+## 发布
+
+- AI 只准备到“可发布”，不执行 `npm publish`、不推 tag；发布由用户明确授权。
+- npm 包只含 `lib` / `cordis.patch.yml` / `locale` / `README.md` / `LICENSE`。
+- 发布流程见 `Context-Engineer/docs/checklist/active/dsh/token-dash-release-checklist.md`。
+
+## 安全
+
+- 不读取 `~/.dsh/.credentials.yaml`；凭据只经宿主 `ctx.credentials.resolve(...)`。
+- 余额查询仅限 DeepSeek / Kimi / GLM 官方接口；第三方显示“第三方不支持”且不请求。
+- 密钥、cookie、token 不得出现在源码、日志、fixture 或提交信息中。
+
+## 变更纪律
+
+- 先更新 plan / checklist，再改代码；改动范围以施工稿声明为准。
+- 不顺手改边界外文件；需要越界时先更新文档并重新确认。
+- 新增依赖前说明理由；运行时依赖保持最少（当前仅 `zod`）。

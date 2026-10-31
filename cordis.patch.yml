@@ -1,0 +1,5 @@
+# dsh-token-dash bundle：底栏 Token 看板 + 设置页。
+- insert:
+    - id: dsh-token-dash
+      name: 'dsh-token-dash'
+      config: {}

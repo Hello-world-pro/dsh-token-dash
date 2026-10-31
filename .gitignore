@@ -1,0 +1,30 @@
+# dependencies / build output
+node_modules/
+lib/
+dist/
+build/
+
+# temp & test artifacts
+.tmp/
+artifacts/
+coverage/
+playwright-report/
+test-results/
+*.tgz
+*.tar.gz
+
+# logs & cache
+*.log
+.cache/
+
+# secrets
+.env
+.env.*
+*.pem
+*.key
+.credentials*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
