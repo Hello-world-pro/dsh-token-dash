@@ -132,7 +132,7 @@ try {
   const pill = page.locator('[data-testid=token-dash-pill]')
   await pill.waitFor({ timeout: 20000 })
   assert.ok(await pill.isVisible(), 'home pill visible')
-  assert.match(await pill.innerText(), /\[非订阅\]/)
+  assert.match(await pill.innerText(), /\[API\]/)
 
   const summaryPattern = '**/token-dash/api/summary*'
   let currentSummary = baseSummary
@@ -211,7 +211,7 @@ try {
   currentSummary = summaryOf([], [], null)
   await refresh()
   assert.match(await panel.innerText(), /未检测到已配置供应商/)
-  assert.match(await pill.innerText(), /\[非订阅\]/)
+  assert.match(await pill.innerText(), /\[API\]/)
   // #32：用量表空态保留表格结构，数值显示 0
   assert.ok(!(await panel.innerText()).includes('本月暂无消耗'))
   assert.match(await panel.innerText(), /0\.00M/)
@@ -228,8 +228,8 @@ try {
   assert.ok(!(await settings.innerText()).includes('清空日志'))
   assert.ok(!(await settings.innerText()).includes('本月 Token'))
   assert.equal(await settings.locator('input[type=text]').count(), 2)
-  assert.equal(await settings.locator('select').count(), 4)
-  assert.equal(await settings.locator('option[value=hide]').count(), 4)
+  assert.equal(await settings.locator('select').count(), 2)
+  assert.equal(await settings.locator('option[value=hide]').count(), 2)
   assert.equal(await settings.locator('[role=radiogroup] button').count(), 3)
   await page.screenshot({ path: join(tmpRoot, 'e2e', 'settings.png'), fullPage: true })
   assert.equal(await settings.getByRole('link').count(), 5)

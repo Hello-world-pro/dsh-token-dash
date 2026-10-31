@@ -276,8 +276,8 @@ window.__ModuleLoader__.load({
 
       const providers = summary?.providers ?? []
       const current = providers.find((provider) => provider.id === summary?.currentProviderId) ?? providers[0]
-      // #36 定案：徽标 [非订阅]/[订阅]，不显示 provider 名（hover title 与 aria-label 兜底）
-      let prefix = '[非订阅]'
+      // #36/#38 定案：徽标 [API]/[订阅]（词条统一），不显示 provider 名（hover title 与 aria-label 兜底）
+      let prefix = '[API]'
       let bodyNodes = [h('span', { key: 'unknown' }, '--')]
       let ariaText = '按量 API'
       if (current?.kind === 'subscription') {
@@ -329,28 +329,26 @@ window.__ModuleLoader__.load({
       const budget = provider.budget
       const hasBudget = budget !== undefined && budget.state !== 'unset'
       const color = budgetColor(budget?.state)
+      // #37：单行紧凑式（框线图）——名称 + 预算段（#33 总额度并入）+ 今日 + 余额，第二行进度条
       return h('div', { 'data-testid': `token-dash-api-card-${provider.id}`, style: styles.card },
         h('div', { style: styles.row },
           h('b', { style: styles.nameEllipsis, title: provider.name }, provider.name),
-          hasBudget
-            ? h('span', { 'data-testid': `token-dash-budget-${provider.id}`, style: { fontWeight: 700, color } }, `预算 ${fmtRatio(budget.percent)}`)
-            : h('span', { style: styles.muted }, '未设置预算')),
-        // #33：大字显示已用 / 总预算额度
-        h('div', { 'data-testid': `token-dash-budget-amount-${provider.id}`, style: { fontSize: 20, fontWeight: 700, marginTop: 4 } },
-          hasBudget
-            ? `${fmtMoney(budget.used, provider.currency)} / ${fmtMoney(budget.amount, provider.currency)}`
-            : fmtMoney(provider.usage?.monthCost, provider.currency)),
-        h('div', { style: styles.bar },
+          h('span', { style: styles.rowStart },
+            hasBudget
+              ? h('span', { 'data-testid': `token-dash-budget-${provider.id}` },
+                  '预算 ', h('b', { style: { color } }, fmtMoney(budget.used, provider.currency)),
+                  ` / ${fmtMoney(budget.amount, provider.currency)} · `,
+                  h('b', { style: { color } }, fmtRatio(budget.percent)))
+              : h('span', { style: styles.muted }, '预算 未设置'),
+            h('span', null, `今日 ${fmtMoney(provider.usage?.todayCost, provider.currency)}`),
+            h('span', null, `余额 ${balanceText(provider, true) ?? '--'}`))),
+        h('div', { style: { ...styles.bar, marginTop: 6, marginBottom: 0 } },
           h('div', {
             style: {
               ...(hasBudget ? { background: color } : styles.barNeutral),
               width: hasBudget ? `${Math.min(100, (budget.percent ?? 0) * 100)}%` : '100%',
             },
-          })),
-        // #31：余额列恒显示（账户余额开关只控制 P1 pill）
-        h('div', { style: styles.cols },
-          h('div', { style: { textAlign: 'left' } }, h('div', { style: styles.muted }, '今日'), h('b', { style: styles.num }, fmtMoney(provider.usage?.todayCost, provider.currency))),
-          h('div', { style: { textAlign: 'right' } }, h('div', { style: styles.muted }, '余额'), h('b', { style: styles.num }, balanceText(provider, true) ?? '--'))))
+          })))
     }
 
     function SubscriptionCard({ provider }) {
@@ -648,13 +646,12 @@ window.__ModuleLoader__.load({
         h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, title), action),
         body)
 
+      // #39：API 卡删除计费模式下拉——单行：provider 名 + 月度预算 + 输入框 + 币种（模式依赖自动侦测）
       const apiCards = api.map((provider) => h('div', { key: provider.id, style: cardStyle },
         h('div', { style: styles.row },
           h('b', { style: styles.nameEllipsis, title: provider.name }, provider.name),
-          modeSelect(provider, prefs, savePrefs)),
-        h('div', { style: styles.row },
-          h('span', { style: styles.muted }, '月度预算'),
           h('span', { style: styles.rowStart },
+            h('span', { style: styles.muted }, '月度预算'),
             h('input', {
               type: 'text', inputMode: 'decimal', 'aria-label': `${provider.name} 月度预算`,
               value: budgetText[provider.id] ?? (provider.budget?.amount ? String(provider.budget.amount) : ''),
