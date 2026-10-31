@@ -107,6 +107,13 @@ window.__ModuleLoader__.load({
       const [summary, setSummary] = useState(null)
       const [open, setOpen] = useState(false)
       const [error, setError] = useState(false)
+      const [refreshMs, setRefreshMs] = useState(60000)
+
+      useEffect(() => {
+        getJson('/prefs')
+          .then((prefs) => setRefreshMs(prefs.refreshMs ?? 60000))
+          .catch(() => {})
+      }, [])
 
       useEffect(() => {
         let alive = true
@@ -120,12 +127,12 @@ window.__ModuleLoader__.load({
             .catch(() => alive && setError(true))
         }
         load()
-        const timer = setInterval(load, 60000)
+        const timer = setInterval(load, refreshMs)
         return () => {
           alive = false
           clearInterval(timer)
         }
-      }, [])
+      }, [refreshMs])
 
       const percent = summary?.budget?.state === 'unset' ? '设置预算' : fmtPct(summary?.budget?.percent)
       const monthTokens = fmtM(summary?.tokens?.total)
