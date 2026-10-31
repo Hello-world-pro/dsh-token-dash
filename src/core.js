@@ -258,13 +258,15 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
     }
   }
 
-  // #44：已配置 provider 本月无真实模型行时补默认模型行（数值 0）——"配置即可见"，
-  // 与严格本月口径兼容（不引入跨月数据）；真实行优先不重复补
+  // #44/#45：已配置 provider 本月无真实模型行时补默认模型行（数值 0）——"配置即可见"，
+  // 与严格本月口径兼容（不引入跨月数据）；真实行优先不重复补；
+  // '-' 占位（中转无默认模型）在该 provider 出现任何真实模型行后不再补
   for (const info of providerInfo) {
     const id = normalizeProvider(info.id ?? info.provider)
     if (id === 'unknown' || hidden.has(id)) continue
     const fallbackModel = DEFAULT_MODELS[id]
     if (fallbackModel === undefined) continue
+    if (fallbackModel === '-' && [...modelsMap.keys()].some((k) => k.startsWith(`${id}:`))) continue
     const key = `${id}:${fallbackModel}`
     if (modelsMap.has(key)) continue
     const provider = providerMap.get(id)
