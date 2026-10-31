@@ -87,8 +87,9 @@ window.__ModuleLoader__.load({
         padding: '0 3px',
         borderRadius: 4,
         background: 'rgba(77,141,255,.16)',
+        color: 'var(--dsw-alias-state-business-primary, #6ea8ff)',
         fontSize: 10,
-        opacity: 0.9,
+        opacity: 1,
       },
       sep: { width: 1, height: 12, background: 'currentColor', opacity: 0.2 },
       num: { fontWeight: 600 },
@@ -151,7 +152,7 @@ window.__ModuleLoader__.load({
       button: {
         border: '1px solid rgba(77,141,255,.32)',
         background: 'rgba(77,141,255,.16)',
-        color: 'inherit',
+        color: 'var(--dsw-alias-state-business-primary, #6ea8ff)',
         borderRadius: 6,
         padding: '2px 8px',
         cursor: 'pointer',
@@ -279,7 +280,6 @@ window.__ModuleLoader__.load({
           {
             style: {
               ...styles.pillWrap,
-              order: placement === 'input' ? 2 : undefined,
               marginLeft: 8,
             },
           },
@@ -646,8 +646,8 @@ window.__ModuleLoader__.load({
         slots.inject('conversation.hero.agentPreset', () =>
           slots.register({ name: 'conversation.hero.agentPreset', id: 'token-dash-home', order: 10 }, HomePill),
         )
-        slots.inject('conversation.input.right', () =>
-          slots.register({ name: 'conversation.input.right', id: 'token-dash-input', order: 10 }, InputPill),
+        slots.inject('conversation.composer.dock', () =>
+          slots.register({ name: 'conversation.composer.dock', id: 'token-dash-input', order: -1 }, InputPill),
         )
       },
     }
