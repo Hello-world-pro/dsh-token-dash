@@ -9,6 +9,7 @@ import {
   normalizeModel,
   normalizeProvider,
   providerCurrency,
+  providerFromModel,
   providerLabel,
 } from './providers.js'
 
@@ -192,53 +193,68 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
     })
   }
 
+  // #41：models 跨月累计（用量/费用明细 = 历史累计估算）；provider.usage 与预算口径保持当月；
+  // unknown 行按模型名前缀视图层归因（不改 daily.json），无匹配前缀的保持不可见
+  const accumulate = (providerId, modelId, row, isCurrentMonth, isToday) => {
+    const key = `${providerId}:${modelId}`
+    const entry = modelsMap.get(key) ?? {
+      name: modelId,
+      modelId,
+      providerId,
+      providerName: providerLabel(providerId),
+      displayName: modelLabel(modelId),
+      kind: providerMap.get(providerId)?.kind === 'subscription' ? 'subscription' : 'api',
+      currency: providerMap.get(providerId)?.currency ?? providerCurrency(providerId),
+      priced: true,
+      approximate: false,
+      requests: 0,
+      input: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+      output: 0,
+      cost: 0,
+    }
+    entry.requests += num(row.requests)
+    entry.input += num(row.input)
+    entry.cacheRead += num(row.cacheRead)
+    entry.cacheWrite += num(row.cacheWrite)
+    entry.output += num(row.output)
+    entry.cost += num(row.cost)
+    if (row.priced === false) entry.priced = false
+    const price = priceFor(providerId, modelId, now)
+    if (price?.approximate === true) entry.approximate = true
+    modelsMap.set(key, entry)
+    if (isCurrentMonth === false) return
+    const provider = providerMap.get(providerId) ?? providerEmpty(providerId)
+    providerMap.set(providerId, provider)
+    const tokens = num(row.input) + num(row.cacheRead) + num(row.cacheWrite) + num(row.output)
+    provider.usage.monthTokens += tokens
+    provider.usage.monthCost += num(row.cost)
+    provider.usage.requests += num(row.requests)
+    if (isToday) {
+      provider.usage.todayTokens += tokens
+      provider.usage.todayCost += num(row.cost)
+    }
+    provider.models.push(entry.modelId)
+  }
+
   for (const [dayKey, bucket] of Object.entries(state.days ?? {})) {
-    if (!dayKey.startsWith(`${month}-`)) continue
+    const isCurrentMonth = dayKey.startsWith(`${month}-`)
+    const isToday = dayKey === todayKey
     const providers = bucket.providers ?? { unknown: { models: bucket.models ?? {} } }
     for (const [rawProvider, providerBucket] of Object.entries(providers)) {
       const providerId = normalizeProvider(rawProvider)
-      if (providerId === 'unknown' || hidden.has(providerId)) continue
-      const provider = providerMap.get(providerId) ?? providerEmpty(providerId)
-      providerMap.set(providerId, provider)
+      if (providerId === 'unknown') {
+        for (const [rawModel, row] of Object.entries(providerBucket.models ?? {})) {
+          const owner = providerFromModel(rawModel)
+          if (owner === null || hidden.has(owner)) continue
+          accumulate(owner, normalizeModel(rawModel), row, isCurrentMonth, isToday)
+        }
+        continue
+      }
+      if (hidden.has(providerId)) continue
       for (const [rawModel, row] of Object.entries(providerBucket.models ?? {})) {
-        const modelId = normalizeModel(rawModel)
-        const key = `${providerId}:${modelId}`
-        const entry = modelsMap.get(key) ?? {
-          name: modelId,
-          modelId,
-          providerId,
-          providerName: providerLabel(providerId),
-          displayName: modelLabel(modelId),
-          kind: provider.kind,
-          currency: provider.currency,
-          priced: true,
-          approximate: false,
-          requests: 0,
-          input: 0,
-          cacheRead: 0,
-          cacheWrite: 0,
-          output: 0,
-          cost: 0,
-        }
-        entry.requests += num(row.requests)
-        entry.input += num(row.input)
-        entry.cacheRead += num(row.cacheRead)
-        entry.cacheWrite += num(row.cacheWrite)
-        entry.output += num(row.output)
-        entry.cost += num(row.cost)
-        if (row.priced === false) entry.priced = false
-        const price = priceFor(providerId, modelId, now)
-        if (price?.approximate === true) entry.approximate = true
-        modelsMap.set(key, entry)
-        const tokens = num(row.input) + num(row.cacheRead) + num(row.cacheWrite) + num(row.output)
-        provider.usage.monthTokens += tokens
-        provider.usage.monthCost += num(row.cost)
-        provider.usage.requests += num(row.requests)
-        if (dayKey === todayKey) {
-          provider.usage.todayTokens += tokens
-          provider.usage.todayCost += num(row.cost)
-        }
-        provider.models.push(entry.modelId)
+        accumulate(providerId, normalizeModel(rawModel), row, isCurrentMonth, isToday)
       }
     }
   }

@@ -179,3 +179,26 @@ test('provider 排序：当前 provider 置顶，其余按今日消耗降序', (
   assert.equal(summary.providers[0].id, 'deepseek-official')
   assert.equal(summary.providers[1].id, 'zhipu')
 })
+
+test('#41 unknown 行按模型名前缀归因，且跨月累计进用量/费用明细', () => {
+  const state = emptyState()
+  // 上月（10 月）unknown 数据：老版本插件无 provider 标注
+  const lastMonth = new Date(2026, 8, 30, 12, 0, 0).getTime()
+  addRecord(state, { ts: lastMonth, provider: 'unknown', model: 'deepseek-flash', input: 500_000, cacheRead: 0, cacheWrite: 0, output: 10_000 })
+  // 本月（11 月 1 日）正常记录
+  const now = new Date(2026, 10, 1, 12, 0, 0).getTime()
+  addRecord(state, { ts: now, provider: 'deepseek-account', model: 'deepseek-flash', input: 100_000, cacheRead: 0, cacheWrite: 0, output: 1_000 })
+  const summary = buildSummary(state, { budgets: {} }, now, [])
+  const rows = summary.breakdown.models.filter((item) => item.modelId === 'deepseek-flash')
+  // 归因：unknown + deepseek-* → deepseek-official；跨月累计为一条
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].providerId, 'deepseek-official')
+  assert.ok(rows[0].requests >= 2, `requests=${rows[0].requests}`)
+  // provider.usage 保持当月口径（10 月消耗不计入 11 月的 today/month）
+  const deepseek = summary.providers.find((item) => item.id === 'deepseek-official')
+  assert.equal(deepseek.usage.todayTokens, 101_000)
+  // 无前缀的 unknown 模型保持不可见
+  addRecord(state, { ts: now, provider: 'unknown', model: 'mystery-model', input: 1000, cacheRead: 0, cacheWrite: 0, output: 1 })
+  const summary2 = buildSummary(state, { budgets: {} }, now, [])
+  assert.equal(summary2.breakdown.models.some((item) => item.modelId === 'mystery-model'), false)
+})

@@ -69,6 +69,23 @@ export function providerKind(raw, mode) {
   return canBeSubscription(id) ? 'subscription' : 'api'
 }
 
+/** #41：模型名前缀 → provider 归因（DSH 会话事件无 provider 标注时，unknown 行按此兜底归属）。 */
+const MODEL_OWNER_RULES = [
+  [/^deepseek/, 'deepseek-official'],
+  [/^glm/, 'zhipu'],
+  [/^kimi|^moonshot/, 'moonshot'],
+  [/^qwen/, 'qwen'],
+]
+
+export function providerFromModel(modelId) {
+  const id = normalizeModel(modelId)
+  if (id === 'unknown') return null
+  for (const [pattern, owner] of MODEL_OWNER_RULES) {
+    if (pattern.test(id)) return owner
+  }
+  return null
+}
+
 export function modelLabel(raw) {
   const id = normalizeModel(raw)
   const labels = {
