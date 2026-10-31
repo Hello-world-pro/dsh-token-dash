@@ -125,6 +125,28 @@ try {
     { timeout: 8000 },
   )
   assert.match(await settings.innerText(), /月度预算/)
+  const budgetInput = settings.locator('input[type=text]').first()
+  await budgetInput.fill('123456.78')
+  await budgetInput.press('Enter')
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=token-dash-settings]')?.innerText.includes('已保存'),
+    null,
+    { timeout: 8000 },
+  )
+  assert.equal(await budgetInput.inputValue(), '123456.78')
+
+  await budgetInput.fill('500.50')
+  await settings.getByRole('button', { name: '← 返回' }).click()
+  await panel.waitFor({ timeout: 8000 })
+  await panel.getByRole('button', { name: '设置' }).click()
+  await settings.waitFor({ timeout: 8000 })
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=token-dash-settings] input[type=text]')?.value === '500.5',
+    null,
+    { timeout: 8000 },
+  )
+  assert.equal(await settings.getByRole('button', { name: '检查更新' }).count(), 1)
+  assert.equal(await settings.getByRole('button', { name: '保存' }).count(), 0)
   await settings.getByRole('button', { name: '← 返回' }).click()
   await panel.waitFor({ timeout: 8000 })
   await panel.getByRole('button', { name: '关闭' }).click()

@@ -2,6 +2,7 @@
  * dsh-token-dash — host 半：采集、聚合、持久化、同源查询接口。
  */
 
+import { readFileSync } from 'node:fs'
 import { buildSummary, emptyState, num } from './src/core.js'
 import { ingest, backfill } from './src/collect.js'
 import { createFlusher, dataDir, loadPrefs, loadState, saveJson } from './src/store.js'
@@ -10,6 +11,24 @@ import { readBalance } from './src/balance.js'
 export const name = 'dsh-token-dash'
 
 const ROUTE_PREFIX = '/token-dash/api'
+const CURRENT_VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
+let updateCache = { at: 0, data: null }
+
+function versionParts(value) {
+  return String(value)
+    .split('.')
+    .map((part) => Number.parseInt(part, 10) || 0)
+}
+
+function isNewer(latest, current) {
+  const left = versionParts(latest)
+  const right = versionParts(current)
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    const diff = (left[index] ?? 0) - (right[index] ?? 0)
+    if (diff !== 0) return diff > 0
+  }
+  return false
+}
 
 function json(res, status, body) {
   res.writeHead(status, {
@@ -134,6 +153,34 @@ export function apply(ctx) {
           if (url.pathname === `${ROUTE_PREFIX}/summary` && req.method === 'GET') {
             const balance = await readBalance(scoped, prefs)
             json(res, 200, { ok: true, data: buildSummary(state, prefs, Date.now(), balance) })
+            return
+          }
+          if (url.pathname === `${ROUTE_PREFIX}/update` && req.method === 'GET') {
+            if (updateCache.data !== null && Date.now() - updateCache.at < 300000) {
+              json(res, 200, { ok: true, data: updateCache.data })
+              return
+            }
+            const response = await fetch('https://registry.npmjs.org/dsh-token-dash/latest', {
+              headers: { accept: 'application/json' },
+              signal: AbortSignal.timeout(5000),
+            })
+            if (response.status === 404) {
+              const data = { current: CURRENT_VERSION, latest: null, hasUpdate: false, published: false }
+              updateCache = { at: Date.now(), data }
+              json(res, 200, { ok: true, data })
+              return
+            }
+            if (!response.ok) throw new Error(`registry-${response.status}`)
+            const meta = await response.json()
+            if (typeof meta?.version !== 'string') throw new Error('invalid-registry-response')
+            const data = {
+              current: CURRENT_VERSION,
+              latest: meta.version,
+              hasUpdate: isNewer(meta.version, CURRENT_VERSION),
+              published: true,
+            }
+            updateCache = { at: Date.now(), data }
+            json(res, 200, { ok: true, data })
             return
           }
           if (url.pathname === `${ROUTE_PREFIX}/prefs` && req.method === 'GET') {

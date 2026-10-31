@@ -299,11 +299,76 @@ window.__ModuleLoader__.load({
 
     function Settings({ onBack, onClose }) {
       const [prefs, setPrefs] = useState(null)
+      const [budgetText, setBudgetText] = useState('')
       const [status, setStatus] = useState('')
+
+      useEffect(() => {
+        getJson('/prefs')
+          .then((data) => {
+            setPrefs(data)
+            setBudgetText(String(data.budget.amount))
+          })
+          .catch(() => setStatus('读取失败'))
+      }, [])
+
+      async function write(next) {
+        const saved = await putPrefs(next)
+        setPrefs(saved)
+        return saved
+      }
+
+      async function saveBudget() {
+        if (prefs === null) return true
+        const raw = String(budgetText).replace(/[\u00a5,\s]/g, '')
+        const amount = Number(raw)
+        if (raw === '' || !Number.isFinite(amount) || amount < 0 || amount > 9999999.99) {
+          setStatus('请输入 0 ~ 9,999,999.99')
+          return false
+        }
+        const next = { ...prefs, budget: { ...prefs.budget, amount: Math.round(amount * 100) / 100 } }
+        try {
+          const saved = await write(next)
+          setBudgetText(String(saved.budget.amount))
+          setStatus('已保存')
+          setTimeout(() => setStatus(''), 1500)
+          return true
+        } catch (error) {
+          setStatus(`保存失败：${error.message}`)
+          return false
+        }
+      }
+
+      function savePatch(patch) {
+        if (prefs === null) return
+        const next = { ...prefs, ...patch }
+        setPrefs(next)
+        write(next)
+          .then(() => {
+            setStatus('已保存')
+            setTimeout(() => setStatus(''), 1500)
+          })
+          .catch((error) => setStatus(`保存失败：${error.message}`))
+      }
+
+      function back() {
+        void saveBudget()
+        onBack()
+      }
+
+      async function checkUpdate() {
+        setStatus('检查中…')
+        try {
+          const data = await getJson('/update')
+          setStatus(data.published === false ? '未发布' : data.hasUpdate ? `发现 ${data.latest}` : '已是最新')
+        } catch {
+          setStatus('检查失败')
+        }
+      }
+
       const header = h(
         'div',
         { style: styles.row },
-        h('button', { style: styles.button, onClick: onBack }, '← 返回'),
+        h('button', { style: styles.button, onClick: back }, '← 返回'),
         h(
           'div',
           { style: { display: 'flex', alignItems: 'center', gap: 8 } },
@@ -311,21 +376,9 @@ window.__ModuleLoader__.load({
           h('button', { style: styles.button, onClick: onClose }, '关闭'),
         ),
       )
-      useEffect(() => {
-        getJson('/prefs').then(setPrefs).catch(() => setStatus('读取失败'))
-      }, [])
+
       if (prefs === null) {
         return h('div', { 'data-testid': 'token-dash-settings', style: { fontSize: 12, display: 'grid', gap: 10 } }, header, 'Token 看板加载中…')
-      }
-
-      const save = () => {
-        putPrefs(prefs)
-          .then((next) => {
-            setPrefs(next)
-            setStatus('已保存')
-            setTimeout(() => setStatus(''), 1500)
-          })
-          .catch((error) => setStatus(`保存失败：${error.message}`))
       }
 
       return h(
@@ -337,12 +390,22 @@ window.__ModuleLoader__.load({
           { style: styles.row },
           h('span', null, '月度预算'),
           h('input', {
-            type: 'number',
-            min: 0,
-            step: 0.01,
-            value: prefs.budget.amount,
-            onChange: (event) => setPrefs({ ...prefs, budget: { ...prefs.budget, amount: Number(event.target.value) } }),
-            style: { width: 120, textAlign: 'right' },
+            type: 'text',
+            inputMode: 'decimal',
+            value: budgetText,
+            onChange: (event) => setBudgetText(event.target.value),
+            onBlur: saveBudget,
+            onKeyDown: (event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                event.currentTarget.blur()
+              }
+              if (event.key === 'Escape') {
+                setBudgetText(String(prefs.budget.amount))
+                setStatus('')
+              }
+            },
+            style: { width: 160, textAlign: 'right' },
           }),
         ),
         h(
@@ -351,7 +414,10 @@ window.__ModuleLoader__.load({
           h('span', null, '刷新间隔'),
           h(
             'select',
-            { value: prefs.refreshMs, onChange: (event) => setPrefs({ ...prefs, refreshMs: Number(event.target.value) }) },
+            {
+              value: prefs.refreshMs,
+              onChange: (event) => savePatch({ refreshMs: Number(event.target.value) }),
+            },
             [30000, 60000, 300000].map((ms) => h('option', { key: ms, value: ms }, ms === 30000 ? '30 秒' : ms === 60000 ? '1 分钟' : '5 分钟')),
           ),
         ),
@@ -359,9 +425,18 @@ window.__ModuleLoader__.load({
           'label',
           { style: styles.row },
           h('span', null, '账户余额'),
-          h('input', { type: 'checkbox', checked: prefs.showBalance, onChange: (event) => setPrefs({ ...prefs, showBalance: event.target.checked }) }),
+          h('input', {
+            type: 'checkbox',
+            checked: prefs.showBalance,
+            onChange: (event) => savePatch({ showBalance: event.target.checked }),
+          }),
         ),
-        h('div', { style: styles.row }, h('span', { style: styles.muted }, `版本 0.1.0 ${status}`), h('button', { style: styles.button, onClick: save }, '保存')),
+        h(
+          'div',
+          { style: styles.row },
+          h('span', { style: styles.muted }, `版本 0.1.0 ${status}`),
+          h('button', { style: styles.button, onClick: checkUpdate }, '检查更新'),
+        ),
         h('div', { style: styles.muted }, '费用按内置官方峰谷价估算，仅供参考'),
       )
     }
