@@ -31,3 +31,13 @@ dsh plugin --profile web add link:D:/MyProjects/dsh-tokenDash
 - 只读本地会话 `usage`，不统计标题生成开销
 - 余额仅访问官方接口，凭据经宿主解析
 - 不做系统级悬浮窗，只在 DSH 窗口内渲染
+
+## 开发
+
+```bash
+npm test          # 单元测试
+npm run e2e       # 端到端（临时 DSH_HOME + web profile + Playwright）
+npm run logs -- --tail 50   # 查看插件日志
+```
+
+日志工具参数：`--module slot,adapter.*`（模块过滤，`*` 通配）、`--event mount`（事件子串）、`--home <dir>`（指定 DSH_HOME，默认 `~/.dsh`）、`--json`（原始 JSONL）。
