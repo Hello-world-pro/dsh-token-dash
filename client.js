@@ -374,7 +374,19 @@ window.__ModuleLoader__.load({
         list.push(model)
         groups.set(model.currency, list)
       }
-      if (groups.size === 0) return null
+      if (groups.size === 0) {
+        // #40：空态保留表格结构（对齐 #32 用量表空态口径），不再整体隐藏
+        return h('div', { 'data-testid': 'token-dash-cost-table', style: styles.card },
+          h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, 'API 费用明细（仅按量供应商）'), h('span', { style: styles.muted }, 'DSH 本机估算')),
+          h('div', { style: { ...styles.muted, marginTop: 8 } }, `CNY 合计 ${fmtMoney(0, 'CNY')}`),
+          h('div', { style: { overflowX: 'auto' } },
+            h('table', { style: styles.table },
+              h('thead', null, h('tr', null, h('th', { style: styles.th }, '模型'), h('th', { style: { ...styles.thRight, width: 64 } }, '占比'), h('th', { style: { ...styles.thRight, width: 96 } }, '费用'))),
+              h('tbody', null, h('tr', { key: 'empty' },
+                h('td', { style: styles.modelCell }, '—'),
+                h('td', { style: styles.tdRight }, fmtRatio(0)),
+                h('td', { style: styles.tdRight }, fmtMoney(0, 'CNY')))))))
+      }
       return h('div', { 'data-testid': 'token-dash-cost-table', style: styles.card },
         h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, 'API 费用明细（仅按量供应商）'), h('span', { style: styles.muted }, 'DSH 本机估算')),
         ...[...groups.entries()].flatMap(([currency, rows]) => [

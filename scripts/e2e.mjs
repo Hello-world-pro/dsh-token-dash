@@ -215,6 +215,9 @@ try {
   // #32：用量表空态保留表格结构，数值显示 0
   assert.ok(!(await panel.innerText()).includes('本月暂无消耗'))
   assert.match(await panel.innerText(), /0\.00M/)
+  // #40：费用明细空态同样保留表格结构
+  assert.match(await panel.innerText(), /API 费用明细/)
+  assert.match(await panel.innerText(), /CNY 合计 ¥0\.00/)
 
   currentSummary = baseSummary
   await refresh()
