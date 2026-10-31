@@ -132,7 +132,7 @@ try {
   const pill = page.locator('[data-testid=token-dash-pill]')
   await pill.waitFor({ timeout: 20000 })
   assert.ok(await pill.isVisible(), 'home pill visible')
-  assert.match(await pill.innerText(), /\[API\]/)
+  assert.match(await pill.innerText(), /\[非订阅\]/)
 
   const summaryPattern = '**/token-dash/api/summary*'
   let currentSummary = baseSummary
@@ -177,7 +177,9 @@ try {
 
   currentSummary = summaryOf(baseProviders, baseModels, 'openrouter')
   await refresh()
-  assert.match(await pill.innerText(), /OpenRouter/)
+  // #36：pill 不再显示 provider 名，改由 aria-label 兜底
+  assert.ok(!(await pill.innerText()).includes('OpenRouter'))
+  assert.match(await pill.getAttribute('aria-label'), /OpenRouter/)
   assert.match(await pill.innerText(), /\$/)
 
   currentSummary = summaryOf(baseProviders, baseModels, 'zhipu')
@@ -195,6 +197,12 @@ try {
   currentSummary = baseSummary
   await refresh()
 
+  // #35：点击浮层外部自动关闭（Esc 不做，关闭途径 = 按钮/外部点击）
+  await page.evaluate(() => document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })))
+  await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]') === null, null, { timeout: 5000 })
+  await jsClick(pill)
+  await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]') !== null, null, { timeout: 5000 })
+
   currentSummary = summaryOf([baseProviders[0]], [baseModels[0]], 'deepseek-official')
   await refresh()
   assert.equal(await page.locator('[data-testid^=token-dash-api-card-]').count(), 1)
@@ -203,7 +211,7 @@ try {
   currentSummary = summaryOf([], [], null)
   await refresh()
   assert.match(await panel.innerText(), /未检测到已配置供应商/)
-  assert.match(await pill.innerText(), /\[API\]/)
+  assert.match(await pill.innerText(), /\[非订阅\]/)
   // #32：用量表空态保留表格结构，数值显示 0
   assert.ok(!(await panel.innerText()).includes('本月暂无消耗'))
   assert.match(await panel.innerText(), /0\.00M/)

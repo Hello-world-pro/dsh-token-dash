@@ -71,9 +71,9 @@ window.__ModuleLoader__.load({
       pill: {
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 8,
+        gap: 6,
         height: 24,
-        padding: '0 10px',
+        padding: '0 8px',
         borderRadius: 999,
         cursor: 'pointer',
         maxWidth: '100%',
@@ -90,7 +90,7 @@ window.__ModuleLoader__.load({
         fontSize: 11, whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(0,0,0,.25)',
       },
       chevron: {
-        marginLeft: 6, padding: '0 3px', borderRadius: 4, background: 'rgba(77,141,255,.16)',
+        marginLeft: 2, padding: '0 1px', borderRadius: 4, background: 'rgba(77,141,255,.16)',
         color: 'var(--dsw-alias-state-business-primary, #6ea8ff)', fontSize: 10,
       },
       sep: { width: 1, height: 12, background: 'currentColor', opacity: 0.2 },
@@ -276,13 +276,13 @@ window.__ModuleLoader__.load({
 
       const providers = summary?.providers ?? []
       const current = providers.find((provider) => provider.id === summary?.currentProviderId) ?? providers[0]
-      let prefix = '[API]'
+      // #36 定案：徽标 [非订阅]/[订阅]，不显示 provider 名（hover title 与 aria-label 兜底）
+      let prefix = '[非订阅]'
       let bodyNodes = [h('span', { key: 'unknown' }, '--')]
       let ariaText = '按量 API'
       if (current?.kind === 'subscription') {
         prefix = '[订阅]'
         bodyNodes = [
-          h('span', { key: 'name', style: styles.nameEllipsis, title: current.name }, current.name),
           h('span', { key: 'plans' }, ...subscriptionNodes(current, true)),
         ]
         ariaText = `${current.name}，订阅，账户套餐，${subscriptionText(current)}`
@@ -291,7 +291,6 @@ window.__ModuleLoader__.load({
         const hasBudget = budget !== undefined && budget.state !== 'unset'
         const balance = balanceText(current, summary?.showBalance)
         bodyNodes = [
-          h('span', { key: 'name', style: styles.nameEllipsis, title: current.name }, current.name),
           h('span', { key: 'budget' }, '预算 ',
             hasBudget
               ? h('b', { style: { ...styles.num, color: budgetColor(budget.state) } }, fmtRatio(budget.percent))
@@ -301,6 +300,7 @@ window.__ModuleLoader__.load({
         ].filter(Boolean)
         ariaText = `${current.name}，按量 API，${hasBudget ? `预算已用 ${fmtRatio(budget.percent)}` : '预算未设置'}，今日 ${fmtMoney(current.usage?.todayCost, current.currency)}${balance === null ? '' : `，余额 ${balance}`}`
       }
+      const hoverTitle = `${current?.name ?? ''} · ${open ? '收起' : '展开'} Token 看板`
 
       // #30 三次定案 + 根因修复：Panel 必须渲染在 pillWrap 内部，
       // absolute 才以 pillWrap（position:relative）为锚——此前 Panel 是 pillWrap 的兄弟节点，
@@ -317,7 +317,7 @@ window.__ModuleLoader__.load({
           onKeyDown: (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle() } },
           role: 'button', tabIndex: 0, 'aria-expanded': open, 'aria-haspopup': 'dialog',
           'aria-label': `Token 看板：${ariaText}`,
-          title: open ? '收起 Token 看板' : '展开 Token 看板',
+          title: hoverTitle,
         }, h('span', { key: 'prefix', style: styles.num }, prefix), ...bodyNodes,
           h('span', { key: 'chevron', style: styles.chevron }, open ? '⌄' : '⌃')),
         open ? h(Panel, {
@@ -430,6 +430,19 @@ window.__ModuleLoader__.load({
       useEffect(() => {
         panelRef.current?.focus?.()
       }, [])
+
+      // #35：点击浮层外部关闭（Esc 按 D-15 修订不做）；命中 pill/hint 时交给 pill 的 toggle，不视为外部
+      useEffect(() => {
+        const onDown = (event) => {
+          const node = panelRef.current
+          if (node === null || node.contains(event.target)) return
+          const wrap = node.parentElement
+          if (wrap !== null && wrap.contains(event.target)) return
+          onClose()
+        }
+        document.addEventListener('mousedown', onDown)
+        return () => document.removeEventListener('mousedown', onDown)
+      }, [onClose])
 
       const panelProps = {
         ref: panelRef, tabIndex: -1, role: 'dialog', 'aria-label': 'Token 看板',
@@ -612,11 +625,17 @@ window.__ModuleLoader__.load({
         }
       }
 
+      // #34：状态提示放"关闭"左侧，固定宽度占位——出现/消失不改变标题栏布局，弹窗不 resize
+      const statusSlot = h('span', {
+        role: 'status', 'aria-live': 'polite',
+        style: { minWidth: 88, textAlign: 'right', fontSize: 11, opacity: 0.85, color: status?.error === true ? '#e05a5a' : undefined },
+      }, status?.text ?? '')
+
       const header = h('div', { style: styles.titleBar },
         h('div', { style: styles.rowStart },
           h('button', { style: styles.button, onClick: onBack }, '← 返回'),
           h('b', { style: styles.headerTitle }, 'Token 看板')),
-        h('button', { style: styles.button, onClick: onClose }, '关闭'))
+        h('span', { style: styles.rowStart }, statusSlot, h('button', { style: styles.button, onClick: onClose }, '关闭')))
 
       if (prefs === null) return h('div', { 'data-testid': 'token-dash-settings', style: { fontSize: 12, display: 'grid', gap: 10 } }, header, '加载中…')
 
@@ -666,7 +685,6 @@ window.__ModuleLoader__.load({
 
       return h('div', { 'data-testid': 'token-dash-settings', style: { fontSize: 12, display: 'grid', gap: 12 } },
         header,
-        status !== null ? h('div', { role: 'status', 'aria-live': 'polite', style: { ...styles.muted, color: status.error === true ? '#e05a5a' : undefined } }, status.text) : null,
         api.length > 0 ? section(`API 计费（已检测 ${api.length}）`, h('div', { style: { display: 'grid', gap: 8 } }, ...apiCards)) : null,
         subscriptions.length > 0 ? section(`订阅计费（已检测 ${subscriptions.length}）`,
           h('div', { style: cardStyle }, ...subscriptionRows),
