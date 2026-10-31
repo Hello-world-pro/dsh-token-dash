@@ -238,4 +238,36 @@ export async function readSubscriptions(ctx, prefs) {
   return out
 }
 
+/** #46：按 §2.5 adapter.* 事件表记侦测结果——只记状态与计数，不记 Key/响应体（脱敏约束）。 */
+export function logAdapterEvents(log, providers) {
+  const info = (module, event, meta) => log.info(module, event, meta)
+  for (const item of providers) {
+    if (item.id === 'deepseek-official') {
+      if (item.balance?.status === 'ok') info('adapter.deepseek', 'balance.ok', { amount: item.balance.amount })
+      else if (item.balance?.status === 'unconfigured') info('adapter.deepseek', 'balance.auth', {})
+      else if (item.balance !== undefined) info('adapter.deepseek', 'balance.error', { status: item.balance.status })
+      continue
+    }
+    if (item.id === 'zhipu' || item.id === 'moonshot') {
+      const module = item.id === 'zhipu' ? 'adapter.glm' : 'adapter.kimi'
+      if (item.kind === 'subscription') {
+        const windows = (item.plans ?? []).length
+        info(module, windows > 0 ? 'quota.ok' : 'quota.fail', { windows })
+      } else {
+        info(module, 'quota.miss', {})
+      }
+      if (item.id === 'moonshot' && item.balance?.status === 'ok') info('adapter.kimi', 'balance.ok', { amount: item.balance.amount })
+      continue
+    }
+    if (item.id === 'openrouter') {
+      if (item.balance?.status === 'ok') info('adapter.openrouter', 'credits.ok', { amount: item.balance.amount })
+      else if (item.balance !== undefined) info('adapter.openrouter', 'credits.error', { status: item.balance.status })
+      continue
+    }
+    if (item.id === 'qwen') {
+      info('adapter.qwen', item.currency === 'USD' ? 'currency.usd' : 'detected', {})
+    }
+  }
+}
+
 export { KIMI_USAGES, GLM_QUOTA, KIMI_BALANCE, OPENROUTER_CREDITS }

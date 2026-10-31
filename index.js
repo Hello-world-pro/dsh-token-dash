@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path'
 import { buildSummary, emptyState, num } from './src/core.js'
 import { ingest, backfill } from './src/collect.js'
 import { createFlusher, dataDir, loadPrefs, loadState, logsDir, saveJson } from './src/store.js'
-import { readProviders, readSubscriptions } from './src/adapters.js'
+import { logAdapterEvents, readProviders, readSubscriptions } from './src/adapters.js'
 import { catalogInfo, loadCommunityPricing, loadRouterPricing } from './src/pricing.js'
 import { clearLog, createLogger, exportLog } from './src/diagnostics.js'
 
@@ -229,6 +229,7 @@ export function apply(ctx) {
           if (url.pathname === `${ROUTE_PREFIX}/summary` && req.method === 'GET') {
             if (Date.now() - providerCache.at > PROVIDER_TTL) {
               providerCache = { at: Date.now(), data: await readProviders(scoped, prefs) }
+              logAdapterEvents(logger, providerCache.data)
             }
             const summary = buildSummary(state, prefs, Date.now(), providerCache.data)
             summary.version = CURRENT_VERSION
@@ -245,8 +246,20 @@ export function apply(ctx) {
             map.delete('moonshot')
             for (const item of subs) map.set(item.id, item)
             providerCache = { at: Date.now(), data: [...map.values()] }
+            logAdapterEvents(logger, subs)
             logger.info('provider', 'subscriptions.refreshed', { ids: subs.map((item) => item.id) })
             json(res, 200, { ok: true, data: { refreshed: subs.map((item) => item.id) } })
+            return
+          }
+          if (url.pathname === `${ROUTE_PREFIX}/log` && req.method === 'POST') {
+            // #46：client 端 slot 挂载上报落盘——模块白名单仅 slot，防日志注入
+            const body = JSON.parse((await readBody(req)) || '{}')
+            if (body?.module !== 'slot' || typeof body?.event !== 'string') {
+              json(res, 400, { ok: false, reason: 'invalid-log' })
+              return
+            }
+            logger.info('slot', body.event, typeof body.meta === 'object' && body.meta !== null ? body.meta : {})
+            json(res, 200, { ok: true, data: { logged: true } })
             return
           }
           if (url.pathname === `${ROUTE_PREFIX}/update/install` && req.method === 'POST') {

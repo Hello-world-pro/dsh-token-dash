@@ -726,10 +726,26 @@ window.__ModuleLoader__.load({
       apply(ctx) {
         const slots = typeof ctx.get === 'function' ? ctx.get('slots') : ctx.slots
         if (slots === undefined || typeof slots.inject !== 'function') return
-        slots.inject('conversation.hero.agentPreset', () =>
-          slots.register({ name: 'conversation.hero.agentPreset', id: 'token-dash-home', order: 10 }, Pill))
-        slots.inject('conversation.composer.dock', () =>
-          slots.register({ name: 'conversation.composer.dock', id: 'token-dash-input', order: -1 }, Pill))
+        // #46：slot 挂载上报 host 落盘（§2.5 slot 模块；fire-and-forget，失败静默）
+        const reportMount = (slot) => {
+          try {
+            void fetch(`${API}/log`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ module: 'slot', event: 'mount.ok', meta: { slot } }),
+            }).catch(() => {})
+          } catch {
+            // ignore
+          }
+        }
+        slots.inject('conversation.hero.agentPreset', () => {
+          reportMount('conversation.hero.agentPreset')
+          return slots.register({ name: 'conversation.hero.agentPreset', id: 'token-dash-home', order: 10 }, Pill)
+        })
+        slots.inject('conversation.composer.dock', () => {
+          reportMount('conversation.composer.dock')
+          return slots.register({ name: 'conversation.composer.dock', id: 'token-dash-input', order: -1 }, Pill)
+        })
       },
     }
   },

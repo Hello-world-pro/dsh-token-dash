@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { parseGlmQuota, parseKimiQuota, parseOpenRouterCredits, readProviders, readSubscriptions } from '../../src/adapters.js'
+import { logAdapterEvents, parseGlmQuota, parseKimiQuota, parseOpenRouterCredits, readProviders, readSubscriptions } from '../../src/adapters.js'
 
 test('GLM parses TOKENS_LIMIT unit 3/6 and ignores TIME_LIMIT', () => {
   const windows = parseGlmQuota({
@@ -107,6 +107,33 @@ test('Qwen 国际站 Key 按 USD，国内站按 CNY', async () => {
   assert.equal(intl.find((item) => item.id === 'qwen').currency, 'USD')
   const domestic = await readProviders(ctxWith({ DASHSCOPE_API_KEY: 'sk-test' }), {})
   assert.equal(domestic.find((item) => item.id === 'qwen').currency, 'CNY')
+})
+
+test('#46 logAdapterEvents 按 §2.5 事件表映射侦测结果', () => {
+  const events = []
+  const log = { info: (module, event, meta) => events.push([module, event, meta]) }
+  logAdapterEvents(log, [
+    { id: 'deepseek-official', kind: 'api', currency: 'CNY', balance: { status: 'ok', amount: 49.86 } },
+    { id: 'deepseek-official', kind: 'api', currency: 'CNY', balance: { status: 'unconfigured' } },
+    { id: 'zhipu', kind: 'subscription', currency: 'CNY', plans: [{ key: '5h' }, { key: 'week' }] },
+    { id: 'zhipu', kind: 'subscription', currency: 'CNY', plans: [] },
+    { id: 'moonshot', kind: 'subscription', currency: 'CNY', plans: [{ key: '5h' }] },
+    { id: 'moonshot', kind: 'api', currency: 'CNY', balance: { status: 'ok', amount: 8.5 } },
+    { id: 'openrouter', kind: 'api', currency: 'USD', balance: { status: 'ok', amount: 7.66 } },
+    { id: 'qwen', kind: 'api', currency: 'USD' },
+  ])
+  assert.deepEqual(events.map(([m, e]) => `${m} ${e}`), [
+    'adapter.deepseek balance.ok',
+    'adapter.deepseek balance.auth',
+    'adapter.glm quota.ok',
+    'adapter.glm quota.fail',
+    'adapter.kimi quota.ok',
+    'adapter.kimi quota.miss',
+    'adapter.kimi balance.ok',
+    'adapter.openrouter credits.ok',
+    'adapter.qwen currency.usd',
+  ])
+  assert.equal(events[2][2].windows, 2)
 })
 
 test('readSubscriptions 只重查订阅配额，不请求余额', async () => {

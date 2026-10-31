@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
 
@@ -329,6 +329,15 @@ try {
 
   mkdirSync(join(tmpRoot, 'e2e'), { recursive: true })
   await page.screenshot({ path: join(tmpRoot, 'e2e', 'ui.png'), fullPage: true })
+
+  // #46：slot 挂载日志已落盘（client 上报 → host slot 模块；文件为 JSONL，[TD:xxx] 前缀仅导出格式）
+  const logDir = join(home, 'logs', 'dsh-token-dash')
+  const logText = readdirSync(logDir)
+    .filter((name) => name.endsWith('.log'))
+    .map((name) => readFileSync(join(logDir, name), 'utf8'))
+    .join('\n')
+  assert.match(logText, /"module":"slot","event":"mount\.ok"/)
+  assert.match(logText, /"slot":"conversation\.hero\.agentPreset"/)
   await browser.close()
   browser = undefined
   stopTree(server.child)
