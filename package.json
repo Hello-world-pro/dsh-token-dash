@@ -41,7 +41,8 @@
   },
   "scripts": {
     "test": "node --test test/unit/*.test.mjs",
-    "e2e": "node scripts/e2e.mjs"
+    "e2e": "node scripts/e2e.mjs",
+    "prepublishOnly": "npm test"
   },
   "dsh": {
     "bundle": {

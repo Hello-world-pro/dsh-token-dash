@@ -4,16 +4,14 @@
 
 ## 构建与测试
 
-- 包管理器：pnpm；Node `^22.19.0 || >=24.0.0`；纯 ESM。
-- 构建：`tsdown` 双入口（`src/index.ts`、`src/client/index.tsx`），`tsc` 产出 `.d.ts`；所有 `@deepseek-ai/dsh-*` 设为 external，禁止打进产物。
-- 不提交 `lib/`；`prepublishOnly` 必须跑 `build + test`。
+- Node `>=20`；纯 ESM；首版零构建，源码直接发布。
+- 宿主入口 `index.js`，客户端 `client.js`（手写 `window.__ModuleLoader__` bundle，id 必须等于包名）。
+- 不提交 `lib/`；`prepublishOnly` 跑 `npm test`。
 
 ```bash
-pnpm build        # tsdown + tsc
-pnpm test         # L1：node --test
-pnpm e2e:host     # L2：临时 DSH_HOME + 路由断言
-pnpm e2e:ui       # L3：Playwright
-pnpm pack:check   # npm pack 白名单与体积检查
+npm test          # L1：node --test
+npm run e2e       # L2 + L3：临时 DSH_HOME + Playwright
+npm pack --dry-run
 ```
 
 ## 临时目录
