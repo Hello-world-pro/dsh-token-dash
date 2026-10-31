@@ -403,15 +403,6 @@ window.__ModuleLoader__.load({
         }
       }
 
-      async function clearLogs() {
-        try {
-          await fetch(`${API}/logs`, { method: 'DELETE' })
-          setStatus('日志已清空')
-        } catch {
-          setStatus('清空失败')
-        }
-      }
-
       async function checkUpdate() {
         setStatus('检查中…')
         try {
@@ -423,68 +414,81 @@ window.__ModuleLoader__.load({
       }
 
       const header = h('div', { style: styles.row },
-        h('button', { style: styles.button, onClick: () => { void savePrefs({}); onBack() } }, '← 返回'),
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } }, h('b', null, 'Token 看板'), h('button', { style: styles.button, onClick: onClose }, '关闭')))
+        h('div', { style: styles.rowStart },
+          h('button', { style: styles.button, onClick: () => { void savePrefs({}); onBack() } }, '← 返回'),
+          h('b', { style: { fontSize: 13 } }, 'Token 看板')),
+        h('button', { style: styles.button, onClick: onClose }, '关闭'))
 
       if (prefs === null) return h('div', { 'data-testid': 'token-dash-settings', style: { fontSize: 12, display: 'grid', gap: 10 } }, header, 'Token 看板加载中…')
 
       const providers = summary?.providers ?? []
       const api = providers.filter((provider) => provider.kind === 'api')
       const subscriptions = providers.filter((provider) => provider.kind === 'subscription')
+      const cardStyle = { ...styles.card, marginTop: 0, display: 'grid', gap: 10, background: 'rgba(128,128,128,.05)' }
+      const section = (title, body, action = null) => h('section', { style: { display: 'grid', gap: 8 } },
+        h('div', { style: styles.row }, h('b', { style: { fontSize: 13 } }, title), action),
+        body)
 
-      return h('div', { 'data-testid': 'token-dash-settings', style: { fontSize: 12, display: 'grid', gap: 10 } },
+      const apiCards = api.map((provider) => h('div', { key: provider.id, style: cardStyle },
+        h('div', { style: styles.row },
+          h('b', null, provider.name),
+          h('select', {
+            value: prefs.billingModes?.[provider.id] ?? 'api',
+            onChange: (event) => savePrefs({ billingModes: { ...(prefs.billingModes ?? {}), [provider.id]: event.target.value } }),
+            style: styles.select,
+          }, h('option', { value: 'api' }, '按量 API'), provider.id === 'zhipu' || provider.id === 'moonshot' ? h('option', { value: 'subscription' }, '订阅套餐') : null)),
+        h('div', { style: styles.row },
+          h('span', { style: styles.muted }, '月度预算'),
+          h('span', { style: styles.rowStart },
+            h('input', {
+              type: 'text', inputMode: 'decimal', value: budgetText[provider.id] ?? (provider.budget?.amount ? String(provider.budget.amount) : ''),
+              onChange: (event) => setBudgetText({ ...budgetText, [provider.id]: event.target.value }),
+              onBlur: (event) => saveBudget(provider, event.currentTarget.value),
+              onKeyDown: (event) => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur() } },
+              style: styles.input,
+            }),
+            h('span', { style: styles.muted }, provider.currency)))))
+
+      const subscriptionRows = subscriptions.map((provider) => {
+        const control = h('select', {
+          value: prefs.billingModes?.[provider.id] ?? 'subscription',
+          onChange: (event) => savePrefs({ billingModes: { ...(prefs.billingModes ?? {}), [provider.id]: event.target.value } }),
+          style: styles.select,
+        }, h('option', { value: 'subscription' }, '订阅套餐'), h('option', { value: 'api' }, '按量 API'))
+        return h('div', { key: provider.id, style: styles.row },
+          h('span', null, provider.name),
+          h('span', { style: styles.rowStart }, control, h('span', { style: styles.muted }, `${subscriptionText(provider)} · 账户套餐`)))
+      })
+
+      return h('div', { 'data-testid': 'token-dash-settings', style: { fontSize: 12, display: 'grid', gap: 12 } },
         header,
-        api.length > 0 ? h('div', { style: { display: 'grid', gap: 8 } },
-          h('b', null, 'API 计费'),
-          api.map((provider) => h('div', { key: provider.id, style: styles.row },
-            h('span', null, provider.name),
-            h('span', null,
-              h('select', {
-                value: prefs.billingModes?.[provider.id] ?? 'api',
-                onChange: (event) => savePrefs({ billingModes: { ...(prefs.billingModes ?? {}), [provider.id]: event.target.value } }),
-                style: styles.select,
-              }, h('option', { value: 'api' }, '按量 API'), provider.id === 'zhipu' || provider.id === 'moonshot' ? h('option', { value: 'subscription' }, '订阅套餐') : null),
-              h('span', { style: { ...styles.muted, marginLeft: 8 } }, '月度预算 '),
-              h('input', {
-                type: 'text', inputMode: 'decimal', value: budgetText[provider.id] ?? (provider.budget?.amount ? String(provider.budget.amount) : ''),
-                onChange: (event) => setBudgetText({ ...budgetText, [provider.id]: event.target.value }),
-                onBlur: (event) => saveBudget(provider, event.currentTarget.value),
-                onKeyDown: (event) => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur() } },
-                style: styles.input,
-              }),
-              h('span', { style: { ...styles.muted, marginLeft: 4 } }, provider.currency))))) : null,
-        subscriptions.length > 0 ? h('div', { style: { display: 'grid', gap: 8 } },
-          h('b', null, '订阅计费'),
-          subscriptions.map((provider) => {
-            const control = h('select', {
-              value: prefs.billingModes?.[provider.id] ?? 'subscription',
-              onChange: (event) => savePrefs({ billingModes: { ...(prefs.billingModes ?? {}), [provider.id]: event.target.value } }),
-              style: styles.select,
-            }, h('option', { value: 'subscription' }, '订阅套餐'), h('option', { value: 'api' }, '按量 API'))
-            return h('div', { key: provider.id, style: styles.row },
-              h('span', null, provider.name),
-              h('span', null, control, h('span', { style: { ...styles.muted, marginLeft: 8 } }, `${subscriptionText(provider)} · 账户套餐`)))
-          })) : null,
-        h('div', { style: styles.row }, h('span', null, '刷新间隔'), h('select', {
-          value: prefs.refreshMs,
-          onChange: (event) => savePrefs({ refreshMs: Number(event.target.value) }),
-        }, [30000, 60000, 300000].map((ms) => h('option', { key: ms, value: ms }, ms === 30000 ? '30 秒' : ms === 60000 ? '1 分钟' : '5 分钟')))),
-        h('div', { style: styles.row }, h('span', null, '账户余额'), h(Toggle, { checked: prefs.showBalance, onChange: (next) => savePrefs({ showBalance: next }) })),
-        h('div', { style: styles.row }, h('span', null, '本月 Token'), h(Toggle, { checked: prefs.showMonthTokens !== false, onChange: (next) => savePrefs({ showMonthTokens: next }) })),
-        h('div', { style: styles.row }, h('span', null, '查看日志'), h('button', { 'data-testid': 'token-dash-log-open', style: styles.button, onClick: openLogs }, '打开日志文件夹')),
-        h('div', { style: styles.row },
-          h('span', null, '诊断'),
-          h('span', null,
-            h('select', { value: prefs.logLevel ?? 'info', onChange: (event) => savePrefs({ logLevel: event.target.value }), style: styles.select },
-              h('option', { value: 'info' }, 'Info'), h('option', { value: 'debug' }, 'Debug')),
-            h('button', { 'data-testid': 'token-dash-log-export', style: { ...styles.button, marginLeft: 6 }, onClick: exportLogs }, '导出日志'),
-            h('button', { style: { ...styles.button, marginLeft: 6 }, onClick: clearLogs }, '清空日志'))),
-        h('div', { style: styles.row }, h('span', null, '查看价格明细'),
-          h('span', null, LINKS.map(([label, url]) => h('a', { key: label, href: url, target: '_blank', rel: 'noopener', style: styles.link }, label)))),
-        h('div', { style: styles.row },
-          h('span', { style: styles.muted }, `版本 ${VERSION} ${status}`),
-          h('button', { style: styles.button, onClick: checkUpdate }, '检查更新')),
-        h('div', { style: styles.muted }, 'API 按量按 catalog/社区价格估算；订阅只显示账户配额'))
+        api.length > 0 ? section('API 计费', h('div', { style: { display: 'grid', gap: 8 } }, ...apiCards)) : null,
+        subscriptions.length > 0 ? section('订阅计费',
+          h('div', { style: cardStyle }, ...subscriptionRows),
+          h('button', { style: styles.button, onClick: () => { setStatus('检测中…'); void onRefresh?.() } }, '重新检测')) : null,
+        section('显示', h('div', { style: cardStyle },
+          h('div', { style: styles.row }, h('span', null, '刷新间隔'), h('select', {
+            value: prefs.refreshMs,
+            onChange: (event) => savePrefs({ refreshMs: Number(event.target.value) }),
+            style: styles.select,
+          }, [30000, 60000, 300000].map((ms) => h('option', { key: ms, value: ms }, ms === 30000 ? '30 秒' : ms === 60000 ? '1 分钟' : '5 分钟')))),
+          h('div', { style: styles.row }, h('span', null, '账户余额'), h(Toggle, { checked: prefs.showBalance, onChange: (next) => savePrefs({ showBalance: next }) })),
+          h('div', { style: styles.row }, h('span', null, '本月 Token'), h(Toggle, { checked: prefs.showMonthTokens !== false, onChange: (next) => savePrefs({ showMonthTokens: next }) })))),
+        section('日志', h('div', { style: cardStyle },
+          h('div', { style: styles.row },
+            h('span', null, '查看日志'),
+            h('span', { style: styles.rowStart },
+              h('button', { 'data-testid': 'token-dash-log-open', style: styles.button, onClick: openLogs }, '打开日志文件夹'),
+              h('button', { 'data-testid': 'token-dash-log-export', style: styles.button, onClick: exportLogs }, '导出日志'))))),
+        section('价格与版本', h('div', { style: cardStyle },
+          h('div', { style: styles.row },
+            h('span', null, '查看价格明细'),
+            h('span', { style: { display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8 } },
+              LINKS.map(([label, url]) => h('a', { key: label, href: url, target: '_blank', rel: 'noopener', style: { ...styles.link, marginLeft: 0 } }, label)))),
+          h('div', { style: styles.row },
+            h('span', { style: styles.muted }, `版本 ${VERSION} ${status}`),
+            h('button', { style: styles.button, onClick: checkUpdate }, '检查更新')))),
+        h('div', { style: styles.muted }, 'API 费用按 catalog/社区价估算；订阅只显示账户配额'))
     }
 
     return {

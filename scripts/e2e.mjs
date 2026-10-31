@@ -193,7 +193,10 @@ try {
   assert.match(await settings.innerText(), /API 计费/)
   assert.match(await settings.innerText(), /订阅计费/)
   assert.match(await settings.innerText(), /查看日志/)
+  assert.ok(!(await settings.innerText()).includes('诊断'))
+  assert.ok(!(await settings.innerText()).includes('清空日志'))
   assert.equal(await settings.locator('input[type=text]').count(), 2)
+  await page.screenshot({ path: join(tmpRoot, 'e2e', 'settings.png'), fullPage: true })
   assert.equal(await settings.getByRole('link').count(), 5)
 
   const deepseekInput = settings.locator('input[type=text]').first()
