@@ -20,18 +20,41 @@ export function recordFromEvent(event) {
   }
 }
 
+/** #43：request/header 的请求头配置——message.source 缺失时的归属回退层（形状参考 dsh-ui-usage-billing aggregate）。 */
+export function headerFromEvent(event) {
+  if (event?.type !== 'request/header') return undefined
+  const config = event.data?.header?.config ?? event.data?.config
+  const provider = typeof config?.provider === 'string' && config.provider !== '' ? config.provider : undefined
+  const model = typeof config?.model === 'string' && config.model !== '' ? config.model : undefined
+  if (provider === undefined && model === undefined) return undefined
+  return { provider, model }
+}
+
 /** 入账一条事件；返回记录或 undefined。 */
 export function ingest(state, sessionId, event, seedFloor = 0) {
   const seq = num(event?.seq)
   const mark = num(state.watermarks[sessionId])
   if (seq > 0 && seq <= mark) return undefined
   if (seq > 0 && seq < num(seedFloor)) return undefined
+  // #43：维护会话级 header 归属状态（backfill 顺序遍历天然重建）
+  const header = headerFromEvent(event)
+  if (header !== undefined) {
+    state.headers[sessionId] = { ...(state.headers[sessionId] ?? {}), ...header }
+  }
   const record = recordFromEvent(event)
   if (record === undefined) {
     if (seq > 0) state.watermarks[sessionId] = seq
     return undefined
   }
   record.sessionId = sessionId
+  // #43：usage 事件无 message.source 时，回退最近一条 request/header 的归属
+  if (record.provider === 'unknown' || record.model === '') {
+    const fallback = state.headers[sessionId]
+    if (fallback !== undefined) {
+      if (record.provider === 'unknown' && fallback.provider !== undefined) record.provider = fallback.provider
+      if (record.model === '' && fallback.model !== undefined) record.model = fallback.model
+    }
+  }
   addRecord(state, record)
   if (seq > 0) state.watermarks[sessionId] = seq
   return record

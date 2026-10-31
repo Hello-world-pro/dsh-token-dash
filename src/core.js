@@ -56,7 +56,7 @@ export function costOf(record) {
 }
 
 export function emptyState() {
-  return { version: 1, days: {}, watermarks: {}, currentProvider: null }
+  return { version: 1, days: {}, watermarks: {}, headers: {}, currentProvider: null }
 }
 
 function dayBucket(state, dayKey) {

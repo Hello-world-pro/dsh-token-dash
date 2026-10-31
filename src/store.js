@@ -63,6 +63,7 @@ export async function loadState(dir) {
     }
   }
   state.watermarks ??= {}
+  state.headers ??= {}
   state.currentProvider ??= null
   return state
 }
