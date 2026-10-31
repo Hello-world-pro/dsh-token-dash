@@ -212,6 +212,12 @@ try {
   columnStarts.forEach((start, index) => {
     assert.ok(Math.abs(start - third * index) < 1, `第 ${index + 1} 列未从三分之一处开始: ${columnStarts}`)
   })
+  const columnAligns = await page.evaluate(() =>
+    [...document.querySelector('[data-testid=token-dash-budget-cols]').children].map(
+      (node) => getComputedStyle(node).textAlign,
+    ),
+  )
+  assert.deepEqual(columnAligns, ['left', 'center', 'right'])
   assert.match(panelWithProviders, /余额\n¥49\.86/)
   assert.ok(!panelWithProviders.includes('余额\n余额'), '余额列不应重复“余额”前缀')
   assert.ok(await panel.isVisible(), '刷新后浮层应保持打开')
@@ -283,6 +289,12 @@ try {
   )
   assert.equal(hiddenWidths.length, 2)
   assert.ok(Math.max(...hiddenWidths) - Math.min(...hiddenWidths) < 1, `隐藏余额后列宽不等: ${hiddenWidths}`)
+  const hiddenAligns = await page.evaluate(() =>
+    [...document.querySelector('[data-testid=token-dash-budget-cols]').children].map(
+      (node) => getComputedStyle(node).textAlign,
+    ),
+  )
+  assert.deepEqual(hiddenAligns, ['left', 'right'])
 
   await panel.getByRole('button', { name: '关闭' }).click()
   await panel.waitFor({ state: 'detached', timeout: 5000 })

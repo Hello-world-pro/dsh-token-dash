@@ -258,11 +258,26 @@ window.__ModuleLoader__.load({
               gridTemplateColumns: balanceHidden ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))',
             },
           },
-          h('div', null, h('div', { style: styles.muted }, '今日'), h('b', { style: styles.num }, fmtMoney(summary?.today?.cost))),
-          h('div', null, h('div', { style: styles.muted }, '剩余'), h('b', { style: styles.num }, fmtMoney(budget.remaining))),
+          h(
+            'div',
+            { style: { textAlign: 'left' } },
+            h('div', { style: styles.muted }, '今日'),
+            h('b', { style: styles.num }, fmtMoney(summary?.today?.cost)),
+          ),
+          h(
+            'div',
+            { style: { textAlign: balanceHidden ? 'right' : 'center' } },
+            h('div', { style: styles.muted }, '剩余'),
+            h('b', { style: styles.num }, fmtMoney(budget.remaining)),
+          ),
           balanceHidden
             ? null
-            : h('div', null, h('div', { style: styles.muted }, '余额'), h(BalanceText, { balance: summary?.balance, prefix: false })),
+            : h(
+                'div',
+                { style: { textAlign: 'right' } },
+                h('div', { style: styles.muted }, '余额'),
+                h(BalanceText, { balance: summary?.balance, prefix: false }),
+              ),
         ),
         h('div', { style: { ...styles.muted, marginTop: 8 } }, `估算口径 / ${fmtAgo(summary?.updatedAt)}刷新`),
       )
