@@ -82,7 +82,7 @@ test('手动订阅模式：Kimi coding quota 失败保留订阅卡', async () =>
   }
 })
 
-test('hide 模式过滤 + skipBalance 不请求余额接口', async () => {
+test('hide 模式过滤；showBalance=false 仍请求余额（#31：开关只控制 P1）', async () => {
   const fetched = []
   const restore = mockFetch(async (url) => {
     fetched.push(url)
@@ -95,8 +95,8 @@ test('hide 模式过滤 + skipBalance 不请求余额接口', async () => {
     })
     assert.equal(providers.find((item) => item.id === 'zhipu'), undefined)
     const deepseek = providers.find((item) => item.id === 'deepseek-official')
-    assert.equal(deepseek.balance, undefined)
-    assert.equal(fetched.some((url) => url.includes('user/balance')), false)
+    assert.notEqual(deepseek.balance, undefined)
+    assert.equal(fetched.some((url) => url.includes('user/balance')), true)
   } finally {
     restore()
   }

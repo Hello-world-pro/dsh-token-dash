@@ -106,9 +106,9 @@ async function requestJson(url, headers) {
   return body
 }
 
-async function deepseek(ctx, opts = {}) {
+async function deepseek(ctx) {
   const account = ctx.get?.('deepseekAccount')
-  if (opts.skipBalance !== true && account !== undefined && typeof account.getBalance === 'function') {
+  if (account !== undefined && typeof account.getBalance === 'function') {
     try {
       const data = await account.getBalance({ version: '0.2.0', locale: 'zh-CN', timezoneOffsetSeconds: -new Date().getTimezoneOffset() * 60 })
       if (data?.status === 'ready') {
@@ -123,7 +123,6 @@ async function deepseek(ctx, opts = {}) {
   }
   const key = await resolveKey(ctx, ['DEEPSEEK_API_KEY'])
   if (key === undefined) return null
-  if (opts.skipBalance === true) return { id: 'deepseek-official', kind: 'api', currency: 'CNY' }
   try {
     const body = await requestJson('https://api.deepseek.com/user/balance', { authorization: `Bearer ${key.value}` })
     const amount = (body?.balance_infos ?? []).reduce((sum, item) => sum + (Number(item?.total_balance) || 0), 0)
@@ -170,12 +169,11 @@ async function kimiCodingQuota(ctx, prefs) {
   return { state: 'fallback' }
 }
 
-async function kimi(ctx, prefs, opts = {}) {
+async function kimi(ctx, prefs) {
   const quota = await kimiCodingQuota(ctx, prefs)
   if (quota.state === 'ok') return quota.entry
   const normal = await resolveKey(ctx, ['MOONSHOT_API_KEY'])
   if (normal === undefined) return quota.state === 'no-key' ? null : { id: 'moonshot', kind: 'api', currency: 'CNY' }
-  if (opts.skipBalance === true) return { id: 'moonshot', kind: 'api', currency: 'CNY' }
   try {
     const body = await requestJson(KIMI_BALANCE, { authorization: `Bearer ${normal.value}` })
     const amount = Number(body?.data?.available_balance)
@@ -185,10 +183,9 @@ async function kimi(ctx, prefs, opts = {}) {
   }
 }
 
-async function openrouter(ctx, opts = {}) {
+async function openrouter(ctx) {
   const key = await resolveKey(ctx, ['OPENROUTER_API_KEY'])
   if (key === undefined) return null
-  if (opts.skipBalance === true) return { id: 'openrouter', kind: 'api', currency: 'USD' }
   try {
     const body = await requestJson(OPENROUTER_CREDITS, { authorization: `Bearer ${key.value}` })
     const balance = parseOpenRouterCredits(body)
@@ -211,10 +208,9 @@ function visibleEntry(entry, prefs) {
   return entry !== null && prefs?.billingModes?.[entry.id] !== 'hide'
 }
 
-/** Query configured providers; each failure is isolated. `skipBalance` avoids balance/credits requests. */
+/** Query configured providers; each failure is isolated. Balance/credits are always requested (P2 shows them regardless of the P1-only toggle, #31). */
 export async function readProviders(ctx, prefs) {
-  const opts = { skipBalance: prefs?.showBalance === false }
-  const results = await Promise.allSettled([deepseek(ctx, opts), glm(ctx, prefs), kimi(ctx, prefs, opts), openrouter(ctx, opts), qwen(ctx)])
+  const results = await Promise.allSettled([deepseek(ctx), glm(ctx, prefs), kimi(ctx, prefs), openrouter(ctx), qwen(ctx)])
   const out = []
   for (const result of results) {
     if (result.status === 'fulfilled' && visibleEntry(result.value, prefs)) {

@@ -181,6 +181,15 @@ try {
   assert.match(await pill.innerText(), /5h 42\.5%/)
   assert.ok(!(await pill.innerText()).includes('预算'))
 
+  // #31：账户余额开关只控制 P1——pill 隐藏余额，P2 API 卡余额列恒显示
+  currentSummary = { ...baseSummary, showBalance: false }
+  await refresh()
+  assert.ok(!(await pill.innerText()).includes('余额'))
+  assert.match(await panel.innerText(), /余额/)
+  assert.match(await panel.innerText(), /¥49\.86/)
+  currentSummary = baseSummary
+  await refresh()
+
   currentSummary = summaryOf([baseProviders[0]], [baseModels[0]], 'deepseek-official')
   await refresh()
   assert.equal(await page.locator('[data-testid^=token-dash-api-card-]').count(), 1)
@@ -190,6 +199,9 @@ try {
   await refresh()
   assert.match(await panel.innerText(), /未检测到已配置供应商/)
   assert.match(await pill.innerText(), /\[API\]/)
+  // #32：用量表空态保留表格结构，数值显示 0
+  assert.ok(!(await panel.innerText()).includes('本月暂无消耗'))
+  assert.match(await panel.innerText(), /0\.00M/)
 
   currentSummary = baseSummary
   await refresh()

@@ -114,7 +114,6 @@ window.__ModuleLoader__.load({
       barFill: { height: '100%', background: '#6ea8ff' },
       barNeutral: { height: '100%', background: 'rgba(128,128,128,.45)' },
       cols: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, marginTop: 8 },
-      cols1: { display: 'grid', gridTemplateColumns: '1fr', gap: 0, marginTop: 8 },
       subGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 8 },
       scrollList: { maxHeight: 280, overflowY: 'auto', paddingRight: 4 },
       table: { width: 'max-content', minWidth: '100%', borderCollapse: 'collapse', tableLayout: 'auto', marginTop: 6 },
@@ -209,7 +208,7 @@ window.__ModuleLoader__.load({
       const [refreshing, setRefreshing] = useState(false)
       const [hover, setHover] = useState(false)
       const [hint, setHint] = useState(false)
-      const [direction, setDirection] = useState('up')
+      const [panelMaxHeight, setPanelMaxHeight] = useState('70vh')
       const pillRef = useRef(null)
 
       useEffect(() => {
@@ -262,9 +261,12 @@ window.__ModuleLoader__.load({
       }, [])
       const toggle = () => {
         dismissHint()
-        // 浮层默认向上展开（会话页 pill 在底部）；pill 位于视口上半部时向下，避免溢出视口顶部
+        // #30：浮层固定在 pill 正上方；上方空间不足时收紧 maxHeight（视口顶 8px 间隙 + pill 间距 8px），内容内部滚动
         const rect = pillRef.current?.getBoundingClientRect()
-        if (rect !== undefined) setDirection(rect.top > window.innerHeight / 2 ? 'up' : 'down')
+        if (rect !== undefined) {
+          const available = Math.round(rect.top) - 16
+          setPanelMaxHeight(`${Math.max(200, Math.min(window.innerHeight * 0.7, available))}px`)
+        }
         setOpen((value) => {
           if (!value) setView('dashboard')
           return !value
@@ -316,11 +318,11 @@ window.__ModuleLoader__.load({
           }, h('span', { key: 'prefix', style: styles.num }, prefix), ...bodyNodes,
             h('span', { key: 'chevron', style: styles.chevron }, open ? '⌄' : '⌃'))),
         open ? h(Panel, {
-          summary, error, view, refreshing, direction, onView: setView, onRefresh: load, onRefreshSubs: refreshSubs, onClose: closePanel,
+          summary, error, view, refreshing, maxHeight: panelMaxHeight, onView: setView, onRefresh: load, onRefreshSubs: refreshSubs, onClose: closePanel,
         }) : null)
     }
 
-    function ApiCard({ provider, showBalance }) {
+    function ApiCard({ provider }) {
       const budget = provider.budget
       const hasBudget = budget !== undefined && budget.state !== 'unset'
       const color = budgetColor(budget?.state)
@@ -337,9 +339,10 @@ window.__ModuleLoader__.load({
               width: hasBudget ? `${Math.min(100, (budget.percent ?? 0) * 100)}%` : '100%',
             },
           })),
-        h('div', { style: showBalance === false ? styles.cols1 : styles.cols },
+        // #31：余额列恒显示（账户余额开关只控制 P1 pill）
+        h('div', { style: styles.cols },
           h('div', { style: { textAlign: 'left' } }, h('div', { style: styles.muted }, '今日'), h('b', { style: styles.num }, fmtMoney(provider.usage?.todayCost, provider.currency))),
-          showBalance === false ? null : h('div', { style: { textAlign: 'right' } }, h('div', { style: styles.muted }, '余额'), h('b', { style: styles.num }, balanceText(provider, showBalance) ?? '--'))))
+          h('div', { style: { textAlign: 'right' } }, h('div', { style: styles.muted }, '余额'), h('b', { style: styles.num }, balanceText(provider, true) ?? '--'))))
     }
 
     function SubscriptionCard({ provider }) {
@@ -381,6 +384,16 @@ window.__ModuleLoader__.load({
     }
 
     function UsageTable({ models }) {
+      // #32：空态保留表格结构，数值显示 0（不再用 colSpan 文案行）
+      const emptyRow = models.length === 0
+        ? h('tr', { key: 'empty' },
+            h('td', { style: styles.modelCell }, '—'),
+            h('td', { style: styles.tdRight }, 0),
+            h('td', { style: styles.tdRight }, fmtM(0)),
+            h('td', { style: styles.tdRight }, fmtM(0)),
+            h('td', { style: styles.tdRight }, fmtM(0)),
+            h('td', { style: styles.tdRight }, '—'))
+        : null
       return h('div', { 'data-testid': 'token-dash-usage-table', style: styles.card },
         h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, '模型用量明细（全部供应商）'), h('span', { style: styles.muted }, `合计 ${fmtM(models.reduce((sum, model) => sum + (model.tokens?.total ?? 0), 0))}`)),
         h('div', { style: { overflowX: 'auto' } },
@@ -392,17 +405,18 @@ window.__ModuleLoader__.load({
               h('th', { key: '命中', style: { ...styles.thRight, width: 56 } }, '命中'),
               h('th', { key: '输出', style: { ...styles.thRight, width: 56 } }, '输出'),
               h('th', { key: '命中率', style: { ...styles.thRight, width: 52 } }, '命中率'))),
-            h('tbody', null, models.map((model) => h('tr', { key: `${model.providerId}:${model.modelId}` },
-              h('td', { style: styles.modelCell, title: modelTitle(model) }, modelTitle(model)),
-              h('td', { style: styles.tdRight }, model.requests),
-              h('td', { style: styles.tdRight }, fmtM(model.tokens?.input ?? 0)),
-              h('td', { style: styles.tdRight }, fmtM(model.tokens?.cacheRead ?? 0)),
-              h('td', { style: styles.tdRight }, fmtM(model.tokens?.output ?? 0)),
-              h('td', { style: styles.tdRight }, model.hitRate === null || model.hitRate === undefined ? '—' : fmtRatio(model.hitRate))))),
-            models.length === 0 ? h('tr', null, h('td', { style: styles.modelCell, colSpan: 6 }, '本月暂无消耗')) : null)))
+            h('tbody', null,
+              models.map((model) => h('tr', { key: `${model.providerId}:${model.modelId}` },
+                h('td', { style: styles.modelCell, title: modelTitle(model) }, modelTitle(model)),
+                h('td', { style: styles.tdRight }, model.requests),
+                h('td', { style: styles.tdRight }, fmtM(model.tokens?.input ?? 0)),
+                h('td', { style: styles.tdRight }, fmtM(model.tokens?.cacheRead ?? 0)),
+                h('td', { style: styles.tdRight }, fmtM(model.tokens?.output ?? 0)),
+                h('td', { style: styles.tdRight }, model.hitRate === null || model.hitRate === undefined ? '—' : fmtRatio(model.hitRate)))),
+              emptyRow))))
     }
 
-    function Panel({ summary, error, view, refreshing, direction = 'up', onView, onRefresh, onRefreshSubs, onClose }) {
+    function Panel({ summary, error, view, refreshing, maxHeight = '70vh', onView, onRefresh, onRefreshSubs, onClose }) {
       const panelRef = useRef(null)
 
       useEffect(() => {
@@ -412,7 +426,7 @@ window.__ModuleLoader__.load({
       const panelProps = {
         ref: panelRef, tabIndex: -1, role: 'dialog', 'aria-label': 'Token 看板',
         'data-testid': 'token-dash-panel',
-        style: direction === 'up' ? styles.panel : { ...styles.panel, bottom: 'auto', top: 'calc(100% + 8px)' },
+        style: { ...styles.panel, maxHeight },
       }
 
       if (view === 'settings') {
@@ -440,7 +454,7 @@ window.__ModuleLoader__.load({
         api.length > 0 ? h('div', { 'data-testid': 'token-dash-api-section', style: { marginTop: 8 } },
           h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, `API 按量（已检测 ${api.length}）`), h('span', { style: styles.muted }, ago)),
           h('div', { style: api.length > 3 ? styles.scrollList : null },
-            api.map((provider) => h(ApiCard, { key: provider.id, provider, showBalance: summary?.showBalance })))) : null,
+            api.map((provider) => h(ApiCard, { key: provider.id, provider })))) : null,
         subscriptions.length > 0 ? h('div', { 'data-testid': 'token-dash-sub-section', style: { marginTop: 8 } },
           h('div', { style: styles.row },
             h('b', { style: styles.headerTitle }, `订阅套餐（已检测 ${subscriptions.length}）`),
