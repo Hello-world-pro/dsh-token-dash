@@ -136,6 +136,32 @@ test('#46 logAdapterEvents 按 §2.5 事件表映射侦测结果', () => {
   assert.equal(events[2][2].windows, 2)
 })
 
+test('#47 错误链路日志：错误分类与 quota.parse 还原原因', () => {
+  const events = []
+  const log = { info: (module, event, meta) => events.push([module, event, meta]) }
+  logAdapterEvents(log, [
+    { id: 'deepseek-official', kind: 'api', currency: 'CNY', _error: { kind: 'http', status: 500 }, balance: { status: 'error' } },
+    { id: 'deepseek-official', kind: 'api', currency: 'CNY', _error: { kind: 'timeout' }, balance: { status: 'unconfigured' } },
+    { id: 'zhipu', kind: 'subscription', currency: 'CNY', plans: [], _quotaError: { kind: 'parse' } },
+    { id: 'zhipu', kind: 'api', currency: 'CNY', _quotaError: { kind: 'http', status: 401 } },
+    { id: 'moonshot', kind: 'api', currency: 'CNY', _error: { kind: 'network' }, balance: { status: 'error' } },
+  ])
+  assert.deepEqual(events.map(([m, e]) => `${m} ${e}`), [
+    'adapter.deepseek balance.error',
+    'adapter.deepseek balance.auth',
+    'adapter.glm quota.parse',
+    'adapter.glm quota.fail',
+    'adapter.kimi quota.miss',
+    'adapter.kimi balance.error',
+  ])
+  assert.equal(events[0][2].errorKind, 'http')
+  assert.equal(events[0][2].httpStatus, 500)
+  assert.equal(events[1][2].errorKind, 'timeout')
+  assert.equal(events[3][2].errorKind, 'http')
+  assert.equal(events[3][2].httpStatus, 401)
+  assert.equal(events[5][2].errorKind, 'network')
+})
+
 test('readSubscriptions 只重查订阅配额，不请求余额', async () => {
   const fetched = []
   const restore = mockFetch(async (url) => {

@@ -106,6 +106,14 @@ async function requestJson(url, headers) {
   return body
 }
 
+/** #47：错误分类（http+状态码 / timeout / network）——挂在条目 `_error`/`_quotaError` 上供日志还原原因。 */
+function errorDetail(error) {
+  if (error?.status !== undefined) return { kind: 'http', status: error.status }
+  const name = `${error?.name ?? ''} ${error?.message ?? ''}`
+  if (name.includes('Timeout') || name.includes('abort') || name.includes('Abort')) return { kind: 'timeout' }
+  return { kind: 'network' }
+}
+
 async function deepseek(ctx) {
   const account = ctx.get?.('deepseekAccount')
   if (account !== undefined && typeof account.getBalance === 'function') {
@@ -128,7 +136,7 @@ async function deepseek(ctx) {
     const amount = (body?.balance_infos ?? []).reduce((sum, item) => sum + (Number(item?.total_balance) || 0), 0)
     return { id: 'deepseek-official', kind: 'api', currency: 'CNY', balance: { amount, status: 'ok', currency: 'CNY', updatedAt: Date.now() } }
   } catch (error) {
-    return { id: 'deepseek-official', kind: 'api', currency: 'CNY', balance: { amount: null, status: error.status === 401 ? 'unconfigured' : 'error', currency: 'CNY', updatedAt: Date.now() } }
+    return { id: 'deepseek-official', kind: 'api', currency: 'CNY', _error: errorDetail(error), balance: { amount: null, status: error.status === 401 ? 'unconfigured' : 'error', currency: 'CNY', updatedAt: Date.now() } }
   }
 }
 
@@ -143,9 +151,10 @@ async function glm(ctx, prefs) {
     const body = await requestJson(GLM_QUOTA, { authorization: key.value })
     const windows = parseGlmQuota(body)
     if (windows.length > 0) return { id: 'zhipu', name: 'GLM Coding', kind: 'subscription', currency: 'CNY', plans: windows }
-    return subscriptionFallback ?? { id: 'zhipu', kind: 'api', currency: 'CNY' }
-  } catch {
-    return subscriptionFallback ?? { id: 'zhipu', kind: 'api', currency: 'CNY' }
+    // 响应可解析但无窗口：解析问题（quota.parse），非网络错误
+    return { ...(subscriptionFallback ?? { id: 'zhipu', kind: 'api', currency: 'CNY' }), _quotaError: { kind: 'parse' } }
+  } catch (error) {
+    return { ...(subscriptionFallback ?? { id: 'zhipu', kind: 'api', currency: 'CNY' }), _quotaError: errorDetail(error) }
   }
 }
 
@@ -158,28 +167,36 @@ async function kimiCodingQuota(ctx, prefs) {
   if (coding === undefined) return { state: 'no-key' }
   const mode = prefs?.billingModes?.moonshot
   if (mode === 'api') return { state: 'no-key' }
+  let quotaError = null
   try {
     const body = await requestJson(KIMI_USAGES, { authorization: `Bearer ${coding.value}` })
     const windows = parseKimiQuota(body)
     if (windows.length > 0) return { state: 'ok', entry: { id: 'moonshot', name: 'Kimi Coding', kind: 'subscription', currency: 'CNY', plans: windows } }
-  } catch {
-    // fall through
+    quotaError = { kind: 'parse' }
+  } catch (error) {
+    quotaError = errorDetail(error)
   }
-  if (mode === 'subscription') return { state: 'ok', entry: { id: 'moonshot', name: 'Kimi Coding', kind: 'subscription', currency: 'CNY', plans: [] } }
+  if (mode === 'subscription') return { state: 'ok', entry: { id: 'moonshot', name: 'Kimi Coding', kind: 'subscription', currency: 'CNY', plans: [], _quotaError: quotaError } }
+  return { state: 'fallback', quotaError }
   return { state: 'fallback' }
 }
 
 async function kimi(ctx, prefs) {
   const quota = await kimiCodingQuota(ctx, prefs)
   if (quota.state === 'ok') return quota.entry
+  const quotaError = quota.quotaError ?? null
   const normal = await resolveKey(ctx, ['MOONSHOT_API_KEY'])
-  if (normal === undefined) return quota.state === 'no-key' ? null : { id: 'moonshot', kind: 'api', currency: 'CNY' }
+  if (normal === undefined) return quota.state === 'no-key' ? null : { id: 'moonshot', kind: 'api', currency: 'CNY', _quotaError: quotaError }
   try {
     const body = await requestJson(KIMI_BALANCE, { authorization: `Bearer ${normal.value}` })
     const amount = Number(body?.data?.available_balance)
-    return { id: 'moonshot', kind: 'api', currency: 'CNY', balance: { amount: Number.isFinite(amount) ? amount : null, status: Number.isFinite(amount) ? 'ok' : 'error', currency: 'CNY', updatedAt: Date.now() } }
-  } catch {
-    return { id: 'moonshot', kind: 'api', currency: 'CNY', balance: { amount: null, status: 'error', currency: 'CNY', updatedAt: Date.now() } }
+    const ok = Number.isFinite(amount)
+    return {
+      id: 'moonshot', kind: 'api', currency: 'CNY', _quotaError: quotaError,
+      balance: { amount: ok ? amount : null, status: ok ? 'ok' : 'error', currency: 'CNY', updatedAt: Date.now(), ...(ok ? {} : { _error: { kind: 'parse' } }) },
+    }
+  } catch (error) {
+    return { id: 'moonshot', kind: 'api', currency: 'CNY', _quotaError: quotaError, _error: errorDetail(error), balance: { amount: null, status: 'error', currency: 'CNY', updatedAt: Date.now() } }
   }
 }
 
@@ -189,9 +206,9 @@ async function openrouter(ctx) {
   try {
     const body = await requestJson(OPENROUTER_CREDITS, { authorization: `Bearer ${key.value}` })
     const balance = parseOpenRouterCredits(body)
-    return { id: 'openrouter', kind: 'api', currency: 'USD', balance: balance ?? { amount: null, status: 'error', currency: 'USD', updatedAt: Date.now() } }
-  } catch {
-    return { id: 'openrouter', kind: 'api', currency: 'USD', balance: { amount: null, status: 'error', currency: 'USD', updatedAt: Date.now() } }
+    return { id: 'openrouter', kind: 'api', currency: 'USD', balance: balance ?? { amount: null, status: 'error', currency: 'USD', updatedAt: Date.now(), _error: { kind: 'parse' } } }
+  } catch (error) {
+    return { id: 'openrouter', kind: 'api', currency: 'USD', _error: errorDetail(error), balance: { amount: null, status: 'error', currency: 'USD', updatedAt: Date.now() } }
   }
 }
 
@@ -238,30 +255,37 @@ export async function readSubscriptions(ctx, prefs) {
   return out
 }
 
-/** #46：按 §2.5 adapter.* 事件表记侦测结果——只记状态与计数，不记 Key/响应体（脱敏约束）。 */
+/** #46/#47：按 §2.5 adapter.* 事件表记侦测结果与错误原因——只记状态/计数/错误分类，不记 Key/响应体（脱敏约束）。 */
 export function logAdapterEvents(log, providers) {
   const info = (module, event, meta) => log.info(module, event, meta)
+  // 错误详情合并进 meta：kind=http 时带 status，便于报障还原原因
+  const errorMeta = (detail) => (detail === null || detail === undefined ? {} : detail.kind === 'http' ? { errorKind: detail.kind, httpStatus: detail.status } : { errorKind: detail.kind })
   for (const item of providers) {
     if (item.id === 'deepseek-official') {
       if (item.balance?.status === 'ok') info('adapter.deepseek', 'balance.ok', { amount: item.balance.amount })
-      else if (item.balance?.status === 'unconfigured') info('adapter.deepseek', 'balance.auth', {})
-      else if (item.balance !== undefined) info('adapter.deepseek', 'balance.error', { status: item.balance.status })
+      else if (item.balance?.status === 'unconfigured') info('adapter.deepseek', 'balance.auth', errorMeta(item._error))
+      else if (item.balance !== undefined) info('adapter.deepseek', 'balance.error', { status: item.balance.status, ...errorMeta(item._error ?? item.balance._error) })
       continue
     }
     if (item.id === 'zhipu' || item.id === 'moonshot') {
       const module = item.id === 'zhipu' ? 'adapter.glm' : 'adapter.kimi'
       if (item.kind === 'subscription') {
         const windows = (item.plans ?? []).length
-        info(module, windows > 0 ? 'quota.ok' : 'quota.fail', { windows })
+        if (windows > 0) info(module, 'quota.ok', { windows })
+        else if (item._quotaError?.kind === 'parse') info(module, 'quota.parse', {})
+        else info(module, 'quota.fail', { windows: 0, ...errorMeta(item._quotaError) })
+      } else if (item._quotaError !== undefined && item._quotaError !== null) {
+        info(module, 'quota.fail', { ...errorMeta(item._quotaError) })
       } else {
         info(module, 'quota.miss', {})
       }
       if (item.id === 'moonshot' && item.balance?.status === 'ok') info('adapter.kimi', 'balance.ok', { amount: item.balance.amount })
+      if (item.id === 'moonshot' && item.balance?.status === 'error') info('adapter.kimi', 'balance.error', { status: 'error', ...errorMeta(item._error ?? item.balance._error) })
       continue
     }
     if (item.id === 'openrouter') {
       if (item.balance?.status === 'ok') info('adapter.openrouter', 'credits.ok', { amount: item.balance.amount })
-      else if (item.balance !== undefined) info('adapter.openrouter', 'credits.error', { status: item.balance.status })
+      else if (item.balance !== undefined) info('adapter.openrouter', 'credits.error', { status: item.balance.status, ...errorMeta(item._error ?? item.balance._error) })
       continue
     }
     if (item.id === 'qwen') {

@@ -156,7 +156,7 @@ export function apply(ctx) {
   let prefs
   let state
   let providerCache = { at: 0, data: [] }
-  const ready = Promise.all([loadState(dir), loadPrefs(dir)]).then(([loadedState, loadedPrefs]) => {
+  const ready = Promise.all([loadState(dir, logger), loadPrefs(dir, logger)]).then(([loadedState, loadedPrefs]) => {
     state = loadedState ?? emptyState()
     prefs = loadedPrefs
     logger.info('boot', 'start', { version: CURRENT_VERSION })
@@ -170,7 +170,7 @@ export function apply(ctx) {
     ready
       .then(() => {
         if (disposed) return
-        const local = createFlusher(dir, state)
+        const local = createFlusher(dir, state, 2000, logger)
         flusher.schedule = local.schedule
         flusher.flush = local.flush
         flusher.stop = local.stop
@@ -191,8 +191,13 @@ export function apply(ctx) {
 
   // Pricing refresh is best-effort and never blocks summary.
   ready.then(() => {
-    void loadCommunityPricing().then((info) => logger.info('pricing', 'catalog.loaded', info)).catch(() => {})
-    void loadRouterPricing().then((ok) => logger.info('pricing', 'router.loaded', { ok })).catch(() => {})
+    // #47：加载失败不再静默——费用"未定价"报障的关键线索
+    void loadCommunityPricing()
+      .then((info) => logger.info('pricing', 'catalog.loaded', info))
+      .catch((error) => logger.warn('pricing', 'catalog.fail', { message: String(error?.message ?? error) }))
+    void loadRouterPricing()
+      .then((ok) => logger.info('pricing', 'router.loaded', { ok }))
+      .catch((error) => logger.warn('pricing', 'router.fail', { message: String(error?.message ?? error) }))
   })
 
   ctx.inject(['sessionPersistence'], (scoped) => {
@@ -265,7 +270,11 @@ export function apply(ctx) {
           if (url.pathname === `${ROUTE_PREFIX}/update/install` && req.method === 'POST') {
             const profile = typeof process.env.DSH_PROFILE === 'string' && process.env.DSH_PROFILE !== '' ? process.env.DSH_PROFILE : 'desktop'
             const result = await runPluginUpdate(profile)
-            logger.info('update', result.ok ? 'install.ok' : 'install.fail', { profile, reason: result.reason ?? null })
+            logger.info('update', result.ok ? 'install.ok' : 'install.fail', {
+              profile,
+              reason: result.reason ?? null,
+              ...(result.ok ? {} : { output: String(result.output ?? '').slice(-500) }),
+            })
             json(res, 200, { ok: result.ok, data: result, ...(result.ok ? {} : { reason: 'install-failed' }) })
             return
           }
@@ -323,7 +332,7 @@ export function apply(ctx) {
           }
           json(res, 404, { ok: false, reason: 'not-found' })
         } catch (error) {
-          logger.error('route', 'failed', { path: url.pathname, message: error instanceof Error ? error.message : String(error) })
+          logger.error('route', 'failed', { method: req.method, path: url.pathname, message: error instanceof Error ? error.message : String(error) })
           json(res, 400, { ok: false, reason: error instanceof Error ? error.message : String(error) })
         }
       },
