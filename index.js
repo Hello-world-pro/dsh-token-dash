@@ -5,6 +5,7 @@
 import { buildSummary, emptyState, num } from './src/core.js'
 import { ingest, backfill } from './src/collect.js'
 import { createFlusher, dataDir, loadPrefs, loadState, saveJson } from './src/store.js'
+import { readBalance } from './src/balance.js'
 
 export const name = 'dsh-token-dash'
 
@@ -51,38 +52,6 @@ function normalizePrefs(input, base) {
   }
   if (input?.showBalance !== undefined) prefs.showBalance = input.showBalance === true
   return prefs
-}
-
-async function readBalance(ctx, prefs) {
-  if (!prefs.showBalance) {
-    return { provider: 'unknown', amount: null, currency: 'CNY', status: 'unconfigured', updatedAt: Date.now() }
-  }
-  const account = ctx.get?.('deepseekAccount')
-  if (account === undefined || typeof account.getBalance !== 'function') {
-    return { provider: 'unknown', amount: null, currency: 'CNY', status: 'unsupported', updatedAt: Date.now() }
-  }
-  try {
-    const result = await account.getBalance({
-      version: '0.1.0',
-      locale: 'zh-CN',
-      timezoneOffsetSeconds: -new Date().getTimezoneOffset() * 60,
-    })
-    if (result === null || result === undefined) {
-      return { provider: 'deepseek', amount: null, currency: 'CNY', status: 'unconfigured', updatedAt: Date.now() }
-    }
-    if (result.status !== 'ready') {
-      return { provider: 'deepseek', amount: null, currency: 'CNY', status: 'error', updatedAt: Date.now() }
-    }
-    const wallets = Array.isArray(result.value) ? result.value : Object.values(result.value ?? {})
-    let amount = 0
-    for (const wallet of wallets) {
-      const value = Number(wallet?.balance ?? wallet?.amount ?? 0)
-      if (Number.isFinite(value)) amount += value
-    }
-    return { provider: 'deepseek', amount, currency: 'CNY', status: 'ok', updatedAt: Date.now() }
-  } catch {
-    return { provider: 'deepseek', amount: null, currency: 'CNY', status: 'error', updatedAt: Date.now() }
-  }
 }
 
 export function apply(ctx) {
