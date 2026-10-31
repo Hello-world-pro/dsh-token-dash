@@ -96,7 +96,8 @@ window.__ModuleLoader__.load({
       sep: { width: 1, height: 12, background: 'currentColor', opacity: 0.2 },
       num: { fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
       panel: {
-        position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 'max-content',
+        // #30 定案：垂直贴 pill 上方（bottom 动态计算），水平右缘对齐视口右缘
+        position: 'fixed', right: 16, width: 'max-content',
         minWidth: 'min(380px, calc(100vw - 32px))', maxWidth: 'min(600px, calc(100vw - 32px))',
         boxSizing: 'border-box', maxHeight: '70vh', overflow: 'auto', zIndex: 9999,
         padding: 12, borderRadius: 12, background: 'var(--dsh-bg-elevated, #1f1f1f)',
@@ -209,6 +210,7 @@ window.__ModuleLoader__.load({
       const [hover, setHover] = useState(false)
       const [hint, setHint] = useState(false)
       const [panelMaxHeight, setPanelMaxHeight] = useState('70vh')
+      const [panelBottom, setPanelBottom] = useState('52px')
       const pillRef = useRef(null)
 
       useEffect(() => {
@@ -261,9 +263,11 @@ window.__ModuleLoader__.load({
       }, [])
       const toggle = () => {
         dismissHint()
-        // #30：浮层固定在 pill 正上方；上方空间不足时收紧 maxHeight（视口顶 8px 间隙 + pill 间距 8px），内容内部滚动
+        // #30 定案：浮层垂直贴 pill 上方（fixed bottom = 视口高 - pillTop + 8），水平右缘对齐视口右缘；
+        // 上方空间不足时收紧 maxHeight（视口顶 8px 间隙 + pill 间距 8px），内容内部滚动
         const rect = pillRef.current?.getBoundingClientRect()
         if (rect !== undefined) {
+          setPanelBottom(`${Math.max(8, Math.round(window.innerHeight - rect.top + 8))}px`)
           const available = Math.round(rect.top) - 16
           setPanelMaxHeight(`${Math.max(200, Math.min(window.innerHeight * 0.7, available))}px`)
         }
@@ -318,7 +322,7 @@ window.__ModuleLoader__.load({
           }, h('span', { key: 'prefix', style: styles.num }, prefix), ...bodyNodes,
             h('span', { key: 'chevron', style: styles.chevron }, open ? '⌄' : '⌃'))),
         open ? h(Panel, {
-          summary, error, view, refreshing, maxHeight: panelMaxHeight, onView: setView, onRefresh: load, onRefreshSubs: refreshSubs, onClose: closePanel,
+          summary, error, view, refreshing, maxHeight: panelMaxHeight, bottom: panelBottom, onView: setView, onRefresh: load, onRefreshSubs: refreshSubs, onClose: closePanel,
         }) : null)
     }
 
@@ -330,8 +334,13 @@ window.__ModuleLoader__.load({
         h('div', { style: styles.row },
           h('b', { style: styles.nameEllipsis, title: provider.name }, provider.name),
           hasBudget
-            ? h('span', { 'data-testid': `token-dash-budget-${provider.id}`, style: { fontSize: 20, fontWeight: 700, color } }, '预算 ', fmtRatio(budget.percent))
+            ? h('span', { 'data-testid': `token-dash-budget-${provider.id}`, style: { fontWeight: 700, color } }, `预算 ${fmtRatio(budget.percent)}`)
             : h('span', { style: styles.muted }, '未设置预算')),
+        // #33：大字显示已用 / 总预算额度
+        h('div', { 'data-testid': `token-dash-budget-amount-${provider.id}`, style: { fontSize: 20, fontWeight: 700, marginTop: 4 } },
+          hasBudget
+            ? `${fmtMoney(budget.used, provider.currency)} / ${fmtMoney(budget.amount, provider.currency)}`
+            : fmtMoney(provider.usage?.monthCost, provider.currency)),
         h('div', { style: styles.bar },
           h('div', {
             style: {
@@ -416,7 +425,7 @@ window.__ModuleLoader__.load({
               emptyRow))))
     }
 
-    function Panel({ summary, error, view, refreshing, maxHeight = '70vh', onView, onRefresh, onRefreshSubs, onClose }) {
+    function Panel({ summary, error, view, refreshing, maxHeight = '70vh', bottom = '52px', onView, onRefresh, onRefreshSubs, onClose }) {
       const panelRef = useRef(null)
 
       useEffect(() => {
@@ -426,7 +435,7 @@ window.__ModuleLoader__.load({
       const panelProps = {
         ref: panelRef, tabIndex: -1, role: 'dialog', 'aria-label': 'Token 看板',
         'data-testid': 'token-dash-panel',
-        style: { ...styles.panel, maxHeight },
+        style: { ...styles.panel, bottom, maxHeight },
       }
 
       if (view === 'settings') {

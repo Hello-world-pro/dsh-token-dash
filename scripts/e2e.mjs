@@ -242,8 +242,12 @@ try {
   ], baseModels, 'deepseek-official')
   await jsClick(settings.getByRole('button', { name: '← 返回' }))
   await panel.waitFor({ timeout: 8000 })
-  await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]')?.innerText.includes('2.5%'), null, { timeout: 8000 })
+  // 主动刷新拉取 budget 500.5 的 summary（不依赖 60s interval tick 的随机时机）
+  await jsClick(panel.getByRole('button', { name: '刷新' }))
+  await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]')?.innerText.includes('¥500.50'), null, { timeout: 8000 })
   assert.match(await panel.innerText(), /2\.5%/)
+  // #33：API 卡显示已用 / 总预算额度
+  assert.match(await panel.innerText(), /¥12\.34 \/ ¥500\.50/)
   assert.match(await panel.innerText(), /预算/)
 
   await jsClick(panel.getByRole('button', { name: '设置' }))
