@@ -429,6 +429,7 @@ window.__ModuleLoader__.load({
           setBudgetText(String(saved.budget.amount))
           setStatus('已保存')
           setTimeout(() => setStatus(''), 1500)
+          void onRefresh?.()
           return true
         } catch (error) {
           setStatus(`保存失败：${error.message}`)

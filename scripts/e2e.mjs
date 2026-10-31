@@ -285,6 +285,11 @@ try {
   await budgetInput.fill('500.50')
   await settings.getByRole('button', { name: '← 返回' }).click()
   await panel.waitFor({ timeout: 8000 })
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=token-dash-panel]')?.innerText.includes('¥500.50'),
+    null,
+    { timeout: 8000 },
+  )
   await panel.getByRole('button', { name: '设置' }).click()
   await settings.waitFor({ timeout: 8000 })
   await page.waitForFunction(
