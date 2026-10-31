@@ -27,6 +27,7 @@ window.__ModuleLoader__.load({
       if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`
       return `${Math.floor(seconds / 3600)} 小时前`
     }
+    const modelTitle = (model) => [model.providerName, model.displayName ?? model.name].filter(Boolean).join(' / ')
 
     async function getJson(path) {
       const res = await fetch(`${API}${path}`, { headers: { accept: 'application/json' } })
@@ -258,10 +259,10 @@ window.__ModuleLoader__.load({
             (models ?? []).map((model) =>
               h(
                 'tr',
-                { key: model.name },
-                h('td', { style: styles.td }, model.displayName ?? model.name),
+                { key: `${model.providerId}:${model.modelId}` },
+                h('td', { style: styles.td }, modelTitle(model)),
                 h('td', { style: styles.tdRight }, fmtPct(model.share)),
-                h('td', { style: { ...styles.tdRight, fontWeight: 600 } }, fmtMoney(model.cost)),
+                h('td', { style: { ...styles.tdRight, fontWeight: 600 } }, model.priced === false ? '未定价' : fmtMoney(model.cost)),
               ),
             ),
             (models ?? []).length === 0 ? h('tr', null, h('td', { style: styles.td, colSpan: 3 }, '本月暂无消耗')) : null,
@@ -285,8 +286,8 @@ window.__ModuleLoader__.load({
             (models ?? []).map((model) =>
               h(
                 'tr',
-                { key: model.name },
-                h('td', { style: styles.td }, model.displayName ?? model.name),
+                { key: `${model.providerId}:${model.modelId}` },
+                h('td', { style: styles.td }, modelTitle(model)),
                 h('td', { style: styles.tdRight }, model.requests),
                 h('td', { style: styles.tdRight }, fmtM(model.tokens.input)),
                 h('td', { style: styles.tdRight }, fmtM(model.tokens.cacheRead)),

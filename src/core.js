@@ -27,11 +27,64 @@ export function isPeak(ts) {
   return (hour >= 9 && hour < 12) || (hour >= 14 && hour < 18)
 }
 
-/** 宿主展示名映射；raw model 仍用于计价。 */
+const PROVIDER_ALIASES = {
+  'deepseek-account': 'deepseek-official',
+  'deepseek-official': 'deepseek-official',
+  glm: 'zhipu',
+  zhipu: 'zhipu',
+  'z.ai': 'zhipu',
+  kimi: 'moonshot',
+  moonshot: 'moonshot',
+  qwen: 'qwen',
+  dashscope: 'qwen',
+  aliyun: 'qwen',
+  doubao: 'doubao',
+  volcengine: 'doubao',
+  ark: 'doubao',
+  openai: 'openai',
+  openrouter: 'openrouter',
+  anthropic: 'anthropic',
+  google: 'google',
+}
+
+const PROVIDER_NAMES = {
+  'deepseek-official': 'DeepSeek 官方',
+  deepseek: 'DeepSeek',
+  zhipu: '智谱 AI',
+  moonshot: 'Kimi',
+  qwen: '通义',
+  doubao: '豆包',
+  openai: 'OpenAI',
+  openrouter: 'OpenRouter',
+  anthropic: 'Anthropic',
+  google: 'Google',
+  unknown: '未知来源',
+}
+
+const OFFICIAL_PROVIDERS = new Set(['deepseek-official'])
+
+export function normalizeProvider(raw) {
+  const id = String(raw ?? '').trim().toLowerCase()
+  if (id === '') return 'unknown'
+  return PROVIDER_ALIASES[id] ?? id
+}
+
+export function providerLabel(raw) {
+  const id = normalizeProvider(raw)
+  return PROVIDER_NAMES[id] ?? id
+}
+
+/** 宿主展示名；raw model 仍用于计价。 */
 const MODEL_LABELS = {
-  'deepseek-flash': 'v4.1-1019',
-  'deepseek-v4.1-flash': 'v4.1-1019',
-  'deepseek-v4.1-flash-ioa': 'v4.1-1019',
+  'deepseek-flash': 'DeepSeek-V4.1-Flash',
+  'deepseek-v4.1-flash': 'DeepSeek-V4.1-Flash',
+  'deepseek-v4.1-flash-ioa': 'DeepSeek-V4.1-Flash',
+  'deepseek-pro': 'DeepSeek-V4.1-Pro',
+  'deepseek-v4-pro': 'DeepSeek-V4.1-Pro',
+  'glm-5.3': 'GLM-5.3',
+  'glm-5.3-flash': 'GLM-5.3-Flash',
+  'kimi-k3': 'Kimi K3',
+  'kimi-k2.7': 'Kimi K2.7',
 }
 
 export function displayModel(raw) {
@@ -52,7 +105,7 @@ export function normalizeModel(raw) {
   return name === '' ? 'unknown' : name
 }
 
-const PRICES = {
+const DEEPSEEK_PRICES = {
   flash: {
     peak: { input: 3, cacheRead: 0.1, output: 9 },
     off: { input: 1.5, cacheRead: 0.05, output: 4.5 },
@@ -63,18 +116,33 @@ const PRICES = {
   },
 }
 
-export function priceFor(model, ts) {
-  const tier = model.includes('pro') ? 'pro' : 'flash'
-  return PRICES[tier][isPeak(ts) ? 'peak' : 'off']
+/** 第三方目录价（CNY / 1M tokens）；未收录返回 null，不套 DeepSeek 价。 */
+const THIRD_PARTY_PRICES = {
+  'zhipu:glm-5.3': { input: 8, cacheRead: 2, output: 28 },
+  'zhipu:glm-5.3-flash': { input: 0.8, cacheRead: 0.23, output: 2.8 },
+  'moonshot:kimi-k3': { input: 20, cacheRead: 2, output: 100 },
+  'moonshot:kimi-k2.7': { input: 6.5, cacheRead: 1.3, output: 27 },
 }
 
-/** 每条记录：未命中输入 + 命中输入 + 输出；缓存写入按 0。 */
+export function priceFor(provider, model, ts) {
+  const providerId = normalizeProvider(provider)
+  const modelId = normalizeModel(model)
+  if (OFFICIAL_PROVIDERS.has(providerId)) {
+    const tier = modelId.includes('pro') ? 'pro' : 'flash'
+    return DEEPSEEK_PRICES[tier][isPeak(ts) ? 'peak' : 'off']
+  }
+  return THIRD_PARTY_PRICES[`${providerId}:${modelId}`] ?? null
+}
+
+/** 每条记录：未命中输入 + 命中输入 + 输出；无目录价返回 0。 */
 export function costOf(record) {
-  const p = priceFor(normalizeModel(record.model), record.ts)
+  const provider = record.provider ?? (String(record.model ?? '').includes('deepseek') ? 'deepseek-official' : 'unknown')
+  const price = priceFor(provider, record.model, record.ts)
+  if (price === null) return 0
   return (
-    (num(record.input) * p.input +
-      num(record.cacheRead) * p.cacheRead +
-      num(record.output) * p.output) /
+    (num(record.input) * price.input +
+      num(record.cacheRead) * price.cacheRead +
+      num(record.output) * price.output) /
     1e6
   )
 }
@@ -91,15 +159,30 @@ function dayBucket(state, dayKey) {
 export function addRecord(state, record) {
   const day = localDayKey(record.ts)
   const bucket = dayBucket(state, day)
+  if (bucket.providers === undefined) {
+    bucket.providers = { unknown: { models: bucket.models ?? {} } }
+    delete bucket.models
+  }
+  const provider = normalizeProvider(record.provider)
+  const providerBucket = (bucket.providers[provider] ??= { models: {} })
   const model = normalizeModel(record.model)
-  bucket.models[model] ??= { input: 0, cacheRead: 0, cacheWrite: 0, output: 0, requests: 0, cost: 0 }
-  const row = bucket.models[model]
+  const row = (providerBucket.models[model] ??= {
+    input: 0,
+    cacheRead: 0,
+    cacheWrite: 0,
+    output: 0,
+    requests: 0,
+    cost: 0,
+    priced: true,
+  })
   row.input += num(record.input)
   row.cacheRead += num(record.cacheRead)
   row.cacheWrite += num(record.cacheWrite)
   row.output += num(record.output)
   row.requests += 1
-  row.cost += costOf(record)
+  const price = priceFor(provider, model, record.ts)
+  if (price === null) row.priced = false
+  row.cost += costOf({ ...record, provider })
 }
 
 function sumRows(rows) {
@@ -122,28 +205,37 @@ export function buildSummary(state, prefs, now, balance) {
 
   for (const [dayKey, bucket] of Object.entries(state.days ?? {})) {
     if (!dayKey.startsWith(`${month}-`)) continue
-    for (const [model, row] of Object.entries(bucket.models ?? {})) {
-      const entry = models.get(model) ?? {
-        name: model,
-        displayName: displayModel(model),
-        requests: 0,
-        input: 0,
-        cacheRead: 0,
-        cacheWrite: 0,
-        output: 0,
-        cost: 0,
-      }
-      entry.requests += num(row.requests)
-      entry.input += num(row.input)
-      entry.cacheRead += num(row.cacheRead)
-      entry.cacheWrite += num(row.cacheWrite)
-      entry.output += num(row.output)
-      entry.cost += num(row.cost)
-      models.set(model, entry)
-      if (dayKey === todayKey) {
-        today.tokens += num(row.input) + num(row.cacheRead) + num(row.cacheWrite) + num(row.output)
-        today.requests += num(row.requests)
-        today.cost += num(row.cost)
+    const providers = bucket.providers ?? { unknown: { models: bucket.models ?? {} } }
+    for (const [providerId, providerBucket] of Object.entries(providers)) {
+      for (const [model, row] of Object.entries(providerBucket.models ?? {})) {
+        const key = `${providerId}:${model}`
+        const entry = models.get(key) ?? {
+          name: model,
+          modelId: model,
+          providerId,
+          providerName: providerLabel(providerId),
+          displayName: displayModel(model),
+          priced: true,
+          requests: 0,
+          input: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+          output: 0,
+          cost: 0,
+        }
+        entry.requests += num(row.requests)
+        entry.input += num(row.input)
+        entry.cacheRead += num(row.cacheRead)
+        entry.cacheWrite += num(row.cacheWrite)
+        entry.output += num(row.output)
+        entry.cost += num(row.cost)
+        if (row.priced === false) entry.priced = false
+        models.set(key, entry)
+        if (dayKey === todayKey) {
+          today.tokens += num(row.input) + num(row.cacheRead) + num(row.cacheWrite) + num(row.output)
+          today.requests += num(row.requests)
+          today.cost += num(row.cost)
+        }
       }
     }
   }
@@ -171,6 +263,7 @@ export function buildSummary(state, prefs, now, balance) {
   totalCost = round2(totalCost)
 
   const totals = sumRows([...models.values()])
+  const unpricedModels = rows.filter((row) => row.priced === false).map((row) => `${row.providerId}:${row.modelId}`)
   const totalTokens = totals.input + totals.cacheRead + totals.cacheWrite + totals.output
   const hitRate =
     totals.input + totals.cacheWrite + totals.cacheRead > 0
@@ -191,7 +284,7 @@ export function buildSummary(state, prefs, now, balance) {
       total: totalTokens,
       hitRate,
     },
-    cost: { estimated: totalCost, currency: 'CNY', unpricedModels: [] },
+    cost: { estimated: totalCost, currency: 'CNY', unpricedModels },
     today: { tokens: today.tokens, cost: round2(today.cost), requests: today.requests },
     requests: { month: totals.requests, today: today.requests },
     budget: {

@@ -17,6 +17,9 @@ test-results/
 *.log
 .cache/
 
+# third-party reference sources (local research only)
+reference/third-party/
+
 # secrets
 .env
 .env.*

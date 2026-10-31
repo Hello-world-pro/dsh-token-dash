@@ -11,6 +11,7 @@ export function recordFromEvent(event) {
   return {
     ts: num(event.time) || Date.now(),
     sessionId: '',
+    provider: typeof source.provider === 'string' ? source.provider : 'unknown',
     model: source.model ?? '',
     input: num(usage.inputTokens),
     cacheRead: num(usage.cacheReadTokens),

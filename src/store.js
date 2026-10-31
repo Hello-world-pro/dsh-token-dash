@@ -47,6 +47,13 @@ export async function loadState(dir) {
   await mkdir(dir, { recursive: true })
   const state = await readJson(join(dir, 'daily.json'), emptyState())
   if (state?.version !== 1 || typeof state.days !== 'object') return emptyState()
+  for (const bucket of Object.values(state.days)) {
+    if (bucket === null || typeof bucket !== 'object') continue
+    if (bucket.providers === undefined) {
+      bucket.providers = { unknown: { models: bucket.models ?? {} } }
+      delete bucket.models
+    }
+  }
   state.watermarks ??= {}
   return state
 }
