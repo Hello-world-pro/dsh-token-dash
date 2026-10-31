@@ -96,8 +96,8 @@ window.__ModuleLoader__.load({
       sep: { width: 1, height: 12, background: 'currentColor', opacity: 0.2 },
       num: { fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
       panel: {
-        // #30 定案：垂直贴 pill 上方（bottom 动态计算），水平右缘对齐视口右缘
-        position: 'fixed', right: 16, width: 'max-content',
+        // #30 三次定案：从 pill 正上方弹出——左缘对齐 pill 左缘、底边距 pill 顶 8px，允许遮挡输入框
+        position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 'max-content',
         minWidth: 'min(380px, calc(100vw - 32px))', maxWidth: 'min(600px, calc(100vw - 32px))',
         boxSizing: 'border-box', maxHeight: '70vh', overflow: 'auto', zIndex: 9999,
         padding: 12, borderRadius: 12, background: 'var(--dsh-bg-elevated, #1f1f1f)',
@@ -210,7 +210,6 @@ window.__ModuleLoader__.load({
       const [hover, setHover] = useState(false)
       const [hint, setHint] = useState(false)
       const [panelMaxHeight, setPanelMaxHeight] = useState('70vh')
-      const [panelBottom, setPanelBottom] = useState('52px')
       const pillRef = useRef(null)
 
       useEffect(() => {
@@ -263,11 +262,9 @@ window.__ModuleLoader__.load({
       }, [])
       const toggle = () => {
         dismissHint()
-        // #30 定案：浮层垂直贴 pill 上方（fixed bottom = 视口高 - pillTop + 8），水平右缘对齐视口右缘；
-        // 上方空间不足时收紧 maxHeight（视口顶 8px 间隙 + pill 间距 8px），内容内部滚动
+        // #30 三次定案：浮层从 pill 正上方弹出；pill 上方空间不足时收紧 maxHeight（视口顶 8px 间隙 + pill 间距 8px），内容内部滚动
         const rect = pillRef.current?.getBoundingClientRect()
         if (rect !== undefined) {
-          setPanelBottom(`${Math.max(8, Math.round(window.innerHeight - rect.top + 8))}px`)
           const available = Math.round(rect.top) - 16
           setPanelMaxHeight(`${Math.max(200, Math.min(window.innerHeight * 0.7, available))}px`)
         }
@@ -305,24 +302,26 @@ window.__ModuleLoader__.load({
         ariaText = `${current.name}，按量 API，${hasBudget ? `预算已用 ${fmtRatio(budget.percent)}` : '预算未设置'}，今日 ${fmtMoney(current.usage?.todayCost, current.currency)}${balance === null ? '' : `，余额 ${balance}`}`
       }
 
-      return h(React.Fragment, null,
-        h('div', { style: styles.pillWrap },
-          hint && !open ? h('span', { style: styles.hint, role: 'status' }, '点击查看 Token 看板') : null,
-          h('span', {
-            ref: pillRef,
-            'data-testid': 'token-dash-pill',
-            style: { ...styles.pill, ...(hover || open ? styles.pillHover : {}) },
-            onClick: toggle,
-            onMouseEnter: () => setHover(true), onMouseLeave: () => setHover(false),
-            onFocus: () => setHover(true), onBlur: () => setHover(false),
-            onKeyDown: (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle() } },
-            role: 'button', tabIndex: 0, 'aria-expanded': open, 'aria-haspopup': 'dialog',
-            'aria-label': `Token 看板：${ariaText}`,
-            title: open ? '收起 Token 看板' : '展开 Token 看板',
-          }, h('span', { key: 'prefix', style: styles.num }, prefix), ...bodyNodes,
-            h('span', { key: 'chevron', style: styles.chevron }, open ? '⌄' : '⌃'))),
+      // #30 三次定案 + 根因修复：Panel 必须渲染在 pillWrap 内部，
+      // absolute 才以 pillWrap（position:relative）为锚——此前 Panel 是 pillWrap 的兄弟节点，
+      // absolute 一直挂在宿主槽位容器上，导致 v1 起浮层位置从未真正对齐过 pill。
+      return h('div', { style: styles.pillWrap },
+        hint && !open ? h('span', { style: styles.hint, role: 'status' }, '点击查看 Token 看板') : null,
+        h('span', {
+          ref: pillRef,
+          'data-testid': 'token-dash-pill',
+          style: { ...styles.pill, ...(hover || open ? styles.pillHover : {}) },
+          onClick: toggle,
+          onMouseEnter: () => setHover(true), onMouseLeave: () => setHover(false),
+          onFocus: () => setHover(true), onBlur: () => setHover(false),
+          onKeyDown: (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle() } },
+          role: 'button', tabIndex: 0, 'aria-expanded': open, 'aria-haspopup': 'dialog',
+          'aria-label': `Token 看板：${ariaText}`,
+          title: open ? '收起 Token 看板' : '展开 Token 看板',
+        }, h('span', { key: 'prefix', style: styles.num }, prefix), ...bodyNodes,
+          h('span', { key: 'chevron', style: styles.chevron }, open ? '⌄' : '⌃')),
         open ? h(Panel, {
-          summary, error, view, refreshing, maxHeight: panelMaxHeight, bottom: panelBottom, onView: setView, onRefresh: load, onRefreshSubs: refreshSubs, onClose: closePanel,
+          summary, error, view, refreshing, maxHeight: panelMaxHeight, onView: setView, onRefresh: load, onRefreshSubs: refreshSubs, onClose: closePanel,
         }) : null)
     }
 
@@ -425,7 +424,7 @@ window.__ModuleLoader__.load({
               emptyRow))))
     }
 
-    function Panel({ summary, error, view, refreshing, maxHeight = '70vh', bottom = '52px', onView, onRefresh, onRefreshSubs, onClose }) {
+    function Panel({ summary, error, view, refreshing, maxHeight = '70vh', onView, onRefresh, onRefreshSubs, onClose }) {
       const panelRef = useRef(null)
 
       useEffect(() => {
@@ -435,7 +434,7 @@ window.__ModuleLoader__.load({
       const panelProps = {
         ref: panelRef, tabIndex: -1, role: 'dialog', 'aria-label': 'Token 看板',
         'data-testid': 'token-dash-panel',
-        style: { ...styles.panel, bottom, maxHeight },
+        style: { ...styles.panel, maxHeight },
       }
 
       if (view === 'settings') {

@@ -150,6 +150,11 @@ try {
 
   await refresh()
   const panel = page.locator('[data-testid=token-dash-panel]')
+  // #30 三次定案：浮层从 pill 正上方弹出——左缘对齐 pill 左缘、底边距 pill 顶 8px
+  const pillBox = await pill.boundingBox()
+  const panelBox = await panel.boundingBox()
+  assert.ok(Math.abs(panelBox.x - pillBox.x) < 4, `panel left ${panelBox.x} should align pill left ${pillBox.x}`)
+  assert.ok(Math.abs(panelBox.y + panelBox.height - (pillBox.y - 8)) < 4, `panel bottom ${panelBox.y + panelBox.height} should sit 8px above pill top ${pillBox.y}`)
   assert.match(await panel.innerText(), /API 按量（已检测 2）/)
   assert.match(await panel.innerText(), /订阅套餐（已检测 2）/)
   assert.match(await panel.innerText(), /DeepSeek 官方/)
