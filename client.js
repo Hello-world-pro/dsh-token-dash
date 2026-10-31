@@ -27,7 +27,11 @@ window.__ModuleLoader__.load({
       if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`
       return `${Math.floor(seconds / 3600)} 小时前`
     }
-    const modelTitle = (model) => [model.providerName, model.displayName ?? model.name].filter(Boolean).join(' / ')
+    const modelTitle = (model) => {
+      const name = model.displayName ?? model.name
+      if (!model.providerId || model.providerId === 'unknown') return name
+      return [model.providerName, name].filter(Boolean).join(' / ')
+    }
 
     async function getJson(path) {
       const res = await fetch(`${API}${path}`, { headers: { accept: 'application/json' } })
@@ -89,10 +93,21 @@ window.__ModuleLoader__.load({
       barFill: { height: '100%', background: '#f0a020' },
       cols: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8 },
       table: { width: '100%', borderCollapse: 'collapse', marginTop: 6 },
-      th: { textAlign: 'left', opacity: 0.6, fontWeight: 400, padding: '4px 0' },
-      thRight: { textAlign: 'right', opacity: 0.6, fontWeight: 400, padding: '4px 0' },
-      td: { padding: '4px 0', borderTop: '1px solid rgba(128,128,128,.15)' },
-      tdRight: { padding: '4px 0', textAlign: 'right', borderTop: '1px solid rgba(128,128,128,.15)' },
+      th: { textAlign: 'left', opacity: 0.6, fontWeight: 400, padding: '4px 8px' },
+      thRight: {
+        textAlign: 'right',
+        opacity: 0.6,
+        fontWeight: 400,
+        padding: '4px 8px',
+        borderLeft: '1px solid rgba(128,128,128,.15)',
+      },
+      td: { padding: '4px 8px', borderTop: '1px solid rgba(128,128,128,.15)' },
+      tdRight: {
+        padding: '4px 8px',
+        textAlign: 'right',
+        borderTop: '1px solid rgba(128,128,128,.15)',
+        borderLeft: '1px solid rgba(128,128,128,.15)',
+      },
       link: { color: 'inherit', textDecoration: 'underline', cursor: 'pointer', marginLeft: 12 },
       button: {
         border: '1px solid var(--dsh-border, rgba(128,128,128,.35))',

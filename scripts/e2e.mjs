@@ -151,6 +151,19 @@ try {
           cost: 0,
           share: 0,
         },
+        {
+          name: 'deepseek-flash',
+          modelId: 'deepseek-flash',
+          providerId: 'unknown',
+          providerName: '未知来源',
+          displayName: 'DeepSeek-V4.1-Flash',
+          priced: true,
+          requests: 1,
+          tokens,
+          hitRate: 0,
+          cost: 0,
+          share: 0,
+        },
       ],
     },
     balance: { provider: 'deepseek', amount: 49.86, currency: 'CNY', status: 'ok', updatedAt: now },
@@ -184,6 +197,7 @@ try {
   assert.match(panelWithProviders, /DeepSeek 官方 \/ DeepSeek-V4\.1-Flash/)
   assert.match(panelWithProviders, /OpenRouter \/ DeepSeek-V4\.1-Flash/)
   assert.match(panelWithProviders, /未定价/)
+  assert.ok(!panelWithProviders.includes('未知来源'), 'unknown provider 不应显示“未知来源 /”')
   assert.ok(await panel.isVisible(), '刷新后浮层应保持打开')
   await page.unroute(summaryPattern)
 

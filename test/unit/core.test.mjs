@@ -11,6 +11,7 @@ import {
   normalizeProvider,
   priceFor,
   providerLabel,
+  reattributeUnknown,
 } from '../../src/core.js'
 
 test('normalizeModel 去掉渠道前缀与后缀', () => {
@@ -93,6 +94,21 @@ test('同模型不同 provider 分行，未定价不套官方价', () => {
   assert.equal(relay.priced, false)
   assert.equal(relay.cost, 0)
   assert.deepEqual(summary.cost.unpricedModels, ['openrouter:deepseek-flash'])
+})
+
+test('旧 unknown 行在 provider 唯一时归因', () => {
+  const state = emptyState()
+  const now = Date.UTC(2026, 9, 30, 2, 0, 0)
+  addRecord(state, { ts: now, provider: 'unknown', model: 'deepseek-flash', input: 10_000, output: 1_000 })
+  const row = state.days['2026-10-30'].providers.unknown.models['deepseek-flash']
+  row.cost = 0.04
+  row.priced = true
+  reattributeUnknown(
+    state,
+    new Map([['deepseek-flash', new Set(['deepseek-account'])]]),
+  )
+  assert.equal(state.days['2026-10-30'].providers.unknown, undefined)
+  assert.equal(state.days['2026-10-30'].providers['deepseek-official'].models['deepseek-flash'].cost, 0.04)
 })
 
 test('provider 归一化与展示名', () => {

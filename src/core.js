@@ -156,6 +156,35 @@ function dayBucket(state, dayKey) {
   return state.days[dayKey]
 }
 
+/** 仅当某模型在历史事件里只出现过唯一 provider 时，把旧 unknown 行归因过去。 */
+export function reattributeUnknown(state, providerByModel) {
+  for (const bucket of Object.values(state.days ?? {})) {
+    const unknown = bucket?.providers?.unknown?.models
+    if (unknown === undefined) continue
+    for (const [model, row] of Object.entries(unknown)) {
+      const providers = providerByModel.get(model)
+      if (providers === undefined || providers.size !== 1) continue
+      const provider = normalizeProvider([...providers][0])
+      if (provider === 'unknown') continue
+      const targetBucket = (bucket.providers[provider] ??= { models: {} })
+      const target = targetBucket.models[model]
+      if (target === undefined) {
+        targetBucket.models[model] = row
+      } else {
+        target.input += num(row.input)
+        target.cacheRead += num(row.cacheRead)
+        target.cacheWrite += num(row.cacheWrite)
+        target.output += num(row.output)
+        target.requests += num(row.requests)
+        target.cost += num(row.cost)
+        target.priced = target.priced !== false && row.priced !== false
+      }
+      delete unknown[model]
+    }
+    if (Object.keys(unknown).length === 0) delete bucket.providers.unknown
+  }
+}
+
 export function addRecord(state, record) {
   const day = localDayKey(record.ts)
   const bucket = dayBucket(state, day)

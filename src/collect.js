@@ -1,4 +1,4 @@
-import { addRecord, num } from './core.js'
+import { addRecord, normalizeModel, num, reattributeUnknown } from './core.js'
 
 const USAGE_TYPES = new Set(['assistant/message', 'compaction/summary'])
 
@@ -44,6 +44,7 @@ export async function backfill(ctx, state) {
   }
   let sessions = 0
   let records = 0
+  const providerByModel = new Map()
   const list = await persistence.list()
   for (const header of Array.isArray(list) ? list : []) {
     const id = header?.id
@@ -55,6 +56,13 @@ export async function backfill(ctx, state) {
       const events = await handle.read(0, Number.MAX_SAFE_INTEGER)
       const seed = num(header.seedLength) || num(handle.inheritedEventCount)
       for (const event of Array.isArray(events) ? events : []) {
+        const source = event?.data?.message?.source
+        if (typeof source?.provider === 'string' && typeof source?.model === 'string') {
+          const model = normalizeModel(source.model)
+          const providers = providerByModel.get(model) ?? new Set()
+          providers.add(source.provider)
+          providerByModel.set(model, providers)
+        }
         if (ingest(state, id, event, seed) !== undefined) records += 1
       }
     } catch {
@@ -67,5 +75,6 @@ export async function backfill(ctx, state) {
       }
     }
   }
+  reattributeUnknown(state, providerByModel)
   return { sessions, records, degraded: null }
 }
