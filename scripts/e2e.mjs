@@ -113,9 +113,94 @@ try {
   await panel.waitFor({ timeout: 8000 })
   assert.match(await panel.innerText(), /本月费用与额度/)
   assert.equal(await panel.getByRole('link').count(), 0)
+
+  const now = Date.now()
+  const tokens = { input: 1_000_000, cacheRead: 0, output: 1_000_000, total: 2_000_000 }
+  const summaryFixture = {
+    month: '2026-10',
+    tokens: { ...tokens, cacheWrite: 0, hitRate: 0 },
+    cost: { estimated: 24, currency: 'CNY', unpricedModels: ['openrouter:deepseek-flash'] },
+    today: { tokens: 0, cost: 0, requests: 0 },
+    requests: { month: 2, today: 0 },
+    budget: { amount: 3500, used: 24, remaining: 3476, percent: 24 / 3500, state: 'ok' },
+    breakdown: {
+      models: [
+        {
+          name: 'deepseek-flash',
+          modelId: 'deepseek-flash',
+          providerId: 'deepseek-official',
+          providerName: 'DeepSeek 官方',
+          displayName: 'DeepSeek-V4.1-Flash',
+          priced: true,
+          requests: 1,
+          tokens,
+          hitRate: 0,
+          cost: 24,
+          share: 1,
+        },
+        {
+          name: 'deepseek-flash',
+          modelId: 'deepseek-flash',
+          providerId: 'openrouter',
+          providerName: 'OpenRouter',
+          displayName: 'DeepSeek-V4.1-Flash',
+          priced: false,
+          requests: 1,
+          tokens,
+          hitRate: 0,
+          cost: 0,
+          share: 0,
+        },
+      ],
+    },
+    balance: { provider: 'deepseek', amount: 49.86, currency: 'CNY', status: 'ok', updatedAt: now },
+    showBalance: true,
+    updatedAt: now,
+    stale: false,
+  }
+
+  const summaryPattern = '**/token-dash/api/summary*'
+  await page.route(summaryPattern, async (route) => {
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 800))
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, data: summaryFixture }),
+    })
+  })
+
   await panel.getByRole('button', { name: '刷新' }).click()
-  await page.waitForTimeout(300)
+  await page.waitForFunction(
+    () => [...document.querySelectorAll('[data-testid=token-dash-panel] button')].some((button) => button.textContent.includes('刷新中')),
+    null,
+    { timeout: 2000 },
+  )
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=token-dash-panel]')?.innerText.includes('DeepSeek 官方'),
+    null,
+    { timeout: 8000 },
+  )
+  const panelWithProviders = await panel.innerText()
+  assert.match(panelWithProviders, /DeepSeek 官方 \/ DeepSeek-V4\.1-Flash/)
+  assert.match(panelWithProviders, /OpenRouter \/ DeepSeek-V4\.1-Flash/)
+  assert.match(panelWithProviders, /未定价/)
   assert.ok(await panel.isVisible(), '刷新后浮层应保持打开')
+  await page.unroute(summaryPattern)
+
+  await page.route(summaryPattern, (route) => route.fulfill({ status: 500, body: '{}' }))
+  await panel.getByRole('button', { name: '刷新' }).click()
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=token-dash-panel]')?.innerText.includes('Token 数据不可用'),
+    null,
+    { timeout: 5000 },
+  )
+  await page.unroute(summaryPattern)
+  await panel.getByRole('button', { name: '刷新' }).click()
+  await page.waitForFunction(
+    () => !document.querySelector('[data-testid=token-dash-panel]')?.innerText.includes('Token 数据不可用'),
+    null,
+    { timeout: 5000 },
+  )
 
   await panel.getByRole('button', { name: '设置' }).click()
   const settings = page.locator('[data-testid=token-dash-settings]')
