@@ -66,12 +66,8 @@ window.__ModuleLoader__.load({
       },
       pillWrap: {
         position: 'relative',
-        display: 'flex',
-        justifyContent: 'flex-end',
+        display: 'inline-flex',
         alignItems: 'center',
-        width: '100%',
-        padding: '2px 12px',
-        boxSizing: 'border-box',
       },
       pillHover: { background: 'rgba(127,127,127,.12)' },
       hint: {
@@ -626,8 +622,8 @@ window.__ModuleLoader__.load({
       apply(ctx) {
         const slots = typeof ctx.get === 'function' ? ctx.get('slots') : ctx.slots
         if (slots === undefined || typeof slots.inject !== 'function') return
-        slots.inject('shell.bottom', () =>
-          slots.register({ name: 'shell.bottom', id: 'token-dash', order: 10 }, Pill),
+        slots.inject('conversation.input.left', () =>
+          slots.register({ name: 'conversation.input.left', id: 'token-dash', order: 10 }, Pill),
         )
       },
     }
