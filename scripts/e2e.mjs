@@ -111,7 +111,7 @@ try {
   await pill.click()
   const panel = page.locator('[data-testid=token-dash-panel]')
   await panel.waitFor({ timeout: 8000 })
-  assert.match(await panel.innerText(), /本月费用与额度/)
+  assert.match(await panel.innerText(), /DSH本月估算/)
   assert.equal(await panel.getByRole('link').count(), 0)
 
   const now = Date.now()

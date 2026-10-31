@@ -259,7 +259,7 @@ window.__ModuleLoader__.load({
       return h(
         'div',
         { style: styles.card },
-        h('div', { style: styles.row }, h('b', null, '本月费用与额度'), h('b', { style: styles.num }, budget.state === 'unset' ? '--' : fmtPct(budget.percent))),
+        h('div', { style: styles.row }, h('b', null, 'DSH本月估算'), h('b', { style: styles.num }, budget.state === 'unset' ? '--' : fmtPct(budget.percent))),
         h('div', { style: { fontSize: 20, fontWeight: 700, marginTop: 4 } }, `${fmtMoney(budget.used)} / ${fmtMoney(budget.amount)}`),
         h('div', { style: styles.bar }, h('div', { style: { ...styles.barFill, width: `${pct * 100}%` } })),
         h(
