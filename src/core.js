@@ -5,6 +5,7 @@
 import { priceFor } from './pricing.js'
 import {
   canBeSubscription,
+  DEFAULT_MODELS,
   modelLabel,
   normalizeModel,
   normalizeProvider,
@@ -255,6 +256,35 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
         accumulate(providerId, normalizeModel(rawModel), row, isToday)
       }
     }
+  }
+
+  // #44：已配置 provider 本月无真实模型行时补默认模型行（数值 0）——"配置即可见"，
+  // 与严格本月口径兼容（不引入跨月数据）；真实行优先不重复补
+  for (const info of providerInfo) {
+    const id = normalizeProvider(info.id ?? info.provider)
+    if (id === 'unknown' || hidden.has(id)) continue
+    const fallbackModel = DEFAULT_MODELS[id]
+    if (fallbackModel === undefined) continue
+    const key = `${id}:${fallbackModel}`
+    if (modelsMap.has(key)) continue
+    const provider = providerMap.get(id)
+    modelsMap.set(key, {
+      name: fallbackModel,
+      modelId: fallbackModel,
+      providerId: id,
+      providerName: providerLabel(id),
+      displayName: modelLabel(fallbackModel),
+      kind: provider?.kind === 'subscription' ? 'subscription' : 'api',
+      currency: provider?.currency ?? providerCurrency(id),
+      priced: true,
+      approximate: false,
+      requests: 0,
+      input: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+      output: 0,
+      cost: 0,
+    })
   }
 
   const models = [...modelsMap.values()].map((entry) => {

@@ -86,6 +86,14 @@ export function providerFromModel(modelId) {
   return null
 }
 
+/** #44：已配置 provider 的默认模型——明细表在本月无真实消耗行时补一行（数值 0），保证"配置即可见"。OpenRouter 为中转无默认模型。 */
+export const DEFAULT_MODELS = {
+  'deepseek-official': 'deepseek-v4.1-flash',
+  zhipu: 'glm-5.3',
+  moonshot: 'kimi-k3',
+  qwen: 'qwen3.8-max',
+}
+
 export function modelLabel(raw) {
   const id = normalizeModel(raw)
   const labels = {

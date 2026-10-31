@@ -119,6 +119,30 @@ test('provider 归一化与展示名', () => {
   assert.equal(displayModel('glm-5.3'), 'GLM-5.3')
 })
 
+test('#44 已配置 provider 无消耗时补默认模型行（配置即可见）', () => {
+  const now = new Date(2026, 10, 1, 12, 0, 0).getTime()
+  // 已配置 DeepSeek（providerInfo），本月零消耗 → 补 deepseek-v4.1-flash 0 值行
+  const summary = buildSummary(emptyState(), { budgets: {} }, now, [
+    { id: 'deepseek-official', kind: 'api', currency: 'CNY' },
+  ])
+  const row = summary.breakdown.models.find((item) => item.modelId === 'deepseek-v4.1-flash')
+  assert.notEqual(row, undefined)
+  assert.equal(row.providerId, 'deepseek-official')
+  assert.equal(row.cost, 0)
+  assert.equal(row.requests, 0)
+  // 有真实消耗行时不重复补（同模型去重）
+  const state = emptyState()
+  addRecord(state, { ts: now, provider: 'deepseek-account', model: 'deepseek-v4.1-flash', input: 100, cacheRead: 0, cacheWrite: 0, output: 1 })
+  const summary2 = buildSummary(state, { budgets: {} }, now, [
+    { id: 'deepseek-official', kind: 'api', currency: 'CNY' },
+  ])
+  assert.equal(summary2.breakdown.models.filter((item) => item.modelId === 'deepseek-v4.1-flash').length, 1)
+  assert.equal(summary2.breakdown.models[0].requests, 1)
+  // 未配置（providerInfo 空）→ 无补行
+  const summary3 = buildSummary(emptyState(), { budgets: {} }, now, [])
+  assert.deepEqual(summary3.breakdown.models, [])
+})
+
 test('月汇总：预算、剩余、按模型请求数', () => {
   const state = emptyState()
   const now = new Date(2026, 9, 31, 12, 0, 0).getTime()
