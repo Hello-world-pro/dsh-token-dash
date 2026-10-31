@@ -82,7 +82,14 @@ window.__ModuleLoader__.load({
         whiteSpace: 'nowrap',
         boxShadow: '0 4px 16px rgba(0,0,0,.25)',
       },
-      chevron: { marginLeft: 6, fontSize: 10, opacity: 0.65 },
+      chevron: {
+        marginLeft: 6,
+        padding: '0 3px',
+        borderRadius: 4,
+        background: 'rgba(77,141,255,.16)',
+        fontSize: 10,
+        opacity: 0.9,
+      },
       sep: { width: 1, height: 12, background: 'currentColor', opacity: 0.2 },
       num: { fontWeight: 600 },
       panel: {
@@ -142,8 +149,8 @@ window.__ModuleLoader__.load({
       },
       link: { color: 'inherit', textDecoration: 'underline', cursor: 'pointer', marginLeft: 12 },
       button: {
-        border: '1px solid var(--dsh-border, rgba(128,128,128,.35))',
-        background: 'transparent',
+        border: '1px solid rgba(77,141,255,.32)',
+        background: 'rgba(77,141,255,.16)',
         color: 'inherit',
         borderRadius: 6,
         padding: '2px 8px',
@@ -190,7 +197,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function Pill() {
+    function Pill({ placement }) {
       const [summary, setSummary] = useState(null)
       const [open, setOpen] = useState(false)
       const [error, setError] = useState(false)
@@ -269,7 +276,13 @@ window.__ModuleLoader__.load({
         null,
         h(
           'div',
-          { style: styles.pillWrap },
+          {
+            style: {
+              ...styles.pillWrap,
+              order: placement === 'input' ? 2 : undefined,
+              marginLeft: 8,
+            },
+          },
           hint && !open
             ? h('span', { style: styles.hint, role: 'status' }, '点击查看 Token 看板')
             : null,
@@ -616,14 +629,25 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function HomePill() {
+      return h(Pill, { placement: 'home' })
+    }
+
+    function InputPill() {
+      return h(Pill, { placement: 'input' })
+    }
+
     return {
       name: PKG,
       inject: ['slots'],
       apply(ctx) {
         const slots = typeof ctx.get === 'function' ? ctx.get('slots') : ctx.slots
         if (slots === undefined || typeof slots.inject !== 'function') return
-        slots.inject('conversation.input.left', () =>
-          slots.register({ name: 'conversation.input.left', id: 'token-dash', order: 10 }, Pill),
+        slots.inject('conversation.hero.agentPreset', () =>
+          slots.register({ name: 'conversation.hero.agentPreset', id: 'token-dash-home', order: 10 }, HomePill),
+        )
+        slots.inject('conversation.input.right', () =>
+          slots.register({ name: 'conversation.input.right', id: 'token-dash-input', order: 10 }, InputPill),
         )
       },
     }
