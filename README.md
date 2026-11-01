@@ -31,17 +31,20 @@
 
 ## 安装
 
-Requires DSH `0.2.1` or newer，两种方式任选：
+Requires DSH `0.2.1` or newer，三种方式任选：
 
 ```bash
-# 方式一：GitHub 仓库直装（推荐，纯 JS 无构建，源码即产物）
+# 方式一：npm 安装（推荐）
+dsh plugin --profile desktop add dsh-token-dash
+
+# 方式二：GitHub 仓库直装（纯 JS 无构建，源码即产物）
 dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash
 
-# 方式二：从 Releases 下载 dsh-token-dash-x.y.z.tgz 后本地安装（离线场景）
+# 方式三：从 Releases 下载 dsh-token-dash-x.y.z.tgz 后本地安装（离线场景）
 dsh plugin --profile desktop add /path/to/dsh-token-dash-1.0.0.tgz
 ```
 
-更新：`update` 同名命令，或在插件设置页（P3 → 检查更新）内完成。卸载：`remove` 同名命令，数据保留在 `$DSH_HOME/dsh-token-dash/`。
+更新：`update` 同名命令（npm / github: 各自同名），或在插件设置页（P3 → 检查更新）内完成。卸载：`remove` 同名命令，数据保留在 `$DSH_HOME/dsh-token-dash/`。
 
 ---
 

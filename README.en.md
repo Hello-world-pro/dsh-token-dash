@@ -31,13 +31,16 @@
 
 ## Install
 
-Requires DSH `0.2.1` or newer. Two options:
+Requires DSH `0.2.1` or newer. Three options:
 
 ```bash
-# Option 1: install straight from the GitHub repo (recommended; plain JS, no build step)
+# Option 1: install from npm (recommended)
+dsh plugin --profile desktop add dsh-token-dash
+
+# Option 2: install straight from the GitHub repo (plain JS, no build step)
 dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash
 
-# Option 2: download dsh-token-dash-x.y.z.tgz from Releases and install locally (offline)
+# Option 3: download dsh-token-dash-x.y.z.tgz from Releases and install locally (offline)
 dsh plugin --profile desktop add /path/to/dsh-token-dash-1.0.0.tgz
 ```
 
