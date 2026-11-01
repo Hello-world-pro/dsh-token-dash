@@ -155,6 +155,8 @@ npm run e2e   # end-to-end (temp DSH_HOME + web profile + Playwright)
 npm run pack  # build the release tarball into build/
 ```
 
+Releases: pushing a `v*` tag triggers the GitHub Release (tarball) and an npm staged publish automatically (goes live after a maintainer approves it on npmjs.com with 2FA); see [doc/release.md](./doc/release.md) for the full checklist.
+
 ## Acknowledgements
 
 Attribution and billing semantics learned from these community plugins:

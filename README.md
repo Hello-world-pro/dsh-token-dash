@@ -179,6 +179,8 @@ npm run e2e   # 端到端（临时 DSH_HOME + web profile + Playwright）
 npm run pack  # 发布 tarball 生成到 build/
 ```
 
+发版：推 `v*` tag 自动触发 GitHub Release（tarball）与 npm 暂存（staged publishing，网页 2FA 审批后上线）；完整流程见 [doc/release.md](./doc/release.md)。
+
 ## 致谢
 
 归属与计费语义参考了以下社区插件：
