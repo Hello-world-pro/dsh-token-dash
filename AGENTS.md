@@ -68,7 +68,7 @@ npm pack --dry-run
 ## 发布
 
 - AI 只准备到“可发布”，不执行 `npm publish`、不推 tag；发布由用户明确授权。
-- **本地打包必须由用户显式指令触发**（`本地打包` / `本地版本` / `候选包`）。完成 issue、修复、测试或提交后，不得自动改版本号、写 local CHANGELOG、`npm run pack` 或安装本地包。
+- **本地打包必须由用户显式指令触发**（`本地打包` / `本地版本` / `候选包`）。完成 issue、修复、测试或提交后，不得自动改版本号、写本地草稿、`npm run pack` 或安装本地包。本地构建的修改记录放 `.tmp/release-local.md`，不写 CHANGELOG；正式发布时合并并删除。
 - npm 包只含 `lib` / `cordis.patch.yml` / `locale` / `README.md` / `LICENSE`。
 - 发布流程见 `docs/release.md` 与 `.agents/skills/dsh-token-dash-release/SKILL.md`；历史发布 checklist 见 `docs/checklist/archived/dsh/token-dash-release-checklist.md`。
 
