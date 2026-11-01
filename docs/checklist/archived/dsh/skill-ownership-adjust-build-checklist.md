@@ -200,7 +200,7 @@ pwsh D:\Projects\Jvedio\scripts\sync-skills.ps1 -Action Status
 | Jvedio 同步状态 | ✅ | `sync-skills.ps1 -Action Status` 7 项 OK |
 | Jvedio git 状态 | ✅ | `4812ce3e`，已推送 `origin/master` |
 | CE git 状态 | ✅ | `e26a432`，已推送 `origin/main` |
-| dsh-token-dash git 状态 | ✅ | 本 checklist 提交后 clean |
+| dsh-token-dash git 状态 | ✅ | `421feac`，已推送 `origin/main` |
 
 ## 五、风险 / 遗留
 
@@ -226,5 +226,5 @@ pwsh D:\Projects\Jvedio\scripts\sync-skills.ps1 -Action Status
 - 2026-11-02：Jvedio 两个 skill 从 `skills-global` `git mv` 到 `.agents/skills`；系统全局副本删除；Jvedio `skills-global/plan-workflow` 按方案 A 移除。
 - 2026-11-02：Jvedio `sync-skills.ps1 -Action Status` 通过（7 项 OK）；`~/.agents/skills/plan-workflow` 仍为 CE junction。
 - 2026-11-02：Jvedio 提交 `4812ce3e`（origin/master）；CE 提交 `e26a432`（origin/main）。
-- 2026-11-02：本 checklist 归档；dsh-token-dash 提交见本轮记录。
+- 2026-11-02：本 checklist 归档；dsh-token-dash 提交 `421feac`，已推送 `origin/main`。
 - 踩坑 0：无阻断；系统全局副本与 Jvedio 源副本哈希一致后删除。
