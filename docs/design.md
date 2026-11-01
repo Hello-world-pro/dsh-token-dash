@@ -1,6 +1,6 @@
 # dsh-token-dash 设计文档
 
-> 面向贡献者的一页式架构说明。需求背景与决策记录见 [计划文档](../plan/active/token-dash/plan.md)。
+> 面向贡献者的一页式架构说明。需求背景与决策记录见 [计划文档](plan/active/dsh/feature_token_dash.md)。
 
 ## 总体架构
 
@@ -61,9 +61,12 @@ dsh-token-dash/
 ├── tools/logs.mjs         常驻日志查看工具（npm run logs）
 ├── scripts/e2e.mjs        端到端测试（临时 DSH_HOME + web profile + Playwright）
 ├── test/unit/             L1 单元测试（node --test）
-├── doc/                   文档与截图（本目录，纳入 git）
+├── docs/                  文档与截图（本目录，纳入 git）
 │   ├── design.md          本设计文档
-│   └── pic/               README 展示用截图
+│   ├── release.md         发版流程
+│   ├── pic/               README 展示用截图
+│   ├── plan/              计划（active / archived）
+│   └── checklist/         施工 / 走查 checklist
 ├── build/                 生成物（npm pack tarball 等），.gitignore 忽略不入库
 └── reference/third-party/ 本地调研用的第三方插件源码（.gitignore 忽略）
 ```

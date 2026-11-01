@@ -1,6 +1,6 @@
 # dsh-token-dash 项目规则
 
-> 面向 AI agent 与维护者。本仓库是 DSH 插件代码仓；当前插件的计划在 `plan/`、checklist 在 `doc/checklist/` 维护，`Context-Engineer` 不再维护本插件文档。规则以本文件为准。
+> 面向 AI agent 与维护者。本仓库是 DSH 插件代码仓；当前插件的计划在 `docs/plan/`、checklist 在 `docs/checklist/` 维护，`Context-Engineer` 不再维护本插件文档。规则以本文件为准。
 
 ## 构建与测试
 
@@ -16,15 +16,15 @@ npm pack --dry-run
 
 ## 文档位置
 
-- 稳定文档：`doc/design.md`、`doc/release.md`。
-- 计划：`plan/active/token-dash/plan.md`（遵循全局 `plan-workflow` 的 `plan/active/`、`plan/tracking/`、`plan/archive/` 约定）。
-- checklist：`doc/checklist/archived/`。
+- 稳定文档：`docs/design.md`、`docs/release.md`。
+- 计划：`docs/plan/active/dsh/feature_token_dash.md`（遵循全局 `plan-workflow` 的 `docs/plan/` 约定）。
+- checklist：`docs/checklist/active/dsh/`、`docs/checklist/archived/dsh/`。
 - 本插件文档只在本仓维护；`Context-Engineer` 不保留同名副本。
 
 ## 规划
 
-- 计划目录遵循全局 `plan-workflow`：`plan/active/<feature>/plan.md`、`plan/tracking/<topic>/plan.md`、`plan/archive/`。
-- 当前主计划：`plan/active/token-dash/plan.md`。
+- 计划目录遵循全局 `plan-workflow`：`docs/plan/active/<project-domain>/`、`docs/plan/tracking/<topic>/`、`docs/plan/archived/<project-domain>/`。
+- 当前主计划：`docs/plan/active/dsh/feature_token_dash.md`。
 
 ## 临时目录
 
@@ -45,7 +45,7 @@ npm pack --dry-run
 | 测试脚本 | `tests/unit/**`、`tests/e2e/**/*.spec.ts`、`tests/e2e/fixtures/**`（仅合成数据） |
 | 工具脚本 | `scripts/**` |
 | 工程与发布 | `.github/workflows/**`、`README.md`、`LICENSE`、`AGENTS.md`、`CHANGELOG.md` |
-| 文档 | `doc/**`、`plan/**` |
+| 文档 | `docs/**` |
 
 ### 不进入版本管理
 
@@ -69,7 +69,7 @@ npm pack --dry-run
 
 - AI 只准备到“可发布”，不执行 `npm publish`、不推 tag；发布由用户明确授权。
 - npm 包只含 `lib` / `cordis.patch.yml` / `locale` / `README.md` / `LICENSE`。
-- 发布流程见 `doc/release.md`；历史发布 checklist 见 `doc/checklist/archived/token-dash-release-checklist.md`。
+- 发布流程见 `docs/release.md`；历史发布 checklist 见 `docs/checklist/archived/dsh/token-dash-release-checklist.md`。
 
 ## 安全
 

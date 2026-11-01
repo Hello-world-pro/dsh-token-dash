@@ -3,7 +3,8 @@
 > 状态：待归档（v1.0.0 已发布 GitHub：#24-#47 全部闭环，L1 37/37 + E2E pass + 用户桌面验收；npm 发布与市场收录待办见 §十）<br>
 > 创建：2026-10-31；更新：2026-11-01（v0.2 施工 → #24-#47 五轮迭代 → v1.0.0 发布 + 治理体系；终态精修）<br>
 > 工程：`dsh-token-dash`（包名 `dsh-token-dash`）<br>
-> 关联资料：[UI 施工 checklist（已归档）](../../../doc/checklist/archived/token-dash-ui-build-checklist.md)、[治理体系 checklist（已归档）](../../../doc/checklist/archived/github-governance-build-checklist.md)
+> 关联资料：[UI 施工 checklist（已归档）](../../../checklist/archived/dsh/token-dash-ui-build-checklist.md)、[治理体系 checklist（已归档）](../../../checklist/archived/dsh/github-governance-build-checklist.md)<br>
+> 文档位置：`docs/plan/active/dsh/feature_token_dash.md`；checklist 统一在 `docs/checklist/`。
 
 ## 〇、前置依赖 / 代码探查事实
 
@@ -603,12 +604,12 @@ QuotaWindow {
 - 版本号 `1.0.0`（用户定案；0.2.0 → 1.0.0，覆盖 #30-#47 全部 18 个 issue 的功能与修复）
 - **GitHub 版本发布**：`git tag v1.0.0` + push tag；安装命令 `dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash`
 - **npm 发布后续再做**：届时复用 dsh-token-usage-lao 的 publish.yml 模板（tag 校验 + Trusted Publishing），README 安装段的 npm 命令同步解注
-- 展示素材入库：`doc/pic/` 四张截图（pill-home / pill-session / panel-dashboard / settings），README 界面预览引用
+- 展示素材入库：`docs/pic/` 四张截图（pill-home / pill-session / panel-dashboard / settings），README 界面预览引用
 - README 参考第三方结构多轮迭代（badge / 安装双方式 / 界面草图与截图 / 日志排查 / 隐私 / 开发 / 致谢）
 - **`github:` 安装语义**：宿主拉 GitHub 仓库作安装源；本项目纯 JS 无构建，源码即产物，长期可用（lao 为 TS 需构建产物已转 npm-only）
 - **npm 迁移坑（lao 教训，npm 发布时必办）**：`github:` 名与 npm 包名无法原地 `update`——需 `remove` 旧名再 `add` 新名，数据目录不受影响；README 已加迁移预告
 - **Release 产物**：`dsh plugin add <tgz路径>` 实测可用；Release v1.0.0 已建并附 tarball；`.github/workflows/release.yml`（tag push → npm pack → 自动 Release）；`npm run pack` 产物入 `build/`（gitignore）
 - **插件市场收录（PR 已提）**：[awesome-dsh-plugin#11130](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/11130)（manifest + 双 README 重新生成，仓库创建 2026-10-31 满足 1 天条件——此前误记 11-01）；合并后 plugins.json 更新、dshmarket/Cockpit 市场自动收录，届时 README 加 awesome badge
 - **Issue 治理体系（已落地，施工稿见 checklist archived/github-governance-build-checklist.md）**：标签 11 个（英文小写、双语描述）；模板三件套双语（Bug 强制日志附件）；`issue-template-compliance`（必填校验 + 附件链接校验仅 Bug + 模块关键词→英文标签 + 2h 期限）与 `issue-template-close`（cron 超时自动关闭）；`README.en.md` 英文版；验收通过
-- **发布流程文档化**：`doc/release.md` 一页 checklist + `CHANGELOG.md`（新增/修改两段式）
-- **npm 通道上线（同日）**：`dsh-token-dash@1.0.1` 已发布（staged publishing：CI `npm stage publish` → npmjs.com Staged Packages 2FA 审批 → `dist-tag add` 移 latest）；三条安装通道齐备（npm / github: / Release tgz）；检查更新链路真实生效（registry latest=1.0.1）；`publish.yml` + 双语 README npm 命令解注；`CHANGELOG` 1.0.1 段。**终态（同日 v1.0.2）**：Trusted Publishing（OIDC）配置并验证通过（2 天窗口内首发 1.0.2 成功）——`publish.yml` 改直发模式（`npm publish --provenance`、零 token），**推 `v*` tag = GitHub Release + npm 全自动上线**（无审批、无 dist-tag 手工步骤）；发版手册 `doc/release.md` 已对齐该形态。发布全程实录见 `doc/checklist/archived/token-dash-release-checklist.md`（四踩坑：granular token 无法预授权新包 / staged 审批后 latest 不自动移 / action-gh-release 名字与 dispatch tag_name / granular 直发权限 2027 废弃）。**待办**：删除对话明文暴露的 stage-only token（npm 侧）；awesome-dsh-plugin PR #11130 等评审
+- **发布流程文档化**：`docs/release.md` 一页 checklist + `CHANGELOG.md`（新增/修改两段式）
+- **npm 通道上线（同日）**：`dsh-token-dash@1.0.1` 已发布（staged publishing：CI `npm stage publish` → npmjs.com Staged Packages 2FA 审批 → `dist-tag add` 移 latest）；三条安装通道齐备（npm / github: / Release tgz）；检查更新链路真实生效（registry latest=1.0.1）；`publish.yml` + 双语 README npm 命令解注；`CHANGELOG` 1.0.1 段。**终态（同日 v1.0.2）**：Trusted Publishing（OIDC）配置并验证通过（2 天窗口内首发 1.0.2 成功）——`publish.yml` 改直发模式（`npm publish --provenance`、零 token），**推 `v*` tag = GitHub Release + npm 全自动上线**（无审批、无 dist-tag 手工步骤）；发版手册 `docs/release.md` 已对齐该形态。发布全程实录见 `docs/checklist/archived/dsh/token-dash-release-checklist.md`（四踩坑：granular token 无法预授权新包 / staged 审批后 latest 不自动移 / action-gh-release 名字与 dispatch tag_name / granular 直发权限 2027 废弃）。**待办**：删除对话明文暴露的 stage-only token（npm 侧）；awesome-dsh-plugin PR #11130 等评审

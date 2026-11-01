@@ -2,7 +2,7 @@
 
 > 依据：学习 JvedioNext 的标签系统、Issue 模板与 Actions 治理（2026-11-01 gh api 实地取证）<br>
 > 状态：**已完成**（阶段 1-4 全部 ✅，用户网页验收通过；回写双去向完成：feature §十已补记治理基建落地）<br>
-> 生命周期：本文件归档至 `doc/checklist/archived/`
+> 生命周期：本文件归档至 `docs/checklist/archived/`
 
 ## 一、标签系统（11 个，英文命名，`gh label create`）
 
@@ -157,7 +157,7 @@ contact_links:
 |---|---|---|---|
 | 1 | 标签 11 个（英文）+ 模板三件套（双语）入库推送 | 网页 New issue 渲染正常、模块可多选 | ✅ acfc1a1（标签 3 个 edit 默认 + 8 个 create，gh label list 核对 11 个全部就位） |
 | 2 | 两个 workflow 入库推送 | 提测试 issue（漏填日志）看自动打标+评论；补全后看标签移除 | ✅ acfc1a1（compliance + close，github-script，双语 heading 关键词匹配） |
-| 3 | **README 英文版 `README.en.md` 编写入库**：与中文版同构翻译（badge / 安装 / 界面草图与截图 / 日志与隐私 / 开发 / 致谢），复用 `doc/pic` 截图；中英两版顶部互加语言切换链接（`English | 简体中文`） | 英文页渲染、双语链接互跳正常 | ✅ acfc1a1（草图英文标注、npm 安装占位待解注） |
+| 3 | **README 英文版 `README.en.md` 编写入库**：与中文版同构翻译（badge / 安装 / 界面草图与截图 / 日志与隐私 / 开发 / 致谢），复用 `docs/pic` 截图；中英两版顶部互加语言切换链接（`English | 简体中文`） | 英文页渲染、双语链接互跳正常 | ✅ acfc1a1（草图英文标注、npm 安装占位待解注） |
 | 4 | 测试结果汇总入表 | 确认后清理测试 issue | ✅ 用户网页验收通过（模板渲染正常；Blank issue 显示 Maintainers only = `blank_issues_enabled: false` 平台机制正确生效，外部用户不可见，维护者保留逃生口；整体无大问题） |
 
 > README.en.md 形态：中文主（README.md）+ 英文附（cockpit / ui-usage-billing / spend 同流派，参考插件 5/7 双语）。英文版安装段的 npm 命令保持占位注释，npm 发布同日解注。
@@ -182,7 +182,7 @@ contact_links:
 
 ## plan 回写候选
 
-1. ~~plan.md §十补记：社区治理基建（标签/模板/Actions）落地情况 + 英文 README~~ → **已回写**（2026-11-01，§十"Issue 治理体系"与"发布流程文档化"条目）
+1. ~~feature_token_dash.md §十补记：社区治理基建（标签/模板/Actions）落地情况 + 英文 README~~ → **已回写**（2026-11-01，§十"Issue 治理体系"与"发布流程文档化"条目）
 
 ## 执行日志 + 踩坑
 

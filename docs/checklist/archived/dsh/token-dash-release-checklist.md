@@ -1,7 +1,7 @@
 # dsh-token-dash 发布 checklist（npm + GitHub）
 
-> 依据 plan：`../../../plan/active/token-dash/plan.md` §十<br>
-> 状态：**已完成并归档**（2026-11-01）——npm v1.0.2 上线（Trusted Publishing OIDC 验证通过）、GitHub Release 齐备、市场收录 PR 已提；发版流程唯一来源：`doc/release.md`<br>
+> 依据 plan：`../../../plan/active/dsh/feature_token_dash.md` §十<br>
+> 状态：**已完成并归档**（2026-11-01）——npm v1.0.2 上线（Trusted Publishing OIDC 验证通过）、GitHub Release 齐备、市场收录 PR 已提；发版流程唯一来源：`docs/release.md`<br>
 > 工程根：`dsh-token-dash`（包名 `dsh-token-dash`）
 
 ## 最终成果
@@ -14,7 +14,7 @@
 | 市场收录 | PR [#11130](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/11130) | 等评审；合并后 dshmarket/Cockpit 自动收录 |
 | 验证 | ✅ | 干净 profile npm 安装 `+1.0.1`；检查更新链路生效（registry latest 真实返回）；npm 安装/`update` 路径通过 |
 
-**发版形态（终态）**：改版本（package.json + e2e fixture 两处）→ CHANGELOG → 测试 → 推 `v*` tag → GitHub Release + npm 全自动上线。流程细节与易错点见 `doc/release.md`。
+**发版形态（终态）**：改版本（package.json + e2e fixture 两处）→ CHANGELOG → 测试 → 推 `v*` tag → GitHub Release + npm 全自动上线。流程细节与易错点见 `docs/release.md`。
 
 ## 遗留
 

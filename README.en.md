@@ -115,23 +115,23 @@ UI transitions
 **P1 · Bottom bar pill** (home workspace row / activity row under the chat input)
 
 <p align="center">
-  <img src="./doc/pic/pill-home.png" alt="Home pill" />
+  <img src="./docs/pic/pill-home.png" alt="Home pill" />
 </p>
 
 <p align="center">
-  <img src="./doc/pic/pill-session.png" alt="Session pill" />
+  <img src="./docs/pic/pill-session.png" alt="Session pill" />
 </p>
 
 **P2 · Floating dashboard**
 
 <p align="center">
-  <img src="./doc/pic/panel-dashboard.png" alt="Dashboard" />
+  <img src="./docs/pic/panel-dashboard.png" alt="Dashboard" />
 </p>
 
 **P3 · Settings**
 
 <p align="center">
-  <img src="./doc/pic/settings.png" alt="Settings" />
+  <img src="./docs/pic/settings.png" alt="Settings" />
 </p>
 
 ---
@@ -155,7 +155,7 @@ npm run e2e   # end-to-end (temp DSH_HOME + web profile + Playwright)
 npm run pack  # build the release tarball into build/
 ```
 
-Releases: pushing a `v*` tag triggers the GitHub Release (tarball) and an npm staged publish automatically (goes live after a maintainer approves it on npmjs.com with 2FA); see [doc/release.md](./doc/release.md) for the full checklist.
+Releases: pushing a `v*` tag triggers the GitHub Release (tarball) and an npm staged publish automatically (goes live after a maintainer approves it on npmjs.com with 2FA); see [docs/release.md](./docs/release.md) for the full checklist.
 
 ## Acknowledgements
 

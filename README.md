@@ -139,23 +139,23 @@ UI 交互转移
 **P1 · 底栏 Pill**（首页工作区行 / 会话输入框下方活动行）
 
 <p align="center">
-  <img src="./doc/pic/pill-home.png" alt="首页 Pill" />
+  <img src="./docs/pic/pill-home.png" alt="首页 Pill" />
 </p>
 
 <p align="center">
-  <img src="./doc/pic/pill-session.png" alt="会话 Pill" />
+  <img src="./docs/pic/pill-session.png" alt="会话 Pill" />
 </p>
 
 **P2 · 浮层看板**
 
 <p align="center">
-  <img src="./doc/pic/panel-dashboard.png" alt="浮层看板" />
+  <img src="./docs/pic/panel-dashboard.png" alt="浮层看板" />
 </p>
 
 **P3 · 设置**
 
 <p align="center">
-  <img src="./doc/pic/settings.png" alt="设置" />
+  <img src="./docs/pic/settings.png" alt="设置" />
 </p>
 
 ---
@@ -179,7 +179,7 @@ npm run e2e   # 端到端（临时 DSH_HOME + web profile + Playwright）
 npm run pack  # 发布 tarball 生成到 build/
 ```
 
-发版：推 `v*` tag 自动触发 GitHub Release（tarball）与 npm 暂存（staged publishing，网页 2FA 审批后上线）；完整流程见 [doc/release.md](./doc/release.md)。
+发版：推 `v*` tag 自动触发 GitHub Release（tarball）与 npm 暂存（staged publishing，网页 2FA 审批后上线）；完整流程见 [docs/release.md](./docs/release.md)。
 
 ## 致谢
 
