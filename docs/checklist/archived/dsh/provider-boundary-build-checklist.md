@@ -1,7 +1,7 @@
 # Provider 边界收口施工 checklist
 
-> 依据 plan：`../../../plan/active/feature_provider_boundary.md`<br>
-> 状态：施工中（用户指令：创建 → 迭代 → 全量测试 → 发布 1.0.6）<br>
+> 依据 plan：`../../../plan/archived/feature_provider_boundary.md`<br>
+> 状态：已归档（2026-11-02）——registry/snapshot/VM/UI 收口；L1 53/53 + E2E pass；v1.0.6 发布；桌面 1.0.6 走查未执行<br>
 > 工程根：`dsh-token-dash`（包名 `dsh-token-dash`）
 
 ## 阶段总览
@@ -116,6 +116,12 @@
 | E2E | ✅ | `npm run e2e` pass；P3 link 数 5 |
 | 桌面走查 | 未走查 | 发布链路已核验；桌面 profile 仍为 1.0.5，未自动安装 |
 
+## 移交 / 遗留
+
+| 编号 | 一句话内容 | 原因 / 去向 |
+|---|---|---|
+| M-01 | 桌面 1.0.6 走查未执行 | 桌面 profile 仍 1.0.5（日志无 1.0.6 启动）；安装后走查 P1/P2/P3，问题记 `feature_token_dash` §九或后续 bug 流水 |
+
 ## 施工提醒
 
 - 先 registry，再 snapshot，最后 VM/UI；每步跑 L1，避免一次性排错。
@@ -124,10 +130,7 @@
 
 ## plan 回写候选
 
-1. registry 实际导出清单与 descriptor 字段。
-2. Snapshot 最终字段与 `status` 取值。
-3. `pricingLinks` 顺序与空数组行为。
-4. 迭代测试结果与 1.0.6 发布记录。
+> 归档前已全部回写、候选清空：descriptor 导出见 plan §3.0 CHG-01；Snapshot 字段与 `status` 见 §2.2；`pricingLinks` 顺序与空数组行为见 §2.2；测试与发布结果见 §四。
 
 ## 执行日志 + 踩坑
 
@@ -135,4 +138,5 @@
 - 2026-11-02（迭代）：确认 adapter 内部解析不改，只在 `readProviders`/`readSubscriptions` 出口统一 snapshot；补 UI 无 provider 硬编码与 E2E 链接数 5 两项回归。
 - 2026-11-02（施工）：registry / snapshot / VM / UI 完成；L1 53/53、E2E pass；版本 1.0.6，待打包发布。
 - 2026-11-02（发布）：tag `v1.0.6`，release/publish 双 workflow success，npm latest 1.0.6，Release body 与 CHANGELOG 一致，asset 已上传。
+- 2026-11-02（归档）：回写 plan §3.0/§五 与 §九 发布记录；桌面日志仅见 1.0.3→1.0.5 启动，1.0.6 未上桌面；checklist 归档，M-01 移交。
 
