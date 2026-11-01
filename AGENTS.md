@@ -1,6 +1,6 @@
 # dsh-token-dash 项目规则
 
-> 面向 AI agent 与维护者。本仓库是 DSH 插件代码仓，与 `Context-Engineer` 文档仓分离；规则以本文件为准。
+> 面向 AI agent 与维护者。本仓库是 DSH 插件代码仓；当前插件的计划与 checklist 已复制到本仓 `docs/` 维护，`Context-Engineer` 仅保留跨项目副本。规则以本文件为准。
 
 ## 构建与测试
 
@@ -13,6 +13,12 @@ npm test          # L1：node --test
 npm run e2e       # L2 + L3：临时 DSH_HOME + Playwright
 npm pack --dry-run
 ```
+
+## 文档位置
+
+- 稳定文档：`doc/design.md`、`doc/release.md`。
+- 计划与 checklist：`docs/plan/active/dsh/`、`docs/checklist/archived/dsh/`（目录样式与 `Context-Engineer` 一致）。
+- 本插件文档在本仓维护；`Context-Engineer` 中的同名文档仅作跨项目副本。
 
 ## 临时目录
 
@@ -33,7 +39,7 @@ npm pack --dry-run
 | 测试脚本 | `tests/unit/**`、`tests/e2e/**/*.spec.ts`、`tests/e2e/fixtures/**`（仅合成数据） |
 | 工具脚本 | `scripts/**` |
 | 工程与发布 | `.github/workflows/**`、`README.md`、`LICENSE`、`AGENTS.md`、`CHANGELOG.md` |
-| 文档 | `docs/**`（如有） |
+| 文档 | `doc/**`、`docs/**` |
 
 ### 不进入版本管理
 
@@ -57,7 +63,7 @@ npm pack --dry-run
 
 - AI 只准备到“可发布”，不执行 `npm publish`、不推 tag；发布由用户明确授权。
 - npm 包只含 `lib` / `cordis.patch.yml` / `locale` / `README.md` / `LICENSE`。
-- 发布流程见 `Context-Engineer/docs/checklist/active/dsh/token-dash-release-checklist.md`。
+- 发布流程见 `doc/release.md`；历史发布 checklist 见 `docs/checklist/archived/dsh/token-dash-release-checklist.md`。
 
 ## 安全
 
