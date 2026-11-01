@@ -227,4 +227,5 @@ pwsh D:\Projects\Jvedio\scripts\sync-skills.ps1 -Action Status
 - 2026-11-02：Jvedio `sync-skills.ps1 -Action Status` 通过（7 项 OK）；`~/.agents/skills/plan-workflow` 仍为 CE junction。
 - 2026-11-02：Jvedio 提交 `4812ce3e`（origin/master）；CE 提交 `e26a432`（origin/main）。
 - 2026-11-02：本 checklist 归档；dsh-token-dash 提交 `421feac`，已推送 `origin/main`。
+- 2026-11-02：删除旧全局备份 `~/.agents/skills/plan-workflow.bak-2026-11-01`；系统全局只保留 CE 的 `plan-workflow` junction。
 - 踩坑 0：无阻断；系统全局副本与 Jvedio 源副本哈希一致后删除。
