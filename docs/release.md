@@ -8,7 +8,7 @@
 
 1. 读 `.agents/skills/dsh-token-dash-release/references/official-release-version.md` 确认正式版基准，并确定目标 `X.Y.Z-local.N`（同 base 取历史最大值 +1）。
 2. 改 `package.json` 为 `X.Y.Z-local.N`；同步 `scripts/e2e.mjs` 两处版本字符串（`baseSummary.version`、update mock 的 `current`）。
-3. 在 `.tmp/release-local.md` 记录本次 `## [X.Y.Z-local.N] - YYYY-MM-DD` 的修改；**不写 CHANGELOG**。
+3. 在 `CHANGELOG.md` 顶部新增/更新 `## [X.Y.Z-local.N] - YYYY-MM-DD`，标题下加 `> 本地构建，未发布`；这个 local 块就是中间产物记录。
 4. `npm test` + `npm run e2e` 全绿；`npm run pack` 生成 `build/dsh-token-dash-X.Y.Z-local.N.tgz`。
 5. 可选本地安装：`dsh plugin --profile desktop add build/dsh-token-dash-X.Y.Z-local.N.tgz`。
 6. 禁止：打 tag、触发 release/publish、声称已发布。
@@ -16,7 +16,7 @@
 ## 正式发布
 
 1. **版本基准**：读 `.agents/skills/dsh-token-dash-release/references/official-release-version.md`，用 `npm view dsh-token-dash dist-tags --json` 与 `gh release view vX.Y.Z` 核验；不一致时停止。版本号由用户确认。
-2. **合并草稿**：读取 `.tmp/release-local.md` 中自上次正式版以来的全部条目，聚合进新的 `## [X.Y.Z]` 正式块，然后删除/清空草稿文件；CHANGELOG 只保留完整正式历史，不出现 `-local` 或“本地构建”条目。
+2. **合并 local 块**：把自上次正式版以来的全部 `-local` 块按时间聚合进新的 `## [X.Y.Z]` 正式块，然后删除这些 local 块；CHANGELOG 最终只保留完整正式历史，不出现 `-local` 或“本地构建”条目。
 3. **版本号**：`package.json` 改为 `X.Y.Z`；`index.js` 的 `CURRENT_VERSION` 自动生效；同步 `scripts/e2e.mjs` 两处 fixture。
 4. **CHANGELOG 预览**：输出正式块完整 `新增 / 修改` 预览，等用户确认后再继续。
 5. **测试**：`npm test`（L1）+ `npm run e2e` 全绿。
@@ -36,8 +36,8 @@
 ## CHANGELOG 规则
 
 - 完整正式历史永久保留，按时间倒序；不删除旧正式版本。
-- 本地构建用 `X.Y.Z-local.N`，修改记录放 `.tmp/release-local.md`，不写入 CHANGELOG。
-- 正式发布时把草稿条目聚合进正式块并删除草稿；CHANGELOG 只保留正式块，固定 `### 新增` / `### 修改`。
+- 本地构建用 `X.Y.Z-local.N`，在 CHANGELOG 顶部写 local 块（中间产物记录），不 tag、不发布。
+- 正式发布时把 local 块聚合进正式块并从 CHANGELOG 删除；最终只保留正式块，固定 `### 新增` / `### 修改`。
 - Release body 按 tag 版本提取，不按文件第一块提取。
 
 ## 产物归位

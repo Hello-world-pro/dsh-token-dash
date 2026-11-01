@@ -20,11 +20,11 @@ test('local 版本不能用于 Release notes', () => {
   assert.throws(() => execFileSync(process.execPath, ['scripts/release-notes.mjs', '1.0.6-local.1'], { stdio: 'pipe' }))
 })
 
-test('CHANGELOG 只保留正式历史，不写本地版本', () => {
+test('CHANGELOG 保留正式历史且不残留已消费的本地版本', () => {
   const text = readFileSync('CHANGELOG.md', 'utf8')
   assert.match(text, /## \[1\.0\.0\]/)
   assert.match(text, /## \[1\.0\.2\]/)
   assert.match(text, /## \[1\.0\.5\]/)
-  assert.ok(!/^## \[[^\]]*-local\./m.test(text), '正式历史中不应残留 local 版本块')
-  assert.ok(!/^## \[1\.0\.[34]\]/m.test(text), '本地构建版本不写入 CHANGELOG')
+  // 活跃的 -local.N 草稿允许存在；已消费的 1.0.3/1.0.4 不应留在正式历史
+  assert.ok(!/^## \[1\.0\.[34]\]/m.test(text), '已并入正式版的本地构建版本不应残留')
 })
