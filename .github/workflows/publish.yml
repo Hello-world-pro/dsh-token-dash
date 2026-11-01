@@ -25,7 +25,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24 # Node 24 自带 npm ≥ 11.15（npm stage publish 的最低要求）
           registry-url: https://registry.npmjs.org
 
       - name: 校验 tag 与 package.json 版本一致
@@ -40,13 +40,9 @@ jobs:
           fi
           echo "PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
 
-      # npm stage publish 需要 npm CLI ≥ 11.21；把包送入暂存区，维护者在 npmjs.com 2FA 审批后正式发布。
+      # 裸命令（官方文档未确认 --access/--tag 参数支持；unscoped 包默认 public）。
+      # 新包首次 stage 会发布 0.0.0-stage 占位版本（官方流程的一部分）。
       - name: Stage package for release
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          ARGS=(--access public)
-          if [[ "$PKG_VERSION" == *-* ]]; then
-            ARGS+=(--tag next)
-          fi
-          npm stage publish "${ARGS[@]}"
+        run: npm stage publish
