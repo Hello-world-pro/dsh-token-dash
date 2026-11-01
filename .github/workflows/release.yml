@@ -27,9 +27,14 @@ jobs:
       - name: Pack tarball
         run: npm run pack
 
+      - name: Generate release notes from CHANGELOG
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          node scripts/release-notes.mjs "$VERSION" --out build/release-notes.md
+
       - name: Create release with tarball
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }} # dispatch 模式无 tag 上下文，显式指定
           files: build/*.tgz
-          generate_release_notes: true
+          body_path: build/release-notes.md
