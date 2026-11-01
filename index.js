@@ -7,10 +7,11 @@ import { spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { buildSummary, emptyState, num, repriceState } from './src/core.js'
 import { ingest, backfill } from './src/collect.js'
-import { createFlusher, dataDir, loadPrefs, loadState, logsDir, recoverState, saveJson, saveMonths } from './src/store.js'
+import { createFlusher, dataDir, loadPrefs, loadState, logsDir, recoverState, resolveHome, saveJson, saveMonths } from './src/store.js'
 import { logAdapterEvents, readProviders, readSubscriptions } from './src/adapters.js'
 import { catalogInfo, loadCommunityPricing, loadRouterPricing } from './src/pricing.js'
 import { clearLog, createLogger, exportLog } from './src/diagnostics.js'
+import { isNewer } from './src/version.js'
 
 export const name = 'dsh-token-dash'
 
@@ -18,20 +19,6 @@ const ROUTE_PREFIX = '/token-dash/api'
 const CURRENT_VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
 const PROVIDER_TTL = 30000
 let updateCache = { at: 0, data: null }
-
-function versionParts(value) {
-  return String(value).split('.').map((part) => Number.parseInt(part, 10) || 0)
-}
-
-function isNewer(latest, current) {
-  const left = versionParts(latest)
-  const right = versionParts(current)
-  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
-    const diff = (left[index] ?? 0) - (right[index] ?? 0)
-    if (diff !== 0) return diff > 0
-  }
-  return false
-}
 
 /** Locate the bundled dsh CLI (same layout scripts/e2e.mjs relies on). */
 function findDshCli() {
@@ -46,16 +33,40 @@ function findDshCli() {
   return null
 }
 
-/** Run `dsh plugin --profile <p> update dsh-token-dash`; resolves with { ok, reason?, command, output }. */
-function runPluginUpdate(profile) {
+/** Installed version of this plugin inside a DSH profile; null when the manifest is unreadable. */
+function installedVersion(home, profile) {
+  try {
+    const file = join(home, 'profiles', profile, 'node_modules', 'dsh-token-dash', 'package.json')
+    return JSON.parse(readFileSync(file, 'utf8')).version ?? null
+  } catch {
+    return null
+  }
+}
+
+/** Ask the npm registry for the published latest; 404 means the package is not published yet. */
+async function fetchLatest() {
+  const response = await fetch('https://registry.npmjs.org/dsh-token-dash/latest', {
+    headers: { accept: 'application/json' },
+    signal: AbortSignal.timeout(5000),
+  })
+  if (response.status === 404) return { current: CURRENT_VERSION, latest: null, hasUpdate: false, published: false }
+  if (!response.ok) throw new Error(`registry-${response.status}`)
+  const meta = await response.json()
+  if (typeof meta?.version !== 'string') throw new Error('invalid-registry-response')
+  return { current: CURRENT_VERSION, latest: meta.version, hasUpdate: isNewer(meta.version, CURRENT_VERSION), published: true }
+}
+
+/** Run `dsh plugin --profile <p> add dsh-token-dash@<version> --save-exact`; resolves with { ok, reason?, command, output }. */
+function runPluginUpdate(profile, version) {
   return new Promise((resolve) => {
-    const command = `dsh plugin --profile ${profile} update dsh-token-dash`
+    const spec = `dsh-token-dash@${version}`
+    const command = `dsh plugin --profile ${profile} add ${spec} --save-exact`
     const cli = findDshCli()
     if (cli === null) {
       resolve({ ok: false, reason: 'cli-not-found', command, output: '' })
       return
     }
-    const child = spawn(process.execPath, ['--expose-internals', cli, 'plugin', '--profile', profile, 'update', 'dsh-token-dash'], {
+    const child = spawn(process.execPath, ['--expose-internals', cli, 'plugin', '--profile', profile, 'add', spec, '--save-exact'], {
       env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
       windowsHide: true,
     })
@@ -287,13 +298,33 @@ export function apply(ctx) {
           }
           if (url.pathname === `${ROUTE_PREFIX}/update/install` && req.method === 'POST') {
             const profile = typeof process.env.DSH_PROFILE === 'string' && process.env.DSH_PROFILE !== '' ? process.env.DSH_PROFILE : 'desktop'
-            const result = await runPluginUpdate(profile)
-            logger.info('update', result.ok ? 'install.ok' : 'install.fail', {
+            const latest = (await fetchLatest()).latest
+            if (latest === null) {
+              logger.info('update', 'install.fail', { profile, reason: 'unpublished' })
+              json(res, 200, { ok: false, reason: 'unpublished', data: { reason: 'unpublished', command: '' } })
+              return
+            }
+            if (/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(latest) === false) throw new Error('invalid-latest-version')
+            const home = resolveHome(scoped)
+            const from = installedVersion(home, profile) ?? CURRENT_VERSION
+            const result = await runPluginUpdate(profile, latest)
+            const to = installedVersion(home, profile)
+            const changed = to === latest
+            const ok = result.ok === true && changed
+            const failReason = result.ok === true ? 'version-unchanged' : result.reason ?? 'install-failed'
+            logger.info('update', ok ? 'install.ok' : 'install.fail', {
               profile,
-              reason: result.reason ?? null,
-              ...(result.ok ? {} : { output: String(result.output ?? '').slice(-500) }),
+              from,
+              to,
+              reason: ok ? null : failReason,
+              ...(ok ? {} : { output: String(result.output ?? '').slice(-500) }),
             })
-            json(res, 200, { ok: result.ok, data: result, ...(result.ok ? {} : { reason: 'install-failed' }) })
+            updateCache = { at: 0, data: null }
+            json(res, 200, {
+              ok,
+              data: { ...result, from, to, latest, ...(ok ? {} : { reason: failReason }) },
+              ...(ok ? {} : { reason: failReason }),
+            })
             return
           }
           if (url.pathname === `${ROUTE_PREFIX}/update` && req.method === 'GET') {
@@ -301,20 +332,7 @@ export function apply(ctx) {
               json(res, 200, { ok: true, data: updateCache.data })
               return
             }
-            const response = await fetch('https://registry.npmjs.org/dsh-token-dash/latest', {
-              headers: { accept: 'application/json' },
-              signal: AbortSignal.timeout(5000),
-            })
-            if (response.status === 404) {
-              const data = { current: CURRENT_VERSION, latest: null, hasUpdate: false, published: false }
-              updateCache = { at: Date.now(), data }
-              json(res, 200, { ok: true, data })
-              return
-            }
-            if (!response.ok) throw new Error(`registry-${response.status}`)
-            const meta = await response.json()
-            if (typeof meta?.version !== 'string') throw new Error('invalid-registry-response')
-            const data = { current: CURRENT_VERSION, latest: meta.version, hasUpdate: isNewer(meta.version, CURRENT_VERSION), published: true }
+            const data = await fetchLatest()
             updateCache = { at: Date.now(), data }
             json(res, 200, { ok: true, data })
             return

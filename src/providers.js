@@ -28,7 +28,7 @@ export const PROVIDER_ORDER = ['deepseek-official', 'zhipu', 'moonshot', 'openro
 const PROVIDERS = {
   'deepseek-official': {
     id: 'deepseek-official',
-    label: 'DeepSeek 官方',
+    label: 'DeepSeek',
     currency: 'CNY',
     subscription: false,
     defaultModel: 'deepseek-v4.1-flash',

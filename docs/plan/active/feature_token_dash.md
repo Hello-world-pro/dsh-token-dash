@@ -1,7 +1,7 @@
 # DSH Token 看板：多供应商预算、订阅配额与本地计价
 
-> 状态：待归档（#1-#22 全部闭环，L1 44/44 + E2E pass；v1.0.5 发布；待用户归档）<br>
-> 创建：2026-10-31；更新：2026-11-02（#19 零价与历史恢复；#20 补行判重；#21 月度账本；#22 成本对齐官方价；1.0.5 发布）<br>
+> 状态：实施中<br>
+> 创建：2026-10-31；更新：2026-11-02（#19 零价与历史恢复；#20 补行判重；#21 月度账本；#22 成本对齐官方价；#23 进度条无填充；#24 展示名收短；#25 内置更新未生效；三条已实施待验证；#26 版本比较不支持 local→正式；本地构建 1.0.7-local.2 已安装）<br>
 > 工程：`dsh-token-dash`（包名 `dsh-token-dash`）<br>
 > 关联资料：[UI 施工 checklist（已归档）](../../checklist/archived/dsh/token-dash-ui-build-checklist.md)、[治理体系 checklist（已归档）](../../checklist/archived/dsh/github-governance-build-checklist.md)<br>
 > 文档位置：`docs/plan/active/feature_token_dash.md`；checklist 统一在 `docs/checklist/`。
@@ -457,7 +457,7 @@ QuotaWindow {
 
 ## 九、自测反馈台（活跃期）
 
-> 2026-11-02 按时间顺序重排为 #1-#22（原 #30-#51，旧编号作废）；全部为已修复闭环卡，L1 44/44 + E2E pass。
+> 2026-11-02 按时间顺序重排为 #1-#22（原 #30-#51，旧编号作废）；#1-#22 为已修复闭环卡（L1 44/44 + E2E pass），#23-#26 为 1.0.6 后反馈，均已实施待验证；2026-11-02 本地构建 `1.0.7-local.2` 已安装，待正式 1.0.7 发布后现场验证 #25/#26。
 
 ### Issue #1 [已修复] 2026-11-01 浮层锚定 pillWrap
 - 触发：浮层位置三次反馈不对（贴 pill 漂左上 / 右对齐后与 pill 水平脱节）。
@@ -626,11 +626,82 @@ QuotaWindow {
 - 验证：L1 44/44；E2E pass；实测 1.0.5 今日 ¥4.09 vs 平台 ¥3.96（3.1%）。
 - 残余：按官方价反推平台 token ≈103.8M vs 本地 110.3M，判断为 token 口径/聚合时点差异，不改价。
 
+### Issue #23 [待用户验证] 2026-11-02 有预算时 API 卡进度条无填充
+
+- 触发：P2 看板 DeepSeek 卡显示 `预算 ¥11.07 / ¥50.00 · 22.1%`，下方 6px 进度条整条为灰色轨道，左起 22% 无蓝色填充；22.1% 与 100% 视觉相同，进度不可读（桌面 1.0.5，876×615 截图）。
+- 证据：进度条行取色全宽 RGB(55,55,55)，无 `#6ea8ff` 像素 → 填充未渲染，不是配色过暗或被主题吃掉。
+- 根因：`client.js` · `ApiCard` 填充节点写成 `{ ...(hasBudget ? { background: color } : styles.barNeutral), width }`——有预算分支只给 `background`，丢掉 `styles.barFill` 的 `height:'100%'`，子节点高度 0；无预算分支自带 height，所以“无预算满格灰条”正常。
+
+```text
+[budget.percent 0.221] → [width 22.1%] → [height auto = 0] → [轨道全灰] ◄── 修复点
+```
+
+- 落点：`client.js` · `ApiCard`——填充节点补回 `height:'100%'`（合并 `styles.barFill`）；颜色按用户要求改取按钮同款 `var(--dsw-alias-state-business-primary, #6ea8ff)`，`warn` / `over` 仍由 `budgetColor` 覆盖。
+- 边界：无预算满格灰条、订阅卡窗口条、宽度公式与百分比文案不变。
+- 验证：L1 53/53 + E2E pass（新增断言：填充高 ≥5px、宽度≈12.34% 预算、蓝色）；待安装态走查 22.1% 表现。
+
+### Issue #24 [待用户验证] 2026-11-02 provider 展示名 `DeepSeek 官方` 过长
+
+- 触发：P2 卡片标题与两张明细表首列均为 `DeepSeek 官方 / DeepSeek-V4.1-Flash`；名称挤占列宽，模型列易截断或横向滚动，前缀每行重复。
+- 根因：`src/providers.js` · `PROVIDERS.deepseek.label` 带“官方”后缀；`providerLabel()` 同时供给 VM `name`（卡片标题、P1 aria、P3 预算框 aria）、`providerName`（`modelTitle` 拼接）与 `pricingLinks.label`（P3 价格链接）。
+
+```text
+[providers.js label] → [providerLabel()] → [VM name / providerName / pricingLinks.label]
+   → [ApiCard 标题 · modelTitle · P3 价格链接] ◄── 只改 label 一处，展示面同步
+```
+
+- 定案：`DeepSeek`（去“官方”）——品牌名本身即官方；与 Kimi / OpenRouter / 智谱 AI / 通义千问 的单品牌名口径一致；不用 `DS`（DSH 语境易读成 DeepSeek Harness）。备选 `DS 官方` 仅在必须保留“官方 vs 中转”对比时考虑，且只放 hover title / 设置页说明，不进每行明细。
+- 落点：`src/providers.js` · `PROVIDERS['deepseek-official'].label` → `DeepSeek`；单测 3 处、E2E mock/断言、README 四处图示同步。
+- 影响：`providers.test` / `core.test` / `providers-vm.test` / `e2e` 断言、README 四处图示、[feature_provider_boundary.md](../archived/feature_provider_boundary.md) 的 descriptor 表需同步；历史条目 #20 文案不改。
+- 边界：模型展示名、排序、价格链接数量不变；未定案前不改代码。
+- 验证：L1 53/53 + E2E pass（mock 与断言同步）；README 四处图示已改；待安装态走查。
+
+### Issue #25 [待用户验证] 2026-11-02 内置更新按钮报成功但版本停在 1.0.5
+
+- 触发：1.0.6 已发布后，P3「检查更新 → 更新」提示“已更新，重启 DSH 后生效”；完整重启客户端，P3 与日志仍是 1.0.5。
+- 证据：
+  - npm 时间线：1.0.6 发布 18:51:05Z；18:52:29Z 日志 `[TD:update] install.ok profile=desktop`；18:52:39Z、19:26:20Z 两次启动均为 1.0.5。
+  - `profiles/desktop/node_modules/dsh-token-dash/package.json` 为 1.0.5，mtime 01:46:17（早于 1.0.6 发布）；`profiles/desktop/package.json` 依赖写死 `"dsh-token-dash": "1.0.5"`，lockfile 同为 01:46:17。
+  - 该次操作目录 `.plugin-manager/logs/operation-zZUMOU/pnpm.log` 为 0 字节：DSH CLI 以 `execution: "cli"` 继承 stdio，`runPluginUpdate` 的 `collect` 收不到输出。
+- 根因：
+  - `index.js` · `runPluginUpdate` 执行 `dsh plugin --profile desktop update dsh-token-dash`；DSH CLI 把剩余参数原样转发给 pnpm，`pnpm update <pkg>` 只在 manifest 的 semver 范围内选版本——profile 的精确 pin `1.0.5` 让命令变成 no-op，退出码 0。
+  - `/update/install` 只按退出码判成功并记 `install.ok`，既没校验 `node_modules/dsh-token-dash` 实际版本，也没把 pnpm 输出带回（日志只有 `reason: null`），UI 因此显示成功。
+
+```text
+[GET /update] latest=1.0.6 current=1.0.5 hasUpdate=true
+[POST /update/install] → [dsh plugin --profile desktop update dsh-token-dash]
+   → [pnpm update（pin=1.0.5）] → [no-op, exit 0] ◄── 断点
+   → [install.ok] → [UI “已更新”] → [重启 boot start 1.0.5]
+```
+
+- 落点（已实施）：
+  - `index.js` · `runPluginUpdate`：改为带目标版本安装（`dsh plugin --profile <p> add dsh-token-dash@<latest> --save-exact`，或 `update dsh-token-dash --latest --save-exact`）；返回前读 `node_modules/dsh-token-dash/package.json` 校验版本。
+  - `index.js` · `/update/install`：版本未变化时返回 `reason: version-unchanged` 并带出输出尾部；`install.ok` 只在版本真变时记录（可带 `from` / `to`）。
+  - `client.js` · 更新控件：成功文案带实际版本；失败展示原因（复制命令保留）。
+- 边界：不自动重启客户端；不改 profile `dsh.profile.bundles`；不绕过 DSH CLI 直接调 pnpm；仍只更新 `dsh-token-dash`。
+- 验证：手工 `add dsh-token-dash@1.0.6 --save-exact` 已装成功（profile 1.0.6）；路由版本校验与 `version-unchanged` 分支待安装态复测（L1/E2E 不覆盖更新链路）。
+
+### Issue #26 [待用户验证] 2026-11-02 更新检查不认 local→正式版升级
+
+- 触发：本机装 `1.0.7-local.1` 后发布正式 `1.0.7`，P3「检查更新」仍显示“已是最新”，不会出现升级入口。
+- 根因：`index.js` · `versionParts` 按 `.` 切分后 `parseInt`——`1.0.7-local.1` 解析成 `[1,0,7,1]`，比 `1.0.7` 的 `[1,0,7]` 多一位；`isNewer('1.0.7','1.0.7-local.1')` 在第 4 位比较 `0 < 1`，误判为 false。任何已发布 base 的 local 包都会卡住。
+
+```text
+[1.0.7-local.1] → split('.') → [1,0,7,1]
+[1.0.7]         → split('.') → [1,0,7]
+[isNewer] → 第4位 0 < 1 → false → “已是最新” ◄── 修复点
+```
+
+- 定案：按 SemVer 处理——`-local.N` 是同一 `X.Y.Z` 的预发布：先比 base（不同则大者新）；同 base 时正式版 > local；local 之间比 N。
+- 落点（已实施）：新增 `src/version.js`（`compareVersions` / `isNewer`），`index.js` 删除本地 `versionParts`/`isNewer` 改为 import；新增 `test/unit/version.test.mjs`。
+- 边界：只影响更新检查与“发现 N”提示；安装仍按 `add dsh-token-dash@<latest>` 与版本回读校验（#25）；不改 npm 上的版本号规则。
+- 验证：L1 54 pass / 1 skipped（新增 2 组版本用例：base、正式>local、local.N 递增）；E2E pass；现场用 `1.0.7-local.2` 升 `1.0.7` 待发布后验证。
+
 ### 遗留（未编号，2026-11-01 保全）
 
 - 双 Pill 实例共享数据：首页 hero / 会话 dock 两实例各自 fetch，低优
 - i18n zh/en：单独排期，不阻塞
-- `/update` 真实检查：依赖 npm 发布后才有效（当前 registry 404 → "未发布"）；install 的 CLI 定位 = `DSH_CLI` env 或 exe 旁 app.asar 内 cli.js，profile 取 `DSH_PROFILE` 默认 desktop
+- `/update` 真实检查：1.0.6 已发布；本机更新链路问题见 #25（pin 挡住 pnpm update、成功判定只看退出码）
 - Qwen 国际站 USD：仅 `DASHSCOPE_INTL_API_KEY` Key 名判定（DSH_HOME 无 provider 配置可读、reference 无先例）；DSH 暴露 provider 配置后再升级
 - currentProvider 口径：维持"最近消息 provider"（宿主无可读会话上下文，E2E-17 语义 = 发消息后跟随）
 - 浮层关闭后焦点归还：setTimeout 尽力而为（E2E 受宿主焦点管理干扰未断言），真实浏览器人工走查

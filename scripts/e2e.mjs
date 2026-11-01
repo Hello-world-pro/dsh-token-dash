@@ -86,13 +86,13 @@ const model = (providerId, providerName, modelId, displayName, kind, currency, c
   hitRate: 200 / 300, cost, share: 0,
 })
 const baseProviders = [
-  provider('deepseek-official', 'DeepSeek 官方', 'api', 'CNY', apiBudget(100, 'CNY', 12.34, 0.1234), [], { amount: 49.86, status: 'ok', currency: 'CNY', updatedAt: now }),
+  provider('deepseek-official', 'DeepSeek', 'api', 'CNY', apiBudget(100, 'CNY', 12.34, 0.1234), [], { amount: 49.86, status: 'ok', currency: 'CNY', updatedAt: now }),
   provider('openrouter', 'OpenRouter', 'api', 'USD', apiBudget(50, 'USD', 19, 0.38), [], { amount: 7.66, status: 'ok', currency: 'USD', updatedAt: now }),
   provider('zhipu', 'GLM Coding', 'subscription', 'CNY', null, [{ key: '5h', usedPercent: 42.5, resetAt: now + 3600_000 }, { key: 'week', usedPercent: 18.2, resetAt: now + 3600_000 }]),
   provider('moonshot', 'Kimi Coding', 'subscription', 'CNY', null, [{ key: '5h', usedPercent: 30, resetAt: now + 3600_000 }, { key: 'week', usedPercent: 12, resetAt: now + 3600_000 }]),
 ]
 const baseModels = [
-  model('deepseek-official', 'DeepSeek 官方', 'deepseek-flash', 'DeepSeek-V4.1-Flash', 'api', 'CNY', 12.34),
+  model('deepseek-official', 'DeepSeek', 'deepseek-flash', 'DeepSeek-V4.1-Flash', 'api', 'CNY', 12.34),
   model('openrouter', 'OpenRouter', 'deepseek-flash', 'DeepSeek-V4.1-Flash', 'api', 'USD', 4.68),
   model('zhipu', 'GLM Coding', 'glm-5.3', 'GLM-5.3', 'subscription', 'CNY', 0),
   model('moonshot', 'Kimi Coding', 'kimi-k3', 'Kimi K3', 'subscription', 'CNY', 0),
@@ -101,13 +101,13 @@ const baseSummary = {
   providers: baseProviders,
   breakdown: { models: baseModels },
   pricingLinks: [
-    { id: 'deepseek-official', label: 'DeepSeek 官方', url: 'https://api-docs.deepseek.com/quick_start/pricing' },
+    { id: 'deepseek-official', label: 'DeepSeek', url: 'https://api-docs.deepseek.com/quick_start/pricing' },
     { id: 'zhipu', label: '智谱 AI', url: 'https://docs.bigmodel.cn/cn/guide/start/pricing' },
     { id: 'moonshot', label: 'Kimi', url: 'https://platform.moonshot.cn/docs/pricing/chat' },
     { id: 'openrouter', label: 'OpenRouter', url: 'https://openrouter.ai/models' },
     { id: 'qwen', label: '通义千问', url: 'https://help.aliyun.com/zh/model-studio/billing-for-alibaba-cloud-model-studio' },
   ],
-  showBalance: true, version: '1.0.6', refreshMs: 60000, currentProviderId: 'deepseek-official', updatedAt: now, stale: false,
+  showBalance: true, version: '1.0.7', refreshMs: 60000, currentProviderId: 'deepseek-official', updatedAt: now, stale: false,
 }
 
 const env = { ...process.env, DSH_HOME: home }
@@ -233,7 +233,7 @@ try {
   assert.match(await panel.innerText(), /API 按量/)
   assert.match(await panel.innerText(), /已检测 2/)
   assert.match(await panel.innerText(), /订阅套餐/)
-  assert.match(await panel.innerText(), /DeepSeek 官方/)
+  assert.match(await panel.innerText(), /DeepSeek\b/)
   assert.match(await panel.innerText(), /OpenRouter/)
   assert.match(await panel.innerText(), /GLM Coding/)
   assert.match(await panel.innerText(), /Kimi Coding/)
@@ -250,6 +250,16 @@ try {
   assert.ok(!(await panel.innerText()).includes('分钟前'))
   assert.equal(await page.locator('[data-testid^=token-dash-api-card-]').count(), 2)
   assert.equal(await page.locator('[data-testid^=token-dash-sub-card-]').count(), 2)
+
+  // #23：有预算时进度条必须有可见填充（6px 高、宽度≈预算百分比、蓝色）
+  const budgetFill = page.getByTestId('token-dash-budget-bar-deepseek-official')
+  const fillBox = await budgetFill.boundingBox()
+  const trackWidth = await budgetFill.evaluate((element) => element.parentElement.getBoundingClientRect().width)
+  assert.ok(fillBox !== null && fillBox.height >= 5, `budget bar fill height ${fillBox?.height}`)
+  assert.ok(Math.abs(fillBox.width / trackWidth - 0.1234) < 0.02, `budget bar fill ratio ${fillBox.width / trackWidth}`)
+  const fillColor = await budgetFill.evaluate((element) => getComputedStyle(element).backgroundColor)
+  const [red, green, blue] = fillColor.match(/\d+/g).map(Number)
+  assert.ok(blue > red && blue > green && blue > 120, `budget bar fill color ${fillColor}`)
 
   // #48/#49：非零成本摘要 + 每 provider 一条真实行，两张表不再出现全零占位
   const pricedProviders = [
@@ -270,11 +280,11 @@ try {
   assert.match(await panel.innerText(), /CNY 合计 ¥5\.14/)
   const costTable = panel.getByTestId('token-dash-cost-table')
   const usageTable = panel.getByTestId('token-dash-usage-table')
-  const deepseekCostRow = costTable.locator('tr', { hasText: 'DeepSeek 官方 / DeepSeek-V4.1-Flash' })
+  const deepseekCostRow = costTable.locator('tr', { hasText: 'DeepSeek / DeepSeek-V4.1-Flash' })
   assert.equal(await deepseekCostRow.count(), 1)
   assert.match(await deepseekCostRow.innerText(), /100\.0%/)
   assert.match(await deepseekCostRow.innerText(), /¥5\.14/)
-  const deepseekUsageRow = usageTable.locator('tr', { hasText: 'DeepSeek 官方 / DeepSeek-V4.1-Flash' })
+  const deepseekUsageRow = usageTable.locator('tr', { hasText: 'DeepSeek / DeepSeek-V4.1-Flash' })
   assert.equal(await deepseekUsageRow.count(), 1)
   assert.match(await deepseekUsageRow.innerText(), /0\.10M/)
   assert.equal(await costTable.locator('tbody tr').count(), 2)
@@ -415,7 +425,7 @@ try {
   let installCalled = 0
   await page.route('**/token-dash/api/update/install', async (route) => {
     installCalled += 1
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { ok: true, command: 'dsh plugin --profile desktop update dsh-token-dash' } }) })
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { ok: true, command: 'dsh plugin --profile desktop add dsh-token-dash@1.0.7 --save-exact', to: '1.0.7' } }) })
   })
   await page.route('**/token-dash/api/update', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { current: '1.0.6', latest: '1.0.7', hasUpdate: true, published: true } }) })
@@ -423,7 +433,7 @@ try {
   await jsClick(settings.getByRole('button', { name: '检查更新' }))
   await settings.getByText('发现 1.0.7').waitFor({ timeout: 5000 })
   await jsClick(settings.getByRole('button', { name: '更新', exact: true }))
-  await settings.getByText('已更新，重启 DSH 后生效').waitFor({ timeout: 5000 })
+  await settings.getByText('已更新到 1.0.7，重启 DSH 后生效').waitFor({ timeout: 5000 })
   assert.equal(installCalled, 1)
 
   // 关闭浮层（Esc 按键输入按 D-15 修订不做处理，关闭走右上按钮）

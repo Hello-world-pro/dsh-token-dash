@@ -15,9 +15,9 @@ import {
 
 test('registry descriptors keep the five-provider contract', () => {
   assert.deepEqual(pricingLinks().map((item) => item.id), ['deepseek-official', 'zhipu', 'moonshot', 'openrouter', 'qwen'])
-  assert.deepEqual(pricingLinks().map((item) => item.label), ['DeepSeek 官方', '智谱 AI', 'Kimi', 'OpenRouter', '通义千问'])
+  assert.deepEqual(pricingLinks().map((item) => item.label), ['DeepSeek', '智谱 AI', 'Kimi', 'OpenRouter', '通义千问'])
   assert.equal(pricingLinks().length, 5)
-  assert.equal(providerLabel('deepseek-account'), 'DeepSeek 官方')
+  assert.equal(providerLabel('deepseek-account'), 'DeepSeek')
   assert.equal(providerLabel('zai-coding'), '智谱 AI')
   assert.equal(providerCurrency('openrouter'), 'USD')
   assert.equal(providerCurrency('qwen'), 'CNY')

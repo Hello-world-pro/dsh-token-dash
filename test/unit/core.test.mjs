@@ -72,7 +72,7 @@ test('模型展示名映射到宿主标签', () => {
   assert.equal(summary.breakdown.models[0].name, 'deepseek-flash')
   assert.equal(summary.breakdown.models[0].displayName, 'DeepSeek-V4.1-Flash')
   assert.equal(summary.breakdown.models[0].providerId, 'deepseek-official')
-  assert.equal(summary.breakdown.models[0].providerName, 'DeepSeek 官方')
+  assert.equal(summary.breakdown.models[0].providerName, 'DeepSeek')
   assert.equal(summary.showBalance, true)
   assert.equal(summary.showMonthTokens, true)
 })

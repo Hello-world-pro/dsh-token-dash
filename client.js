@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
 
     const API = '/token-dash/api'
     const PKG = 'dsh-token-dash'
-    const COLORS = { primary: '#6ea8ff', warn: '#f0a020', over: '#e05a5a' }
+    const COLORS = { primary: 'var(--dsw-alias-state-business-primary, #6ea8ff)', warn: '#f0a020', over: '#e05a5a' }
     const budgetColor = (state) => (state === 'over' ? COLORS.over : state === 'warn' ? COLORS.warn : COLORS.primary)
     const percentColor = (value) => (value >= 100 ? COLORS.over : value >= 80 ? COLORS.warn : COLORS.primary)
 
@@ -104,7 +104,7 @@ window.__ModuleLoader__.load({
       titleBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 36 },
       buttonGroup: { display: 'flex', gap: 12 },
       bar: { height: 6, borderRadius: 3, background: 'rgba(128,128,128,.25)', overflow: 'hidden', margin: '8px 0' },
-      barFill: { height: '100%', background: '#6ea8ff' },
+      barFill: { height: '100%', background: COLORS.primary },
       barNeutral: { height: '100%', background: 'rgba(128,128,128,.45)' },
       cols: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, marginTop: 8 },
       subGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 8 },
@@ -336,8 +336,10 @@ window.__ModuleLoader__.load({
             h('span', null, `余额 ${balanceText(provider, true) ?? '--'}`))),
         h('div', { style: { ...styles.bar, marginTop: 6, marginBottom: 0 } },
           h('div', {
+            'data-testid': `token-dash-budget-bar-${provider.id}`,
             style: {
-              ...(hasBudget ? { background: color } : styles.barNeutral),
+              ...styles.barFill,
+              background: hasBudget ? color : styles.barNeutral.background,
               width: hasBudget ? `${Math.min(100, (budget.percent ?? 0) * 100)}%` : '100%',
             },
           })))
@@ -611,7 +613,7 @@ window.__ModuleLoader__.load({
           const res = await fetch(`${API}/update/install`, { method: 'POST', headers: { accept: 'application/json' } })
           const body = await res.json().catch(() => ({}))
           const data = body?.data
-          if (body?.ok === true) setUpdate({ phase: 'done', text: '已更新，重启 DSH 后生效' })
+          if (body?.ok === true) setUpdate({ phase: 'done', text: data?.to ? `已更新到 ${data.to}，重启 DSH 后生效` : '已更新，重启 DSH 后生效' })
           else setUpdate({ phase: 'error', text: `更新失败（${data?.reason ?? 'unknown'}）`, command: data?.command })
         } catch (error) {
           setUpdate({ phase: 'error', text: `更新失败（${error.message}）` })

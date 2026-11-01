@@ -4,8 +4,9 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 
 const version = JSON.parse(readFileSync('package.json', 'utf8')).version
+const isLocal = version.includes('-local.')
 
-test('release notes 提取当前版本完整块', () => {
+test('release notes 提取当前版本完整块', { skip: isLocal ? '本地构建不使用 Release notes' : false }, () => {
   const output = execFileSync(process.execPath, ['scripts/release-notes.mjs', version], { encoding: 'utf8' })
   assert.match(output, /^### (新增|修改)$/m)
   assert.match(output, /^- /m)
