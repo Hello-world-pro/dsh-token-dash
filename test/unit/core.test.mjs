@@ -12,6 +12,7 @@ import {
   priceFor,
   providerLabel,
   reattributeUnknown,
+  repriceState,
 } from '../../src/core.js'
 
 test('normalizeModel 去掉渠道前缀与后缀', () => {
@@ -19,19 +20,19 @@ test('normalizeModel 去掉渠道前缀与后缀', () => {
   assert.equal(normalizeModel('glm-5.3-ioa@2026-10-01'), 'glm-5.3-ioa')
 })
 
-test('峰谷价：Flash 高峰 1M 未命中 + 1M 输出 = 12', () => {
+test('峰谷价：Flash 高峰 1M 未命中 + 1M 输出 = 10', () => {
   const ts = Date.UTC(2026, 9, 30, 2, 0, 0) // 北京时间 10:00
   const price = priceFor('deepseek-account', 'deepseek-v4-flash', ts)
-  assert.equal(price.input, 3)
-  assert.equal(price.output, 9)
+  assert.equal(price.input, 2)
+  assert.equal(price.output, 8)
   const cost = costOf({ ts, provider: 'deepseek-account', model: 'deepseek-v4-flash', input: 1_000_000, cacheRead: 0, cacheWrite: 0, output: 1_000_000 })
-  assert.ok(Math.abs(cost - 12) < 1e-9)
+  assert.ok(Math.abs(cost - 10) < 1e-9)
 })
 
-test('闲时 Flash 1M + 1M = 6', () => {
+test('闲时 Flash 1M + 1M = 5', () => {
   const ts = Date.UTC(2026, 9, 30, 13, 0, 0) // 北京时间 21:00
   const cost = costOf({ ts, provider: 'deepseek-account', model: 'deepseek-v4-flash', input: 1_000_000, cacheRead: 0, cacheWrite: 0, output: 1_000_000 })
-  assert.ok(Math.abs(cost - 6) < 1e-9)
+  assert.ok(Math.abs(cost - 5) < 1e-9)
 })
 
 test('第三方按自己的目录价，未知 provider 不套 DeepSeek 价', () => {
@@ -53,7 +54,7 @@ test('费用占比不超过 100%', () => {
     updatedAt: now,
   })
   const row = summary.breakdown.models[0]
-  assert.equal(row.cost, 0.04)
+  assert.equal(row.cost, 0.03)
   assert.ok(row.share <= 1, `share=${row.share}`)
 })
 
@@ -141,6 +142,39 @@ test('#44 已配置 provider 无消耗时补默认模型行（配置即可见）
   // 未配置（providerInfo 空）→ 无补行
   const summary3 = buildSummary(emptyState(), { budgets: {} }, now, [])
   assert.deepEqual(summary3.breakdown.models, [])
+})
+
+test('repriceState 用日级 token 重算旧成本', () => {
+  const state = emptyState()
+  state.costVersion = 1
+  state.days['2026-11-02'] = {
+    providers: {
+      'deepseek-official': { models: { 'deepseek-flash': { input: 1_000_000, cacheRead: 0, cacheWrite: 0, output: 0, requests: 1, cost: 0, priced: true } } },
+      unknown: { models: { 'deepseek-flash': { input: 1_000_000, cacheRead: 0, cacheWrite: 0, output: 0, requests: 1, cost: 0, priced: true } } },
+    },
+  }
+  const result = repriceState(state)
+  assert.equal(result.repriced, true)
+  assert.equal(state.costVersion, 3)
+  // 00:00 走 DeepSeek 闲时价：1M 输入 = 1
+  assert.equal(state.days['2026-11-02'].providers['deepseek-official'].models['deepseek-flash'].cost, 1)
+  // unknown 行按模型前缀归因后同样可计价
+  assert.equal(state.days['2026-11-02'].providers.unknown.models['deepseek-flash'].cost, 1)
+  assert.equal(repriceState(state).repriced, false)
+})
+
+test('#49 已有真实模型行时不再补默认行（不同 id、同展示名）', () => {
+  const now = new Date(2026, 10, 2, 10, 0, 0).getTime()
+  const state = emptyState()
+  addRecord(state, { ts: now, provider: 'deepseek-account', model: 'deepseek-flash', input: 128_000, cacheRead: 1_000_000, cacheWrite: 0, output: 8_000 })
+  const summary = buildSummary(state, { budgets: {} }, now, [
+    { id: 'deepseek-official', kind: 'api', currency: 'CNY' },
+  ])
+  const rows = summary.breakdown.models.filter((item) => item.providerId === 'deepseek-official')
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].modelId, 'deepseek-flash')
+  assert.equal(rows[0].requests, 1)
+  assert.equal(rows[0].displayName, 'DeepSeek-V4.1-Flash')
 })
 
 test('月汇总：预算、剩余、按模型请求数', () => {

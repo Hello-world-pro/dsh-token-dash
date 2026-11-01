@@ -35,11 +35,14 @@ function normalizeEntry(raw) {
   if (provider === 'unknown' || model === 'unknown') return null
   const currency = raw?.currency === 'USD' ? 'USD' : (raw?.currency === 'CNY' || raw?.currency === 'RMB' ? 'CNY' : providerCurrency(provider))
   const prices = raw?.prices !== undefined ? pricesOf(raw.prices) : pricesOf(raw)
-  const peak = raw?.peak !== undefined ? pricesOf(raw.peak) : null
-  const offPeak = raw?.offPeak !== undefined ? pricesOf(raw.offPeak) : null
+  // 二次归一化会显式传 null：null 必须等同于"没有峰谷价目"
+  const peakRaw = raw?.peak != null ? pricesOf(raw.peak) : null
+  const offPeakRaw = raw?.offPeak != null ? pricesOf(raw.offPeak) : null
   const hasFlat = prices.input !== null && prices.output !== null
-  const hasTiers = peak !== null && offPeak !== null && peak.input !== null && peak.output !== null && offPeak.input !== null && offPeak.output !== null
+  const hasTiers = peakRaw !== null && offPeakRaw !== null && peakRaw.input !== null && peakRaw.output !== null && offPeakRaw.input !== null && offPeakRaw.output !== null
   if (!hasFlat && !hasTiers) return null
+  const peak = hasTiers ? peakRaw : null
+  const offPeak = hasTiers ? offPeakRaw : null
   return {
     provider,
     model,
@@ -48,7 +51,7 @@ function normalizeEntry(raw) {
     releasedAt: String(raw?.releasedAt ?? raw?.updatedAt ?? ''),
     currency,
     aliases: Array.isArray(raw?.aliases) ? raw.aliases.map((alias) => normalizeModel(alias)) : [],
-    prices: peak !== null && offPeak !== null ? null : prices,
+    prices: hasTiers ? null : prices,
     peak,
     offPeak,
   }
@@ -83,11 +86,40 @@ function familyEntry(provider, model) {
 
 function effectivePrices(entry, ts) {
   if (entry.peak !== null && entry.offPeak !== null) {
-    const hour = new Date(ts + 8 * 60 * 60 * 1000).getUTCHours()
-    const peak = (hour >= 9 && hour < 12) || (hour >= 14 && hour < 18)
+    // 北京时间工作日 09:00-12:00 / 14:00-18:00 为高峰，周末全天闲时
+    const date = new Date(ts + 8 * 60 * 60 * 1000)
+    const hour = date.getUTCHours()
+    const weekday = date.getUTCDay()
+    const workday = weekday >= 1 && weekday <= 5
+    const peak = workday && ((hour >= 9 && hour < 12) || (hour >= 14 && hour < 18))
     return peak ? entry.peak : entry.offPeak
   }
   return entry.prices
+}
+
+function communityPrices(raw) {
+  return {
+    input: finite(raw?.inputCostPerMillion),
+    cacheRead: finite(raw?.cacheReadCostPerMillion) ?? 0,
+    cacheWrite: finite(raw?.cacheCreationCostPerMillion) ?? 0,
+    output: finite(raw?.outputCostPerMillion),
+  }
+}
+
+/** 社区表用 timeRules/dailySlots 表达峰谷；仅识别标准工作日两段窗口，其余保持平坦价。 */
+function tieredPrices(raw) {
+  const slots = Array.isArray(raw?.dailySlots) ? raw.dailySlots : []
+  const slot = slots.find((item) => Array.isArray(item?.windows) && item.windows.length === 2)
+  if (slot === undefined) return null
+  const windows = slot.windows.map((item) => [Number(item?.startMinute), Number(item?.endMinute)])
+  const standard = windows[0][0] === 540 && windows[0][1] === 720 && windows[1][0] === 840 && windows[1][1] === 1080
+  const days = Array.isArray(slot.daysOfWeek) ? slot.daysOfWeek.map(Number) : [1, 2, 3, 4, 5]
+  const weekdays = days.length === 5 && [1, 2, 3, 4, 5].every((day) => days.includes(day))
+  if (!standard || !weekdays) return null
+  const peak = communityPrices(slot)
+  const offPeak = communityPrices(raw)
+  if (peak.input === null || peak.output === null || offPeak.input === null || offPeak.output === null) return null
+  return { peak, offPeak }
 }
 
 /**
@@ -128,6 +160,7 @@ export function setCatalogForTests(models) {
 }
 
 function remoteEntry(raw) {
+  const tier = tieredPrices(raw)
   return normalizeEntry({
     provider: raw.provider ?? raw.family ?? 'unknown',
     model: raw.modelId ?? raw.model,
@@ -140,6 +173,7 @@ function remoteEntry(raw) {
     cacheWrite: raw.cacheWrite ?? raw.cacheCreationCostPerMillion,
     output: raw.output ?? raw.outputCostPerMillion,
     aliases: Array.isArray(raw.aliases) ? raw.aliases : [],
+    ...(tier === null ? {} : tier),
   })
 }
 

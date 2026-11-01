@@ -1,7 +1,7 @@
 # DSH Token 看板：多供应商预算、订阅配额与本地计价
 
-> 状态：待归档（v1.0.0 已发布 GitHub：#24-#47 全部闭环，L1 37/37 + E2E pass + 用户桌面验收；npm 发布与市场收录待办见 §十）<br>
-> 创建：2026-10-31；更新：2026-11-01（v0.2 施工 → #24-#47 五轮迭代 → v1.0.0 发布 + 治理体系；终态精修）<br>
+> 状态：待归档（#1-#22 全部闭环，L1 44/44 + E2E pass；v1.0.5 发布；待用户归档）<br>
+> 创建：2026-10-31；更新：2026-11-02（#19 零价与历史恢复；#20 补行判重；#21 月度账本；#22 成本对齐官方价；1.0.5 发布）<br>
 > 工程：`dsh-token-dash`（包名 `dsh-token-dash`）<br>
 > 关联资料：[UI 施工 checklist（已归档）](../../checklist/archived/dsh/token-dash-ui-build-checklist.md)、[治理体系 checklist（已归档）](../../checklist/archived/dsh/github-governance-build-checklist.md)<br>
 > 文档位置：`docs/plan/active/feature_token_dash.md`；checklist 统一在 `docs/checklist/`。
@@ -33,11 +33,11 @@
 |---|---|---|---|
 | REQ-01 | P0 | P1 跟随当前 provider；API 样式显示预算%、今日、余额 | DeepSeek / OpenRouter 切换时 P1 正确变化 |
 | REQ-02 | P0 | 订阅 provider 显示账户级 5h / 周百分比 | GLM / Kimi 订阅卡可见；不显示预算% |
-| REQ-03 | P0 | 判定不了时默认 API 样式；P1 不显示对话 Token | 未知 provider 显示 `[API] --`（#38 词条统一）；DSH 原生 Token 不重复 |
+| REQ-03 | P0 | 判定不了时默认 API 样式；P1 不显示对话 Token | 未知 provider 显示 `[API] --`（#9 词条统一）；DSH 原生 Token 不重复 |
 | REQ-04 | P0 | P2 每个 API provider 独立预算 + 独立进度条 | DeepSeek / OpenRouter 各一条；无预算满格且不显示百分比 |
 | REQ-05 | P0 | P2 订阅区每个 provider 一张卡；标题行统一"重新检测" | 5h/周/月窗口、重置时间、单卡无重复按钮 |
 | REQ-06 | P0 | API 费用表只统计 API，按 CNY/USD 分组；订阅只进用量表 | 无跨币种合计；订阅行无金额 |
-| REQ-07 | P0 | P3 只做设置：API 行 = provider + 月度预算 + 币种（#39 删除计费模式下拉）；订阅行 = 模式 + 状态 | 无单价输入、无模型展开、无价格编辑 |
+| REQ-07 | P0 | P3 只做设置：API 行 = provider + 月度预算 + 币种（#10 删除计费模式下拉）；订阅行 = 模式 + 状态 | 无单价输入、无模型展开、无价格编辑 |
 | REQ-08 | P0 | ViewModel 拆 `providers / balances / plans / apiTotals` | P1/P2/P3 共用一份 summary，无单 `balance` |
 | REQ-09 | P0 | 自动侦测五家：DeepSeek / Kimi / GLM / OpenRouter / Qwen | 其他 provider 不显示；Qwen 只判 API；订阅/API 不误判 |
 | REQ-10 | P0 | GLM 配额 adapter 严格参考社区实现 | 5h/周百分比正确；401/无窗口降级 |
@@ -233,7 +233,7 @@ QuotaWindow {
 | `[TD:update]` | `update` | 检查更新、安装结果、失败 | `check.latest` / `install.fail` | info | 命令中的凭证 |
 | `[TD:core]` | `core` | 未归类事件兜底 | `unexpected` | warn | 任意敏感内容 |
 
-职责边界：`adapter.*` 只记外部请求/解析；`pricing` 只记价格来源/匹配；`ui` 只记动作与错误（同类错误限频 1 分钟 3 条）；模块前缀与 JSONL `module` 一致，缺失回退 `core`。错误事件带 `errorKind`（http/timeout/network/parse）+ `httpStatus`（#47 落地）。
+职责边界：`adapter.*` 只记外部请求/解析；`pricing` 只记价格来源/匹配；`ui` 只记动作与错误（同类错误限频 1 分钟 3 条）；模块前缀与 JSONL `module` 一致，缺失回退 `core`。错误事件带 `errorKind`（http/timeout/network/parse）+ `httpStatus`（#18 落地）。
 
 **脱敏红线**
 
@@ -263,6 +263,12 @@ QuotaWindow {
 | CHG-10 | 新增 | `test/unit/*.test.mjs` | pricing、VM、adapter parser、currency、预算 |
 | CHG-11 | 新增 | `src/diagnostics.js` | JSONL 日志、轮转、脱敏、导出 header/错误摘要 |
 | CHG-12 | 修改 | `client.js` | P3 仅"查看日志"：`/open-in-app/open` 打开固定目录 + 导出；无诊断块/级别/清空 |
+| CHG-13 | 修改 | `src/pricing.js` | `normalizeEntry` 峰谷 null 归一化：社区表二次归一化不再把单价清空 |
+| CHG-14 | 修改 | `src/core.js` | `addRecord` 单价缺项按未定价；`buildSummary` 补行改为"provider 已有真实行即不补" |
+| CHG-15 | 修改 | `src/store.js`、`src/core.js`、`index.js` | 历史恢复：并回 `.pre-v2` 备份后按日级 token 重算，不清空聚合 |
+| CHG-17 | 修改 | `src/store.js` | 月度账本 `months/YYYY-MM.json` 写入/读回，daily 缺失时兜底 |
+| CHG-18 | 修改 | `src/catalog.json`、`src/pricing.js`、`index.js` | 官方价对齐、工作日/周末与 `dailySlots` 峰谷、重算前等价格表；`costVersion 3` |
+| CHG-16 | 修改 | `scripts/e2e.mjs`、`test/unit/*` | E2E-45/46/47、迁移/定价/补行 L1 用例；宿主与 Chromium 路径自适应 |
 
 ## 四、不改动 / 边界
 
@@ -278,6 +284,7 @@ QuotaWindow {
 | 项 | 来源 | 验证方式 | 结果 |
 |---|---|---|---|
 | **总口径（2026-11-01）** | 全部 | L1 37/37 + E2E 全矩阵 pass + 用户桌面走查；L5 不覆盖（D-09） | 下表结果列统一为"已验证" |
+| **增量口径（2026-11-02）** | #19-#22 | L1 44/44 + E2E 全矩阵 pass（含恢复、月度账本、非零费用、行数、成本对齐） | 已验证 |
 | P1 API / 订阅两态 | REQ-01/02 | L3 mock；真实桌面走查 | 已验证 |
 | P1 未知默认 API | REQ-03 | L3 mock | 已验证 |
 | P2 多 API 独立进度条 | REQ-04 | L3 mock；无预算满格 | 已验证 |
@@ -296,6 +303,10 @@ QuotaWindow {
 | GLM / Kimi / OpenRouter adapter | REQ-10/11/12 | L4 contract fixture | 已验证 |
 | 社区价格回退 / 近似价 | REQ-13 | L1 + L2 | 已验证 |
 | 只读/停用恢复 | REQ-14 | L2 + 人工 | 已验证 |
+| #19 今日/费用非零（社区价格表） | REQ-01/06 | L1 + E2E-45/46 | 已验证（2026-11-02） |
+| #20 明细表无重复占位行 | REQ-16 | L1 + E2E-47 | 已验证（2026-11-02） |
+| #21 月度账本与历史恢复 | REQ-14/16 | L1 + E2E-46 | 已验证（2026-11-02） |
+| #22 今日成本对齐平台 | REQ-01/06 | L1 + 同源数据对照 | 已验证（2026-11-02） |
 
 ### 5.1 E2E 分层与自主执行守则
 
@@ -335,6 +346,8 @@ QuotaWindow {
 
 ### 5.3 E2E 测试矩阵
 
+> 宿主路径按 `LOCALAPPDATA` 解析（`DSH_APP_ROOT` 可覆盖）；Chromium 依次取 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` → Playwright 默认版本 → 本机已安装的 `chromium-*`；不再硬编码用户目录与浏览器修订号（2026-11-02）。
+
 | ID | 层 | 场景 | 断言 | 来源 |
 |---|---|---|---|---|
 | E2E-01 | L3 | P1 API CNY | `[API]` + 预算% + 今日 + 余额；无 Token | REQ-01/03 |
@@ -346,7 +359,7 @@ QuotaWindow {
 | E2E-07 | L3 | P2 多 API | DeepSeek + OpenRouter 各一条进度条 | REQ-04/08 |
 | E2E-08 | L3 | P2 无预算 | 满格、中性色、无百分比、无"可用" | REQ-04 |
 | E2E-09 | L3 | P2 订阅区 | GLM/Kimi 两张卡；标题行一个"重新检测" | REQ-05 |
-| E2E-10 | L3 | API 费用表 | 仅 API；CNY/USD 分组；无跨币种合计 | REQ-06 |
+| E2E-10 | L3 | API 费用表 | 仅 API；CNY/USD 分组；无跨币种合计；非零成本摘要下合计/占比/金额正确（#19） | REQ-06 |
 | E2E-11 | L3 | 订阅用量 | 订阅 token 出现在用量表，费用表无订阅行 | REQ-06 |
 | E2E-12 | L3 | P3 设置 | 无单价输入、无模型展开；预算在 API 行 | REQ-07 |
 | E2E-13 | L2 | summary VM | `providers/apiTotals` 完整；无单 `balance` | REQ-08 |
@@ -365,6 +378,9 @@ QuotaWindow {
 | E2E-42 | L3 | 日志级别固定 | P3 无级别/清空控件；导出为 info；仍无 Key/prompt/body | REQ-17/BND-05 |
 | E2E-43 | L3 | 空 provider | 无任何 provider：隐藏 API/订阅区，显示空态 | REQ-16 |
 | E2E-44 | L2 | 日志轮转 | 达到大小上限轮转；导出不超过 10MB | REQ-17/RSK-05 |
+| E2E-45 | L3 | 今日费用非零 | pill `今日 ¥2.57`；API 卡预算 used/百分比同步；不再恒 `¥0.00` | REQ-01/#19 |
+| E2E-46 | L2 | 历史恢复与月度账本 | 空 `daily.json` + `.pre-v2` 备份 → 并回、`.merged`、行 `cost>0`、生成 `months/2026-11.json` | #19/#21 |
+| E2E-47 | L3 | 明细表无重复占位行 | 两表 DeepSeek 行各 1；用量行 `0.10M` 非 `0.00M`；费用表 2 行 / 用量表 4 行 | REQ-16/#20 |
 | E2E-19 | L3 | P3 重新检测 | 按钮在订阅区标题右侧；点击只触发订阅配额 | REQ-05 |
 | E2E-20 | L3 | 窄屏 | 表格横向滚动；P1 不撑开输入框 | BND-04/RSK-03 |
 | E2E-21 | L4 | GLM success | 5h/周 42.5/18.2；TIME_LIMIT 不进百分比 | REQ-10 |
@@ -441,147 +457,174 @@ QuotaWindow {
 
 ## 九、自测反馈台（活跃期）
 
-> 旧 Issue #1-#18 随 v0.2 重写废弃；#19-#29 施工后清除（活跃遗留保全至文末"遗留"小节）；#30-#47 已修复并验证通过，按 skill 闭环卡压缩。
+> 2026-11-02 按时间顺序重排为 #1-#22（原 #30-#51，旧编号作废）；全部为已修复闭环卡，L1 44/44 + E2E pass。
 
-### Issue #30 [已修复] 2026-11-01 浮层锚定 pillWrap
-- 触发：浮层位置三次反馈不对（贴 pill 漂左上 / 右对齐后与 pill 水平脱节）
-- 根因：Panel 渲染在 Fragment 中、是 pillWrap 的兄弟节点——`position:absolute` 的定位基准一直是宿主槽位容器，"贴 pill"从未生效（v1 起所有怪位置的共同根因）
-- 落点：`client.js` · Pill render——Panel 移入 pillWrap 内部；`styles.panel`——absolute + left:0 + bottom:calc(100%+8px)，清理 fixed/right 动态计算
-- 边界：允许遮挡输入框（三次定案）；maxHeight 按 pill 上方空间钳制（下限 200px、内部滚动）
-- 验证：L3 位置断言（panel 左缘对齐 pill 左缘 ±4px、底边 = pill 顶 - 8px ±4px）+ 桌面走查
-- 遗留：关闭后焦点归还 setTimeout 尽力而为（E2E 受宿主焦点管理干扰未断言），真实浏览器人工走查
+### Issue #1 [已修复] 2026-11-01 浮层锚定 pillWrap
+- 触发：浮层位置三次反馈不对（贴 pill 漂左上 / 右对齐后与 pill 水平脱节）。
+- 根因：Panel 与 pillWrap 是兄弟节点，`position:absolute` 一直以宿主槽位容器为基准。
+- 落点：`client.js` · Pill/Panel——Panel 移入 pillWrap；`styles.panel` 改 absolute + left:0 + bottom:calc(100%+8px)，清理 fixed/right 计算。
+- 边界：允许遮挡输入框；maxHeight 按 pill 上方空间钳制（下限 200px、内部滚动）。
+- 验证：L3 位置断言（左缘 ±4px、底边 = pill 顶 −8px ±4px）+ 桌面走查；焦点归还仍为尽力而为。
 
+### Issue #2 [已修复] 2026-11-01 showBalance 开关只控制 P1
+- 触发：关闭开关后 P2 余额列隐藏，余额接口也停发。
+- 根因：开关同时作用于 UI 隐藏与 adapters 的 skipBalance 请求跳过。
+- 落点：`src/adapters.js` · readProviders——删除 skipBalance；`client.js` · ApiCard——余额列恒显示。
+- 边界：P1 余额段仍受开关；订阅 quota 不受影响。
+- 验证：L3（pill 无余额 + panel 有 ¥49.86）。
 
-### Issue #31 [已修复] 2026-11-01 showBalance 开关只控制 P1
-- 触发：开关关闭后 P2 余额列也被隐藏，且余额接口停发导致 P2 无数据
-- 根因：开关同时作用于 UI 隐藏与 adapters 的 skipBalance 请求跳过（#28 引入）
-- 落点：`src/adapters.js` · readProviders——删除 skipBalance（余额/credits 恢复常请求）；`client.js` · ApiCard——余额列恒显示（删 cols1 单列分支）
-- 边界：P1 pill 余额段仍受开关控制；订阅 quota 不受影响
-- 验证：L3 断言"showBalance=false 时 pill 无余额 + panel 有 ¥49.86"；checklist 三处口径同步
+### Issue #3 [已修复] 2026-11-01 用量明细空态保留表格结构
+- 触发：`models` 为空时只有 colSpan 文案“本月暂无消耗”，表头下无内容。
+- 根因：空态分支返回单行文案，非表格占位结构。
+- 落点：`client.js` · UsageTable——空态占位行（`—` / `0` / `0.00M`×3 / `—`），提取 emptyRow。
+- 边界：合计 `0.00M` 保留；旧文案废止。
+- 验证：L3 不含“本月暂无消耗”且含 0.00M。
 
+### Issue #4 [已修复] 2026-11-01 API 卡显示总预算额度
+- 触发：P2 API 卡只有百分比，预算总额不可见。
+- 根因：按框线图实现，框线图只有百分比（规划盲区）。
+- 落点：`client.js` · ApiCard——预算段含已用/总额（后并入 #8 单行式）。
+- 验证：L3 `¥12.34 / ¥500.50`；E2E 改精确金额 + 主动刷新。
 
-### Issue #32 [已修复] 2026-11-01 用量明细空态保留表格结构
-- 触发：`models` 为空时渲染 colSpan 文案行"本月暂无消耗"，表头下无内容观感差
-- 根因：空态分支返回单行文案而非表格占位结构
-- 落点：`client.js` · UsageTable——空态改占位行（`—` / `0` / `0.00M` ×3 / `—`），空态行提取为 emptyRow 变量
-- 边界：合计 `0.00M` 保留；P5 文案表"本月暂无消耗"废止
-- 验证：L3 断言不含"本月暂无消耗"且含 0.00M
-- 遗留（施工坑）：嵌套 h() 链替换丢闭括号被 node --check 拦截——大改动优先提取子表达式变量
+### Issue #5 [已修复] 2026-11-01 “已保存”提示不再引起弹窗抖动
+- 触发：status 独立行出现/消失改变浮层高度，弹窗整体 resize。
+- 根因：status 参与内容流布局。
+- 落点：`client.js` · Settings——status 移入标题栏关闭按钮左侧，minWidth 88 固定占位。
+- 边界：`aria-live=polite` 保留；P2 error 行不在范围。
+- 验证：L3 getByText + 桌面走查。
 
+### Issue #6 [已修复] 2026-11-01 点击浮层外部自动关闭
+- 触发：只有“关闭”按钮能收起浮层（Esc 按 D-15 不做）。
+- 落点：`client.js` · Panel——document mousedown：target 不在 panel/pillWrap → onClose；命中 pill 交给 toggle。
+- 边界：关闭途径为按钮/外部点击；Esc 维持不做。
+- 验证：L3 mousedown → panel 消失 → 重开正常 + 桌面走查。
 
-### Issue #33 [已修复] 2026-11-01 API 卡显示总预算额度
-- 触发：P2 API 卡只有百分比，预算总额不可见，与 P3 设置卡不一致
-- 根因：#25-2 按 checklist 框线图实现，框线图只有百分比（规划盲区）
-- 落点：`client.js` · ApiCard——预算段含已用/总额金额（后经 #37 并入单行式）
-- 验证：L3 断言 `¥12.34 / ¥500.50`
-- 遗留（E2E 坑，可复用）：includes(2.5%) 被 GLM 卡 42.5% 子串命中成永真断言；"保存后 P2 更新"依赖 60s tick 随机时机——根修为主动点刷新 + 精确金额断言；Playwright glob `*` 不跨 `/`（`update*` 匹配不到 `update/install` 会穿透 mock 到真实 host）
+### Issue #7 [已修复] 2026-11-01 P1 pill 精简
+- 触发：徽标与厂商名占位过大，输入框右下已有模型指示。
+- 落点：`client.js` · Pill——不显示 provider 名（title/aria-label 兜底）；chevron/gap/padding 收紧。
+- 边界：P2/P3 显示名不变；陈旧数据靠 hover 确认。
+- 验证：L3 无名称 + aria-label 含 OpenRouter；徽标经 #9 改 `[API]`。
 
+### Issue #8 [已修复] 2026-11-01 P2 API 卡回归框线图单行式
+- 触发：四层结构（标题/大字/进度/网格）偏离框线图两层紧凑式。
+- 落点：`client.js` · ApiCard——单行 provider + 预算段（已用/总额·百分比，状态色）+ 今日 + 余额；第二行进度条。
+- 边界：无预算 `未设置预算`，不回退月消费；#4 总额并入。
+- 验证：L3 `¥12.34 / ¥500.50`、`2.5%`、`¥49.86`。
 
-### Issue #34 [已修复] 2026-11-01 "已保存"提示不再引起弹窗抖动
-- 触发：status 独立行出现/消失改变浮层内容高度，弹窗整体 resize
-- 根因：状态提示渲染在 header 下的独立行，参与内容流布局
-- 落点：`client.js` · Settings——status 移入标题栏"关闭"按钮左侧，minWidth 88 固定宽占位（空态保留位置）
-- 边界：`aria-live=polite` 保留；P2 error 行不在范围
-- 验证：L3 getByText 通过 + 桌面走查
+### Issue #9 [已修复] 2026-11-01 模式词条统一 API / 订阅
+- 触发：pill 徽标 `[非订阅]` 与 API/订阅术语不一致。
+- 落点：`client.js` · Pill——`[非订阅]` → `[API]`，未知默认 `[API]`。
+- 验证：L3 两处 `[API]`；REQ-03、E2E-01/06 同步。
 
+### Issue #10 [已修复] 2026-11-01 P3 API 卡删除计费模式下拉
+- 触发：多数 provider 下拉仅一个选项、无作用。
+- 落点：`client.js` · Settings——API 卡单行 provider + 月度预算 + 输入 + 币种，删除 modeSelect。
+- 边界：手动覆盖下线（依赖自动侦测）；billingModes 数据层保留；订阅行下拉保留。
+- 验证：L3 select/hide option 4→2 + 桌面走查。
 
-### Issue #35 [已修复] 2026-11-01 点击浮层外部自动关闭
-- 触发：只有"关闭"按钮能收起浮层（Esc 按 D-15 修订不做）
-- 落点：`client.js` · Panel——document mousedown 监听：target 不在 panel 且不在 pillWrap（含 pill/hint）→ onClose；命中 pill 时交给 toggle，无双触发
-- 边界：关闭途径收敛为关闭按钮 / 点击外部；Esc 维持不做
-- 验证：L3 断言 body 派发 mousedown → panel 消失 → 重开正常 + 桌面走查
+### Issue #11 [已修复] 2026-11-01 API 费用明细空态保留表格结构
+- 触发：本月无 API 消耗时用量表保留空表（#3），费用表却整体消失。
+- 根因：`groups.size === 0` 直接 return null，未随 #3 空态口径。
+- 落点：`client.js` · ApiCostTable——空态渲染表头 + `CNY 合计 ¥0.00` + 占位行。
+- 边界：订阅不进费用表；有数据分组不变。
+- 验证：L3 空态（标题 + 合计）；L1 + E2E pass。
 
+### Issue #12 [已修复] 2026-11-01 升级后旧数据（unknown 行）不出现在看板
+- 触发：升级后 P2 明细为空，用户以为旧数据丢失。
+- 根因：DSH 会话无 `message.source.provider` → 全记 unknown；VM 跳过 unknown；跨月过滤月初不显示。
+- 落点：`src/providers.js` · `providerFromModel`；`src/core.js` · buildSummary 视图层归因 unknown（不改 daily.json）；明细口径后由 #13 回当月。
+- 边界：P1/预算仍当月；OpenRouter 中转 deepseek 误归已知。
+- 验证：L1 归因/跨月用例 + E2E pass。
 
-### Issue #36 [已修复] 2026-11-01 P1 pill 精简
-- 触发：徽标与厂商名占位过大；输入框右下角已有模型指示，名称冗余
-- 落点：`client.js` · Pill——不显示 provider 名（hover `title` 含 provider、aria-label 完整兜底）；chevron marginLeft 2 / padding 0 1px、pill gap 6 / padding 0 8px；数值段保留
-- 边界：P2/P3 卡片显示名不受影响；数据口径"最近消息 provider"下陈旧数据靠 hover 确认（用户接受）
-- 验证：L3 pill 无名称断言 + aria-label 含 OpenRouter 断言 + 桌面走查
-- 备注：徽标文案经 #38 修订为 `[API]`
+### Issue #13 [已修复] 2026-11-01 P2 明细区文案与口径精简
+- 触发：区标题/表标题冗长重复。
+- 落点：`client.js` · Panel 区标题去括号（API 按量 / 订阅套餐）；表标题 `API 费用明细 / 本月`、`模型用量明细 / 本月`；`core.js` · buildSummary models 回当月（回退 #12 跨月）。
+- 边界：本月 unknown 仍归 provider；上月不再显示（用户定案本月口径）。
+- 验证：L1 用例改本月 + E2E 标题断言；#14 三层归因就位。
 
+### Issue #14 [已修复] 2026-11-01 provider 归属三层链
+- 背景：DSH 无 `message.source.provider`，数据全进 unknown；参考库验证 header 回退。
+- 定案：`message.source`（权威）→ 最近 `request/header` 的 `header.config`（回退）→ 模型前缀（#12）。
+- 落点：`src/collect.js` · `headerFromEvent` + `ingest` 维护 `state.headers`；`core.js` · emptyState headers；`store.js` · loadState 兼容。
+- 边界：只读本地；backfill 顺序重建 header；老数据第三层兜底。
+- 验证：L1 三用例 + E2E pass。
 
-### Issue #37 [已修复] 2026-11-01 P2 API 卡回归框线图单行式
-- 触发：四层结构（标题行/金额大字/进度条/两列网格）偏离 checklist 框线图两层紧凑结构
-- 落点：`client.js` · ApiCard——单行：provider 名（左）+ 预算段（¥已用 / ¥总额 · 百分比，状态着色）+ 今日 + 余额（内联文本）+ 第二行进度条
-- 边界：无预算时预算段 `未设置预算`（不再 fallback 月消费金额）；#33 总额度并入预算段
-- 验证：L3 断言 `¥12.34 / ¥500.50`、`2.5%`、`¥49.86` + 桌面走查
+### Issue #15 [已修复] 2026-11-01 模型行跟随供应商配置而非消耗
+- 触发：用户要求“填了供应商就显示模型”，无消耗时明细为空。
+- 根因：breakdown.models 只由消耗聚合，与 providerInfo 无关。
+- 落点：`src/providers.js` · `DEFAULT_MODELS`（四家默认；OpenRouter 不补）；`core.js` · buildSummary 无真实行时补 0 值默认行。
+- 边界：与 #13 本月口径兼容；hidden/usage-only 不补；预算/卡片不受影响。
+- 验证：L1 三场景 + E2E pass。
 
+### Issue #16 [已修复] 2026-11-01 OpenRouter 无默认模型时的占位行
+- 触发：OpenRouter 已配置但本月未用，明细无行；用户要求 `OpenRouter / -`。
+- 落点：`providers.js` · DEFAULT_MODELS 加 `openrouter: '-'`；`core.js` · 该 provider 出现真实行后不再补。
+- 验证：L1 + 运行时双场景 + E2E pass。
 
-### Issue #38 [已修复] 2026-11-01 模式词条统一 API / 订阅
-- 触发：pill 徽标 `[非订阅]`（#36 引入）与设置页/文档术语（API/订阅）不一致，否定式表述别扭
-- 落点：`client.js` · Pill——徽标 `[非订阅]` → `[API]`（未知默认 `[API]`）
-- 验证：L3 两处 `[API]` 断言；REQ-03、E2E-01/06、checklist P1 口径同步
+### Issue #17 [已修复] 2026-11-01 日志前缀 adapter.* 与 slot 落地
+- 触发：对照 §2.5，`adapter.*` 与 `slot` 前缀未实现。
+- 落点：`adapters.js` · `logAdapterEvents`（状态/计数，脱敏）；`index.js` · 两处刷新接线 + `POST /log`（白名单 slot）；`client.js` · 上报 `mount.ok`。
+- 边界：`mount.fail` 无捕获点；JSONL 存储，`[TD:xxx]` 为导出格式。
+- 验证：L1 九事件映射 + E2E 日志断言。
 
+### Issue #18 [已修复] 2026-11-01 错误链路日志完善
+- 触发：报障日志无法还原错误原因。
+- 缺口：adapter 错误原因丢失；pricing 加载失败静默；store 损坏/写失败静默；install.fail 无输出。
+- 落点：`adapters.js` · `errorDetail` + `_error`/`_quotaError`；`pricing.js` · `catalog.fail`/`router.fail`；`store.js` · `state.corrupt`/`state.write-fail`；`index.js` · install.fail 带 output。
+- 边界：signed-out 正常态不记错；readProviders rejected 理论不可达。
+- 验证：L1 六事件映射 + E2E pass。
 
-### Issue #39 [已修复] 2026-11-01 P3 API 卡删除计费模式下拉
-- 触发：大多数 provider 下拉仅一个选项、无作用
-- 落点：`client.js` · Settings——API 卡改单行 `provider 名 + 月度预算 + 输入框 + 币种`，删除 modeSelect 调用
-- 边界：手动覆盖入口下线（已知取舍：计费模式完全依赖自动侦测）；`billingModes` 数据层保留兼容；订阅行下拉保留
-- 验证：L3 select/hide option 计数 4→2 + 桌面走查
+### Issue #19 [已修复] 2026-11-02 今日消耗与 API 费用恒为 ¥0.00
+- 触发：社区表加载后 pill 今日 ¥0.00、费用表合计/占比全 0，用量表有真实 token。
+- 根因：二次归一化把 `peak: null` 当有效 tier → 全 null 单价；`addRecord` 只判 `price === null`，零价仍标 `priced=true`。
 
+```text
+[loadCommunityPricing] → [二次 normalizeEntry: peak null → tier 对象] → [prices=null]
+   → [effectivePrices 返回全 null] → [priceFor 非 null / cost=0] → [今日/本月费用 0] ◄── 修复点
+```
 
-### Issue #40 [已修复] 2026-11-01 API 费用明细空态整体隐藏
-- 触发：本月无 API 消耗（月初/新装）时，用量明细显示空表结构（#32），但"API 费用明细"表完全消失——空态策略不一致
-- 根因：`groups.size === 0` 直接 return null（沿用 Q13"空区隐藏"），未随 #32 的空态口径更新
-- 落点：`client.js` · ApiCostTable——空态分支渲染表头 + `CNY 合计 ¥0.00` + 占位行（模型 `—`、占比 `0.0%`、费用 `¥0.00`）
-- 边界：订阅 provider 不进费用表；有数据时币种分组逻辑不变
-- 验证：L3 空态场景断言（`API 费用明细` 标题 + `CNY 合计 ¥0.00`）；L1 30/30、E2E pass
+- 落点：`pricing.js` · `normalizeEntry`；`core.js` · `addRecord` / `repriceState`；`store.js` · `recoverState`；`index.js` · 启动恢复 + 重算。
+- 不变：bundled/`/models`/family 匹配不变；重算按闲时价估算；不删历史聚合。
+- 验证：L1 44/44；E2E-45/46（今日 ¥2.57、合计 ¥5.14、恢复日 1.4、日志 recover/reprice）。
+- 剩余风险：社区 `family` 过粗，未收录模型可能套 `deepseek-chat` 价。
 
+### Issue #20 [已修复] 2026-11-02 两张明细表各多出一行全零同名模型
+- 触发：两表各两行 `DeepSeek 官方 / DeepSeek-V4.1-Flash`，第二行请求 0、0.00M、占比 0.0%。
+- 根因：补行只比默认 key；真实 id `deepseek-flash` ≠ 默认 `deepseek-v4.1-flash`，展示名相同 → 真实行与占位行并存。
 
-### Issue #41 [已修复] 2026-11-01 升级后旧数据（unknown 行）不出现在看板
-- 触发：用户升级插件后打开 P2，模型用量/费用明细为空，以为旧数据丢失（"目前选择的基础模型显示不出来"）
-- 取证：本地 `daily.json` 有 `2026-10-31` 数据（`deepseek-flash`），但挂在 `providers.unknown` 下；日志多次 `backfill.done`（归因机制正常运行）；DSH 会话事件锁文件无法直读，实时与回填两条路径均未拿到 `message.source.provider`——DSH 侧未标注 provider，`ingest` 按设计记为 `unknown`
-- 根因（三层叠加）：① collect 依赖 `message.source.provider`，DSH 不提供 → 全部记 `unknown`；② `buildSummary` 跳过 unknown（`providerId === 'unknown' continue`）；③ 跨月过滤（`dayKey.startsWith(month)`）——月初旧月数据即使归因也不可见
-- 落点：`src/providers.js` · 新增 `providerFromModel(modelId)`——模型名前缀归因（`deepseek-*`→deepseek-official、`glm-*`→zhipu、`kimi-*`/`moonshot-*`→moonshot、`qwen-*`→qwen，无匹配 null）；`src/core.js` · buildSummary——视图层归因 unknown 行（**不改 daily.json**，随时可逆），`breakdown.models` 改跨月累计（费用/用量明细 = 历史累计估算），`provider.usage`（today/month、预算口径）保持当月
-- 兼容（正式发布老数据）：纯视图层计算，`daily.json` 不迁移不动；v0.1 老结构（day 下直接 models）`loadState` 已兼容；unknown 归因不出时不伪造归属
-- 边界：P1 pill 与 API 卡预算仍当月口径；OpenRouter 中转的 deepseek 模型会被归到 deepseek-official（误归风险已知，单用户场景影响小）
-- 验证：L1 31/31（新增归因/跨月用例：unknown + `deepseek-flash` → deepseek-official 跨月累计一条、provider.usage 当月口径、无前缀模型保持不可见）；E2E 回归 pass
+```text
+[daily: deepseek-official.deepseek-flash] → modelsMap['…:deepseek-flash']
+[默认: deepseek-v4.1-flash] → key 不存在 → 补 0 值行 → 两表各多一行同名 0 值 ◄── 修复点
+```
 
-### Issue #42 [已修复] 2026-11-01 P2 明细区文案与口径精简（用户 5 点）
-- 触发：P2 区块标题与表标题冗长，信息重复
-- 落点：`client.js` · Panel（区标题去括号：`API 按量` + 右侧 `已检测 N · 刚刚`；`订阅套餐` 同理）+ ApiCostTable/UsageTable（表标题 `API 费用明细 / 本月`、`模型用量明细 / 本月`，删括号后缀）+ `src/core.js` · buildSummary（models 回当月口径，回退 #41 跨月累计；unknown 归因保留）
-- 边界：本月 unknown 数据仍归到 provider 名下显示；上月数据不再出现在本月看板（用户定案"简易显示本月信息"）
-- 验证：L1 31/31（#41 用例改回本月断言）+ E2E 标题断言同步 pass；2026-11-01 二问确认（用户拍板）：**明细口径维持严格本月**——取证 daily.json 10-31 数据在（unknown+deepseek-flash）、11-01 零新数据（会话文件 mtime 停在 10-31，当日无对话），月初空表为预期，模型将于 11 月产生消耗后自然显示（#43 三层归因就位）
+- 落点：`core.js` · `buildSummary`——provider 已有任意真实行即不补默认行，删除 `-` 特判；新增“不同 id、同展示名”用例。
+- 不变：#15 零消耗补行、#16 OpenRouter `-` 占位、完全同名不重复。
+- 验证：L1 44/44；E2E-47 两表 DeepSeek 行各 1、用量行 `0.10M`。
 
-### Issue #43 [已修复] 2026-11-01 provider 归属三层链（参考库调研定案）
-- 背景：用户提出"providers 有必要保持"；#41 取证显示本机 DSH 会话事件无 `message.source.provider`，数据全进 unknown
-- 参考库结论（dsh-cost-dashboard `scan.mjs`、dsh-ui-usage-billing `aggregate` 双重印证）：
-  - **两层归属链是社区标准做法**：`assistant/message` 的 `message.source.provider/model` 为权威归属；**无 source 时回退（fallback）最近一条 `request/header` 事件的 `header.config.provider/model`**（每请求写入的请求头配置）
-  - dsh-ui-usage-billing issue #14 教训：仅靠 header 会串账（header 稀疏，380 请求仅 22 条），修复为 message.source 优先；legacy 日志（无 source）保留 header 回退
-  - dsh-cost-dashboard 同构：bare usage chunk（失败请求）归属最近 `request/header`
-- 定案（用户确认施工）：三层归属链 `message.source`（权威）→ `request/header` 会话状态（回退）→ 模型名前缀（#41 兜底）
-- 落点：`src/collect.js` · 新增 `headerFromEvent`（解析 `request/header` 的 `data.header.config.provider/model`）+ `ingest` 维护 `state.headers[sessionId]` 并在 usage 无 source 时回退填充；`src/core.js` · emptyState 加 `headers: {}`；`src/store.js` · loadState 兼容 `state.headers ??= {}`
-- 边界：与 REQ-14"只读本地数据"一致；backfill 顺序遍历天然重建 header 状态；正式发布后老数据（无 source 无 header 追溯）由第三层兜底
-- 验证：L1 34/34（新增三用例：request/header 解析、usage 无 source 回退 header 归属、message.source 优先）；E2E 回归 pass
+### Issue #21 [已修复] 2026-11-02 月度消费/用量改为独立账本文件
+- 触发：1.0.3 迁移清空 `daily.json` 后 backfill 取不到会话（`sessions:0`），11-01 数据从看板消失。
+- 根因：持久层只有 `daily.json`，且迁移假设“启动可重放会话”；桌面 `sessionPersistence.list()` 恒为空。
 
-### Issue #44 [已修复] 2026-11-01 模型行应跟随供应商配置而非消耗数据
-- 触发：用户澄清需求——"只要用户在 DSH 填写了供应商（Key/DS 账号），就应该显示出模型名称，除非没填没登录"；当前明细表只显示有消耗的模型，本月无消耗时表空，用户以为识别失败（参考插件因昨日有会话数据能显示模型）
-- 根因：`breakdown.models` 仅由 `state.days` 消耗数据聚合，与"已配置 provider"（providerInfo）无关联
-- 落点：`src/providers.js` · 新增 `DEFAULT_MODELS`（deepseek-official→`deepseek-v4.1-flash`、zhipu→`glm-5.3`、moonshot→`kimi-k3`、qwen→`qwen3.8-max`；openrouter 中转无默认不补）；`src/core.js` · buildSummary——已配置 provider 本月无真实模型行时补默认模型行（数值 0，kind 跟随 provider，真实行优先不重复）
-- 边界：与 #42 严格本月口径兼容（配置可见性兜底，不引入跨月数据）；hidden/usage-only provider 不补；预算/API 卡不受影响
-- 验证：L1 35/35（新增三场景：已配置无消耗补行、有真实行不重复、未配置无行）；E2E 回归 pass ×2
+```text
+[采集] → state.days → flush → daily.json + months/YYYY-MM.json
+[启动] → daily.json → months/*.json 补缺 → recoverState(.pre-v2) → repriceState
+```
 
-### Issue #45 [已修复] 2026-11-01 OpenRouter 无默认模型时的占位行
-- 触发：用户确认 #44 机制后提出——OpenRouter 配置了但明细表无模型行（#44 设计为中转不补默认），期望显示 `OpenRouter / -` 占位；并指出"不可能不选模型"（DSH 输入框右下角必选模型），`-` 仅是"配了 Key 但本月未用"的短暂状态
-- 落点：`src/providers.js` · DEFAULT_MODELS 增加 `'openrouter': '-'`；`src/core.js` · 补行循环——`-` 占位在该 provider 出现任何真实模型行后不再补（前缀查 `modelsMap`），避免重复
-- 验证：L1 35/35 + 运行时双场景（无消耗 → `openrouter:-` 补位；有真实行 → 占位消失仅显示真实模型）+ E2E 回归 pass
+- 落点：`store.js` · `saveMonths`/`loadMonths`/`createFlusher`——每月独立账本、daily 缺失读回、双写；`loadState` 合并缺口；`recoverState` 并回备份。
+- 不变：daily.json 仍是热状态；不按天拆分、不自动清理历史月份。
+- 验证：L1 44/44；E2E-46 生成 `months/2026-11.json`、恢复日 1.4、`.merged` 落盘。
 
-### Issue #46 [已修复] 2026-11-01 日志前缀完善：adapter.* 与 slot 落地
-- 触发：用户要求审查日志前缀工作。对照 §2.5：现有 12 处调用（boot/pricing/collect/vm/provider/update/diag/route）全部合规；设计中的 `adapter.*` 五家事件表与 `slot` 完全未实现——缺口
-- 落点：`src/adapters.js` · 新增 `logAdapterEvents(logger, providers)` 纯函数（状态映射：`balance.ok/auth/error`、`quota.ok windows=N/fail/miss`、`credits.ok/error`、`currency.usd`；只记状态与计数，脱敏）；`index.js` · providerCache 两处刷新点接线 + 新增 `POST /log` 路由（模块白名单仅 slot，防日志注入）；`client.js` · slot inject 回调 fire-and-forget 上报 `mount.ok`
-- 边界：`mount.fail` 无捕获点（inject 回调不触发时无执行位置）；文件存储为 JSONL，`[TD:xxx]` 前缀为导出格式（§2.5 口径不变）
-- 验证：L1 36/36（logAdapterEvents 九事件映射断言）+ E2E 日志文件断言（`"module":"slot","event":"mount.ok"` + hero 槽位 meta）pass
+### Issue #22 [已修复] 2026-11-02 今日成本估算高于平台账单
+- 触发：DS 后台今日 ¥3.64（379 请求 / 94.02M token），插件 pill 今日 ¥6.02。
+- 根因：`state.reprice` 早于 `catalog.loaded`，历史成本按旧内置价（闲 1.5/0.05/4.5）写死；官方为 1/0.02/4。
 
-### Issue #47 [已修复] 2026-11-01 错误链路日志完善（网友报障排查支撑）
-- 触发：用户指出——反馈 issue 时只有错误情况，日志必须能还原错误原因。逐层审查发现错误路径日志缺口
-- 缺口清单：
-  1. **adapters 错误原因全丢**（最严重）：deepseek/kimi/openrouter 的 catch 只留 `status:'error'`（HTTP 码/网络/超时分类丢弃）；glm/kimi quota 失败降级 api 条目无痕迹（§2.5 设计的 `quota.parse` 事件未用）
-  2. **pricing 加载失败静默**：`loadCommunityPricing/loadRouterPricing` 的 `.catch(() => {})` 吞错——费用全"未定价"时无从排查
-  3. **store 损坏文件静默改名**：readJson 非 ENOENT → rename `.corrupt-*` + fallback，无日志——"数据丢失"报障无痕；flusher 写盘失败 `.catch(() => {})` 静默
-  4. **install.fail 无 spawn 输出**：runPluginUpdate 收集了 output tail 但日志只记 reason
-- 方案：① adapters `errorDetail(error)` 分类（http+status / timeout / network / parse）挂条目 `_error`/`_quotaError`（VM 透传无害），logAdapterEvents 记入错误事件 meta，parse 空窗口发 `quota.parse`；② pricing catch 记 `catalog.fail`/`router.fail`（warn）；③ store `loadState/loadPrefs/createFlusher` 接受可选 logger——corrupt 记 `state.corrupt`、写失败记 `state.write-fail`（warn）；④ install.fail meta 带 output 截断
-- 边界：deepseekAccount 非 ready（signed-out）是正常态不记错；readProviders allSettled rejected 理论不可达（adapter 全 catch），标注不处理
-- 验证：L1 37/37（错误分类六事件映射：balance.error 带 errorKind/httpStatus、balance.auth 带 timeout、quota.parse、quota.fail 带 401、quota.miss + balance.error network）+ E2E 回归 pass
+```text
+[boot] → state.reprice（旧内置价）→ catalog.loaded（社区/官方价）→ 历史成本不再重算  ◄── 本次问题
+```
+
+- 落点：`catalog.json` 官方价（闲 1/0.02/4、峰 2/0.04/8）；`pricing.js` 工作日/周末 + `dailySlots` 峰谷；`index.js` 重算前等 `pricingReady`（≤5s）；`costVersion 3`。
+- 验证：L1 44/44；E2E pass；实测 1.0.5 今日 ¥4.09 vs 平台 ¥3.96（3.1%）。
+- 残余：按官方价反推平台 token ≈103.8M vs 本地 110.3M，判断为 token 口径/聚合时点差异，不改价。
 
 ### 遗留（未编号，2026-11-01 保全）
 
@@ -601,7 +644,7 @@ QuotaWindow {
 
 **本项目 1.0.0 定案**：
 
-- 版本号 `1.0.0`（用户定案；0.2.0 → 1.0.0，覆盖 #30-#47 全部 18 个 issue 的功能与修复）
+- 版本号 `1.0.0`（用户定案；0.2.0 → 1.0.0，覆盖 #1-#18 全部 18 个 issue 的功能与修复）
 - **GitHub 版本发布**：`git tag v1.0.0` + push tag；安装命令 `dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash`
 - **npm 发布后续再做**：届时复用 dsh-token-usage-lao 的 publish.yml 模板（tag 校验 + Trusted Publishing），README 安装段的 npm 命令同步解注
 - 展示素材入库：`docs/pic/` 四张截图（pill-home / pill-session / panel-dashboard / settings），README 界面预览引用
@@ -613,3 +656,10 @@ QuotaWindow {
 - **Issue 治理体系（已落地，施工稿见 checklist archived/github-governance-build-checklist.md）**：标签 11 个（英文小写、双语描述）；模板三件套双语（Bug 强制日志附件）；`issue-template-compliance`（必填校验 + 附件链接校验仅 Bug + 模块关键词→英文标签 + 2h 期限）与 `issue-template-close`（cron 超时自动关闭）；`README.en.md` 英文版；验收通过
 - **发布流程文档化**：`docs/release.md` 一页 checklist + `CHANGELOG.md`（新增/修改两段式）
 - **npm 通道上线（同日）**：`dsh-token-dash@1.0.1` 已发布（staged publishing：CI `npm stage publish` → npmjs.com Staged Packages 2FA 审批 → `dist-tag add` 移 latest）；三条安装通道齐备（npm / github: / Release tgz）；检查更新链路真实生效（registry latest=1.0.1）；`publish.yml` + 双语 README npm 命令解注；`CHANGELOG` 1.0.1 段。**终态（同日 v1.0.2）**：Trusted Publishing（OIDC）配置并验证通过（2 天窗口内首发 1.0.2 成功）——`publish.yml` 改直发模式（`npm publish --provenance`、零 token），**推 `v*` tag = GitHub Release + npm 全自动上线**（无审批、无 dist-tag 手工步骤）；发版手册 `docs/release.md` 已对齐该形态。发布全程实录见 `docs/checklist/archived/dsh/token-dash-release-checklist.md`（四踩坑：granular token 无法预授权新包 / staged 审批后 latest 不自动移 / action-gh-release 名字与 dispatch tag_name / granular 直发权限 2027 废弃）。**待办**：删除对话明文暴露的 stage-only token（npm 侧）；awesome-dsh-plugin PR #11130 等评审
+
+### 1.0.5 发布（2026-11-02）
+
+- 内容：#19 零价 + #20 补行；#21 历史恢复 + 月度账本；#22 成本价对齐官方 + 峰谷/周末 + 重算门控
+- 已验证：L1 44/44 + `npm run e2e` pass（E2E-45/46/47）
+- 发布：tag `v1.0.5` → `release.yml`（GitHub Release + tarball）/ `publish.yml`（npm Trusted Publishing）
+- 本地：`build/dsh-token-dash-1.0.5.tgz` 已安装到 desktop；npm 发布后可用 `dsh plugin --profile desktop add dsh-token-dash@1.0.5` 切回 registry

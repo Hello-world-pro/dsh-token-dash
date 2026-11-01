@@ -32,7 +32,10 @@ export function localMonthKey(ts) {
 
 /** Kept for compatibility; priceFor handles peak/off-peak internally. */
 export function isPeak(ts) {
-  const hour = new Date(ts + 8 * 60 * 60 * 1000).getUTCHours()
+  const date = new Date(ts + 8 * 60 * 60 * 1000)
+  const hour = date.getUTCHours()
+  const weekday = date.getUTCDay()
+  if (weekday === 0 || weekday === 6) return false
   return (hour >= 9 && hour < 12) || (hour >= 14 && hour < 18)
 }
 
@@ -57,7 +60,41 @@ export function costOf(record) {
 }
 
 export function emptyState() {
-  return { version: 1, days: {}, watermarks: {}, headers: {}, currentProvider: null }
+  return { version: 1, costVersion: 3, days: {}, watermarks: {}, headers: {}, currentProvider: null }
+}
+
+function dayStartTs(dayKey) {
+  const [year, month, day] = String(dayKey).split('-').map(Number)
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null
+  return new Date(year, month - 1, day).getTime()
+}
+
+/**
+ * 旧计价模型的成本在入账时写死；定价修复后按日级 token 与当日 00:00 价目重算。
+ * 日级聚合没有单条记录时间，峰谷只能按 00:00（闲时）代表，结果属于估算。
+ */
+export function repriceState(state) {
+  if (state.costVersion === 3) return { repriced: false, rows: 0 }
+  let rows = 0
+  for (const [dayKey, bucket] of Object.entries(state.days ?? {})) {
+    const ts = dayStartTs(dayKey)
+    if (ts === null) continue
+    for (const [providerId, providerBucket] of Object.entries(bucket?.providers ?? {})) {
+      for (const [model, row] of Object.entries(providerBucket?.models ?? {})) {
+        // unknown 行只影响计价归属；展示层仍按模型前缀归因
+        const owner = providerId === 'unknown' ? providerFromModel(model) : providerId
+        const price = owner === null ? null : priceFor(owner, model, ts)
+        const missing = price === null || price.input === null || price.output === null
+        row.cost = missing
+          ? 0
+          : costOf({ ts, provider: owner ?? providerId, model, input: row.input, cacheRead: row.cacheRead, cacheWrite: row.cacheWrite, output: row.output })
+        row.priced = !missing
+        rows += 1
+      }
+    }
+  }
+  state.costVersion = 3
+  return { repriced: true, rows }
 }
 
 function dayBucket(state, dayKey) {
@@ -119,8 +156,9 @@ export function addRecord(state, record) {
   row.output += num(record.output)
   row.requests += 1
   const price = priceFor(provider, model, record.ts)
-  if (price === null) row.priced = false
-  row.cost += costOf({ ...record, provider })
+  const priceMissing = price === null || price.input === null || price.output === null
+  if (priceMissing) row.priced = false
+  row.cost += priceMissing ? 0 : costOf({ ...record, provider })
   state.currentProvider = provider
 }
 
@@ -266,9 +304,9 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
     if (id === 'unknown' || hidden.has(id)) continue
     const fallbackModel = DEFAULT_MODELS[id]
     if (fallbackModel === undefined) continue
-    if (fallbackModel === '-' && [...modelsMap.keys()].some((k) => k.startsWith(`${id}:`))) continue
     const key = `${id}:${fallbackModel}`
-    if (modelsMap.has(key)) continue
+    // provider 已有任意真实模型行时不再补默认行（含 '-' 占位语义）
+    if ([...modelsMap.keys()].some((k) => k.startsWith(`${id}:`))) continue
     const provider = providerMap.get(id)
     modelsMap.set(key, {
       name: fallbackModel,

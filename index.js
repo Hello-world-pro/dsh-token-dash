@@ -5,9 +5,9 @@ import { readFileSync } from 'node:fs'
 import { existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
-import { buildSummary, emptyState, num } from './src/core.js'
+import { buildSummary, emptyState, num, repriceState } from './src/core.js'
 import { ingest, backfill } from './src/collect.js'
-import { createFlusher, dataDir, loadPrefs, loadState, logsDir, saveJson } from './src/store.js'
+import { createFlusher, dataDir, loadPrefs, loadState, logsDir, recoverState, saveJson, saveMonths } from './src/store.js'
 import { logAdapterEvents, readProviders, readSubscriptions } from './src/adapters.js'
 import { catalogInfo, loadCommunityPricing, loadRouterPricing } from './src/pricing.js'
 import { clearLog, createLogger, exportLog } from './src/diagnostics.js'
@@ -189,22 +189,40 @@ export function apply(ctx) {
     }
   }, 'dsh-token-dash: store')
 
-  // Pricing refresh is best-effort and never blocks summary.
-  ready.then(() => {
-    // #47：加载失败不再静默——费用"未定价"报障的关键线索
-    void loadCommunityPricing()
-      .then((info) => logger.info('pricing', 'catalog.loaded', info))
-      .catch((error) => logger.warn('pricing', 'catalog.fail', { message: String(error?.message ?? error) }))
-    void loadRouterPricing()
-      .then((ok) => logger.info('pricing', 'router.loaded', { ok }))
-      .catch((error) => logger.warn('pricing', 'router.fail', { message: String(error?.message ?? error) }))
+  // 价格表必须先于重算就绪：社区表加载失败时回退已对齐官方价的内置目录。
+  const pricingReady = ready.then(async () => {
+    await Promise.allSettled([
+      loadCommunityPricing()
+        .then((info) => logger.info('pricing', 'catalog.loaded', info))
+        .catch((error) => logger.warn('pricing', 'catalog.fail', { message: String(error?.message ?? error) })),
+      loadRouterPricing()
+        .then((ok) => logger.info('pricing', 'router.loaded', { ok }))
+        .catch((error) => logger.warn('pricing', 'router.fail', { message: String(error?.message ?? error) })),
+    ])
   })
 
   ctx.inject(['sessionPersistence'], (scoped) => {
     ready
       .then(async () => {
+        // 等价格表（最多 5s）再重算，避免用旧内置价把历史成本写死
+        await Promise.race([
+          pricingReady,
+          new Promise((resolve) => {
+            const timer = setTimeout(resolve, 5000)
+            timer.unref?.()
+          }),
+        ])
+        // 不丢聚合：先并回 1.0.3 迁移备份，再按日级 token 重算旧计价成本
+        const recovery = await recoverState(dir, state, logger)
+        const repriced = repriceState(state)
+        if (repriced.repriced) logger.info('boot', 'state.reprice', { rows: repriced.rows, recovered: recovery.recovered })
         const result = await backfill(scoped, state)
-        await flushReady?.flush?.()
+        if (flushReady === undefined) {
+          await saveJson(dir, 'daily.json', state)
+          await saveMonths(dir, state)
+        } else {
+          await flushReady.flush()
+        }
         logger.info('collect', result.degraded === null ? 'backfill.done' : 'backfill.degraded', result)
       })
       .catch((error) => logger.warn('collect', 'backfill.failed', { message: String(error) }))

@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
 
@@ -12,10 +12,11 @@ const root = resolve('.')
 const keep = process.argv.includes('--keep')
 const tmpRoot = join(root, '.tmp')
 const home = join(tmpRoot, `e2e-home-${Date.now()}`)
-const appRoot = 'C:\\Users\\Admin\\AppData\\Local\\Programs\\DeepSeek Harness'
-const exe = `${appRoot}\\DeepSeek Harness.exe`
-const cliJs = `${appRoot}\\resources\\app.asar\\dsh\\node_modules\\@deepseek-ai\\dsh-desktop-host\\lib\\cli.js`
+const appRoot = process.env.DSH_APP_ROOT ?? join(process.env.LOCALAPPDATA ?? '', 'Programs', 'DeepSeek Harness')
+const exe = join(appRoot, 'DeepSeek Harness.exe')
+const cliJs = join(appRoot, 'resources', 'app.asar', 'dsh', 'node_modules', '@deepseek-ai', 'dsh-desktop-host', 'lib', 'cli.js')
 mkdirSync(home, { recursive: true })
+assert.ok(existsSync(exe), `DSH executable not found: ${exe} (set DSH_APP_ROOT)`)
 
 const nodeEnv = (env) => ({ ...env, ELECTRON_RUN_AS_NODE: '1' })
 function run(args, env) {
@@ -36,6 +37,33 @@ function startWeb(env) {
     child.on('exit', (code) => { if (!log.includes('http://127.0.0.1')) reject(new Error(`web exited ${code}:\n${log}`)) })
   })
   return { child, ready, log: () => log }
+}
+/** 解析 Chromium：环境变量 → Playwright 默认版本 → 本机已安装的任一 chromium-*。 */
+function resolveChromium() {
+  const fromEnv = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+  if (typeof fromEnv === 'string' && fromEnv !== '' && existsSync(fromEnv)) return fromEnv
+  try {
+    const bundled = chromium.executablePath()
+    if (existsSync(bundled)) return bundled
+  } catch {
+    // fall through
+  }
+  const base = join(process.env.LOCALAPPDATA ?? '', 'ms-playwright')
+  if (!existsSync(base)) return undefined
+  return readdirSync(base)
+    .filter((name) => /^chromium-\d+$/.test(name))
+    .sort((left, right) => Number(right.split('-')[1]) - Number(left.split('-')[1]))
+    .map((name) => join(base, name, 'chrome-win64', 'chrome.exe'))
+    .find((candidate) => existsSync(candidate))
+}
+
+async function waitFor(predicate, timeoutMs, label) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (predicate()) return
+    await new Promise((resolveWait) => setTimeout(resolveWait, 100))
+  }
+  throw new Error(`timeout waiting for ${label}`)
 }
 function stopTree(child) {
   if (child?.pid === undefined) return
@@ -69,7 +97,7 @@ const baseModels = [
   model('zhipu', 'GLM Coding', 'glm-5.3', 'GLM-5.3', 'subscription', 'CNY', 0),
   model('moonshot', 'Kimi Coding', 'kimi-k3', 'Kimi K3', 'subscription', 'CNY', 0),
 ]
-const baseSummary = { providers: baseProviders, breakdown: { models: baseModels }, showBalance: true, version: '1.0.2', refreshMs: 60000, currentProviderId: 'deepseek-official', updatedAt: now, stale: false }
+const baseSummary = { providers: baseProviders, breakdown: { models: baseModels }, showBalance: true, version: '1.0.5', refreshMs: 60000, currentProviderId: 'deepseek-official', updatedAt: now, stale: false }
 
 const env = { ...process.env, DSH_HOME: home }
 let server
@@ -81,9 +109,46 @@ function summaryOf(providers, models = baseModels, currentProviderId = providers
 
 try {
   run(['plugin', '--profile', 'web', 'add', `link:${root}`], env)
+  // #48：模拟 1.0.3 迁移后的现场——daily.json 已清空，历史只留在 .pre-v2 备份
+  const dataDir = join(home, 'dsh-token-dash')
+  const backupName = 'daily.json.pre-v2-1793000000000.bak'
+  mkdirSync(dataDir, { recursive: true })
+  writeFileSync(join(dataDir, 'daily.json'), JSON.stringify({
+    version: 1,
+    costVersion: 2,
+    days: {},
+    watermarks: {},
+    headers: {},
+    currentProvider: null,
+  }))
+  writeFileSync(join(dataDir, backupName), JSON.stringify({
+    version: 1,
+    days: {
+      '2026-11-01': {
+        providers: {
+          'deepseek-official': {
+            models: {
+              'deepseek-flash': { input: 1_000_000, cacheRead: 0, cacheWrite: 0, output: 100_000, requests: 1, cost: 0, priced: true },
+            },
+          },
+        },
+      },
+    },
+    watermarks: { s1: 10 },
+    headers: { s1: { provider: 'deepseek-account', model: 'deepseek-flash' } },
+    currentProvider: 'deepseek-official',
+  }))
   server = startWeb(env)
   const { base, token } = await server.ready
   console.log(`[e2e] web ${base}`)
+
+  await waitFor(() => existsSync(join(dataDir, 'months', '2026-11.json')), 15000, 'month ledger')
+  const restored = JSON.parse(readFileSync(join(dataDir, 'daily.json'), 'utf8'))
+  const restoredRow = restored.days['2026-11-01']?.providers?.['deepseek-official']?.models?.['deepseek-flash']
+  assert.equal(restoredRow !== undefined, true)
+  assert.equal(restoredRow.requests, 1)
+  assert.ok(restoredRow.cost > 0, `restored cost ${restoredRow.cost} should be > 0`)
+  assert.equal(existsSync(join(dataDir, `${backupName}.merged`)), true)
 
   // L2: host contract
   let response = await fetch(`${base}/token-dash/api/summary`)
@@ -110,8 +175,7 @@ try {
   assert.equal(menu.status, 200)
   assert.ok((await menu.json()).data.dir.includes('dsh-token-dash'))
 
-  const cachedChromium = join(process.env.LOCALAPPDATA ?? '', 'ms-playwright', 'chromium-1234', 'chrome-win64', 'chrome.exe')
-  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ?? (existsSync(cachedChromium) ? cachedChromium : undefined)
+  const executablePath = resolveChromium()
   browser = await chromium.launch({ headless: true, ...(executablePath === undefined ? {} : { executablePath }) })
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
   await page.goto(`${base}/?token=${token}`, { waitUntil: 'domcontentloaded' })
@@ -175,6 +239,35 @@ try {
   assert.ok(!(await panel.innerText()).includes('分钟前'))
   assert.equal(await page.locator('[data-testid^=token-dash-api-card-]').count(), 2)
   assert.equal(await page.locator('[data-testid^=token-dash-sub-card-]').count(), 2)
+
+  // #48/#49：非零成本摘要 + 每 provider 一条真实行，两张表不再出现全零占位
+  const pricedProviders = [
+    {
+      ...baseProviders[0],
+      budget: apiBudget(100, 'CNY', 5.14, 0.0514),
+      usage: { ...baseProviders[0].usage, todayCost: 2.57, monthCost: 5.14, requests: 13 },
+    },
+    baseProviders[1], baseProviders[2], baseProviders[3],
+  ]
+  const pricedModels = [
+    { ...baseModels[0], cost: 5.14, share: 1 },
+    baseModels[1], baseModels[2], baseModels[3],
+  ]
+  currentSummary = summaryOf(pricedProviders, pricedModels, 'deepseek-official')
+  await refresh()
+  assert.match(await pill.innerText(), /今日 ¥2\.57/)
+  assert.match(await panel.innerText(), /CNY 合计 ¥5\.14/)
+  const costTable = panel.getByTestId('token-dash-cost-table')
+  const usageTable = panel.getByTestId('token-dash-usage-table')
+  const deepseekCostRow = costTable.locator('tr', { hasText: 'DeepSeek 官方 / DeepSeek-V4.1-Flash' })
+  assert.equal(await deepseekCostRow.count(), 1)
+  assert.match(await deepseekCostRow.innerText(), /100\.0%/)
+  assert.match(await deepseekCostRow.innerText(), /¥5\.14/)
+  const deepseekUsageRow = usageTable.locator('tr', { hasText: 'DeepSeek 官方 / DeepSeek-V4.1-Flash' })
+  assert.equal(await deepseekUsageRow.count(), 1)
+  assert.match(await deepseekUsageRow.innerText(), /0\.10M/)
+  assert.equal(await costTable.locator('tbody tr').count(), 2)
+  assert.equal(await usageTable.locator('tbody tr').count(), 4)
 
   currentSummary = summaryOf(baseProviders, baseModels, 'openrouter')
   await refresh()
@@ -314,10 +407,10 @@ try {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { ok: true, command: 'dsh plugin --profile desktop update dsh-token-dash' } }) })
   })
   await page.route('**/token-dash/api/update', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { current: '1.0.2', latest: '1.0.3', hasUpdate: true, published: true } }) })
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { current: '1.0.5', latest: '1.0.6', hasUpdate: true, published: true } }) })
   })
   await jsClick(settings.getByRole('button', { name: '检查更新' }))
-  await settings.getByText('发现 1.0.3').waitFor({ timeout: 5000 })
+  await settings.getByText('发现 1.0.6').waitFor({ timeout: 5000 })
   await jsClick(settings.getByRole('button', { name: '更新', exact: true }))
   await settings.getByText('已更新，重启 DSH 后生效').waitFor({ timeout: 5000 })
   assert.equal(installCalled, 1)
@@ -338,6 +431,9 @@ try {
     .join('\n')
   assert.match(logText, /"module":"slot","event":"mount\.ok"/)
   assert.match(logText, /"slot":"conversation\.hero\.agentPreset"/)
+  // #48：旧计价 state 恢复 + 重算留痕
+  assert.match(logText, /"module":"boot","event":"state\.recover"/)
+  assert.match(logText, /"module":"boot","event":"state\.reprice"/)
   await browser.close()
   browser = undefined
   stopTree(server.child)
