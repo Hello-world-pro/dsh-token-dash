@@ -1,6 +1,6 @@
 # dsh-token-dash 施工 checklist（UI 框线图版·归档压缩）
 
-> 依据 plan：`../../../plan/active/feature_token_dash.md`<br>
+> 依据 plan：`../../../plan/archived/feature_token_dash.md`<br>
 > 状态：已完成并归档（2026-11-01）——v0.2 UI + #24-#47 五轮反馈闭环；L1 37/37、E2E pass、用户桌面验收；v1.0.0 已发布<br>
 > 工程根：`dsh-token-dash`；本文件保留 UI 规格结论，执行细节见 git 历史与 plan 闭环卡
 

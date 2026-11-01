@@ -1,6 +1,6 @@
 # dsh-token-dash 设计文档
 
-> 面向贡献者的一页式架构说明。需求背景见 [主计划](plan/active/feature_token_dash.md)，Provider/VM/UI 边界收口见 [边界计划](plan/archived/feature_provider_boundary.md)。
+> 面向贡献者的一页式架构说明。需求背景见 [token-dash 计划（已归档）](plan/archived/feature_token_dash.md)，进行中的 UI 迭代见 [UI 迭代计划](plan/active/feature_ui_refresh.md)；Provider/VM/UI 边界收口见 [边界计划](plan/archived/feature_provider_boundary.md)；UI 视觉以 [UI 设计](ui-design.md) 为唯一真源。
 
 ## 总体架构
 
