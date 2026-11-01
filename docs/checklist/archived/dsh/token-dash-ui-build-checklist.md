@@ -1,6 +1,6 @@
 # dsh-token-dash 施工 checklist（UI 框线图版）
 
-> 依据 plan：`../../../plan/active/dsh/feature_token_dash.md`<br>
+> 依据 plan：`../../../plan/active/feature_token_dash.md`<br>
 > 生命周期：**已完成并归档**（2026-11-01）<br>
 > 当前状态：**已完成**——v0.2 UI 施工 + #24-#47 五轮反馈迭代全部闭环；最终 L1 37/37、E2E pass；用户真实环境验收通过；v1.0.0 已发布 GitHub（tag + Release tarball）；plan 回写双去向完成（feature §2.2/§五/§八决策/§九闭环卡/§十发布记录）<br>
 > 更新时间：2026-11-01（终态收口归档）<br>
@@ -373,7 +373,7 @@ P3 设置视图 ──查看价格明细──> 官方价格页（新窗口）
 - 不做日志自动上传/远程分析；只导出文件，由用户自行提供。
 - 不做完整组件代码、状态矩阵、组件级样式稿。
 
-> 施工步骤统一在 plan `../../../plan/active/dsh/feature_token_dash.md` §3.3 管理；测试矩阵在 plan §5.2-§5.4；本文件只保留页面布局与决策。
+> 施工步骤统一在 plan `../../../plan/active/feature_token_dash.md` §3.3 管理；测试矩阵在 plan §5.2-§5.4；本文件只保留页面布局与决策。
 
 ## 移交 / 遗留
 

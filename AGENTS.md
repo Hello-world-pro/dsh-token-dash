@@ -17,14 +17,14 @@ npm pack --dry-run
 ## 文档位置
 
 - 稳定文档：`docs/design.md`、`docs/release.md`。
-- 计划：`docs/plan/active/dsh/feature_token_dash.md`（遵循全局 `plan-workflow` 的 `docs/plan/` 约定）。
+- 计划：`docs/plan/active/feature_token_dash.md`（遵循全局 `plan-workflow` 的 `docs/plan/` 约定；单项目仓不再分项目域）。
 - checklist：`docs/checklist/active/dsh/`、`docs/checklist/archived/dsh/`。
 - 本插件文档只在本仓维护；`Context-Engineer` 不保留同名副本。
 
 ## 规划
 
-- 计划目录遵循全局 `plan-workflow`：`docs/plan/active/<project-domain>/`、`docs/plan/tracking/<topic>/`、`docs/plan/archived/<project-domain>/`。
-- 当前主计划：`docs/plan/active/dsh/feature_token_dash.md`。
+- 计划目录遵循全局 `plan-workflow`：`docs/plan/active/<feature>.md`、`docs/plan/tracking/<topic>/`、`docs/plan/archived/`。
+- 当前主计划：`docs/plan/active/feature_token_dash.md`。
 
 ## 临时目录
 

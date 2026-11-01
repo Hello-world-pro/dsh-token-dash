@@ -3,8 +3,8 @@
 > 状态：待归档（v1.0.0 已发布 GitHub：#24-#47 全部闭环，L1 37/37 + E2E pass + 用户桌面验收；npm 发布与市场收录待办见 §十）<br>
 > 创建：2026-10-31；更新：2026-11-01（v0.2 施工 → #24-#47 五轮迭代 → v1.0.0 发布 + 治理体系；终态精修）<br>
 > 工程：`dsh-token-dash`（包名 `dsh-token-dash`）<br>
-> 关联资料：[UI 施工 checklist（已归档）](../../../checklist/archived/dsh/token-dash-ui-build-checklist.md)、[治理体系 checklist（已归档）](../../../checklist/archived/dsh/github-governance-build-checklist.md)<br>
-> 文档位置：`docs/plan/active/dsh/feature_token_dash.md`；checklist 统一在 `docs/checklist/`。
+> 关联资料：[UI 施工 checklist（已归档）](../../checklist/archived/dsh/token-dash-ui-build-checklist.md)、[治理体系 checklist（已归档）](../../checklist/archived/dsh/github-governance-build-checklist.md)<br>
+> 文档位置：`docs/plan/active/feature_token_dash.md`；checklist 统一在 `docs/checklist/`。
 
 ## 〇、前置依赖 / 代码探查事实
 

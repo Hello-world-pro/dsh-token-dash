@@ -1,6 +1,6 @@
 # dsh-token-dash 发布 checklist（npm + GitHub）
 
-> 依据 plan：`../../../plan/active/dsh/feature_token_dash.md` §十<br>
+> 依据 plan：`../../../plan/active/feature_token_dash.md` §十<br>
 > 状态：**已完成并归档**（2026-11-01）——npm v1.0.2 上线（Trusted Publishing OIDC 验证通过）、GitHub Release 齐备、市场收录 PR 已提；发版流程唯一来源：`docs/release.md`<br>
 > 工程根：`dsh-token-dash`（包名 `dsh-token-dash`）
 
