@@ -285,8 +285,8 @@ git -C D:\Projects\Context-Engineer push origin main
 | 全局 plan skill | ✅ | CE 2.28，含 `dsh` 域；junction 生效 |
 | 全局 checklist skill | ✅ | `~/.agents/skills/checklist` 可见；1.3 |
 | DSH 重启后加载 | ✅ | skill 目录已出现 `plan-workflow` 与 `checklist` |
-| 代码仓 git 状态 | ⏳ 待提交 | 本轮迁移提交后复核 |
-| CE git 状态 | ⏳ 待提交 | CE skill 提交后复核 |
+| 代码仓 git 状态 | ✅ | `3dc715b`，已推送 `origin/main` |
+| CE git 状态 | ✅ | `d13530f`，已推送 `origin/main` |
 
 ## 六、移交 / 遗留
 
@@ -334,5 +334,7 @@ git -C D:\Projects\Context-Engineer push origin main
 - 2026-11-01：迭代 v2——确认文件名后缀规则、增加 README Gate、增加开工门槛；仍未执行迁移。
 - 2026-11-01：阶段 1-5 执行完成——`doc/` + 根 `plan/` 并入 `docs/`；AGENTS/README/package/design/plan/checklist 引用更新；README Gate 通过；CE `plan-workflow` 2.28、`checklist` 1.3 通用化；全局 junction 生效（skill 目录已出现 `checklist`）。
 - 2026-11-01：验证——`npm test` 37/37；Markdown 本地链接 0 缺失；`npm pack --dry-run` 含 `docs/pic`；CE validator 16 tests OK（1 skipped）。
-- 2026-11-01：本 checklist 归档至 `docs/checklist/archived/dsh/`；代码仓与 CE 提交推送见本轮记录。
+- 2026-11-01：本 checklist 归档至 `docs/checklist/archived/dsh/`。
+- 2026-11-01：代码仓提交 `3dc715b`、CE 提交 `d13530f`，均已推送 `origin/main`。
+- 2026-11-01：迁移关闭；业务开发未自动开始，等待具体任务/用户指定。
 - 踩坑 0：无阻断；junction 创建一次成功。
