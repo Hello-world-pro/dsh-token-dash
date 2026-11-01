@@ -68,15 +68,32 @@ P3 · 设置
 
 ## 安装
 
-```bash
-# GitHub（推荐）
-dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash
+Requires DSH `0.2.1` or newer. 本插件为纯 JavaScript（无构建步骤），GitHub 仓库即安装源：
 
-# 本地开发
-dsh plugin --profile desktop add link:D:/MyProjects/dsh-tokenDash
+```bash
+dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash
 ```
 
-安装后重启 DSH。npm 源安装将在后续版本提供。
+> 包声明了 `dsh.bundle`，`add` 会自动把插件接入 profile——安装即用，首次启动会自动回填安装前的历史会话数据。
+
+## 更新
+
+```bash
+dsh plugin --profile desktop update github:spartawhy117/dsh-token-dash
+```
+
+也可以在插件设置页（P3 → 检查更新）内完成：发现新版本 → 确认 → 自动执行更新 → 重启生效。
+
+## 卸载
+
+```bash
+dsh plugin --profile desktop remove github:spartawhy117/dsh-token-dash
+```
+
+数据文件保留在 `$DSH_HOME/dsh-token-dash/`（消耗记录、预算与模式偏好），不再需要时手动删除。
+
+> [!NOTE]
+> npm 源安装将在后续版本提供。届时若从 `github:` 安装切换到 npm 包名，需要先 `remove` 旧名再 `add` 新名（不同安装名无法原地 `update`），数据不受影响。
 
 ## 使用说明
 
@@ -122,9 +139,11 @@ npm run logs -- --event mount                # 按事件名过滤
 ```bash
 npm test          # 单元测试
 npm run e2e       # 端到端（临时 DSH_HOME + web profile + Playwright）
+npm run pack      # 生成发布 tarball 到 build/（不入库，.gitignore 已忽略）
+dsh plugin --profile desktop add link:D:/MyProjects/dsh-tokenDash   # 本地开发安装
 ```
 
-**版本发布**：更新 `package.json` 版本 → 提交 → `git tag v1.0.x` → push tag（`npm publish` 流程后续接入，参考 `docs/plan/active/dsh/feature_token_dash.md` §十）。
+**版本发布**：更新 `package.json` 版本 → 提交 → `git tag v1.0.x` → push tag。`build/` 目录存放生成物（`npm pack` 的 tarball、未来的 release 资产），不纳入 git 管理；npm publish 流程后续接入。
 
 ## 致谢
 
