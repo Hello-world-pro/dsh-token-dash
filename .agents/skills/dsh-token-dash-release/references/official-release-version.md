@@ -2,8 +2,8 @@
 
 > 唯一版本基准。只在正式发布成功后更新；候选包、本地 tarball、本地安装不写入。
 
-- 最新已发布版本：`1.0.5`
-- tag：`v1.0.5`
+- 最新已发布版本：`1.0.6`
+- tag：`v1.0.6`
 - 发布确认日期：2026-11-02
-- GitHub Release：https://github.com/spartawhy117/dsh-token-dash/releases/tag/v1.0.5
-- npm：`dsh-token-dash@1.0.5`（`dist-tags.latest`）
+- GitHub Release：https://github.com/spartawhy117/dsh-token-dash/releases/tag/v1.0.6
+- npm：`dsh-token-dash@1.0.6`（`dist-tags.latest`）

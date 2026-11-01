@@ -1,6 +1,6 @@
 # Provider / VM / UI 边界收口（PATCH 重构）
 
-> 状态：待验收（代码与测试完成，待 1.0.6 发布）<br>
+> 状态：已验收（1.0.6 已发布；待归档）<br>
 > 创建：2026-11-02；更新：2026-11-02（契约迭代：snapshot 字段、pricingLinks 形状、UI 回归口径）<br>
 > 关联逻辑根：`dsh-token-dash`<br>
 > 关联资料：[施工 checklist](../../checklist/active/dsh/provider-boundary-build-checklist.md)
@@ -111,7 +111,7 @@
 | VM 输出 `pricingLinks` 且 UI 无 `LINKS` | REQ-02 | core 单测 5 条 + `grep LINKS client.js` 为空 + E2E 链接数 5 | ✅ |
 | snapshot 边界 | REQ-03 | adapters `toSnapshot` 测试：`windows`/`error`/`quotaError`/`status`；无 `_error`/`plans` | ✅ |
 | 行为回归 | REQ-04 | `npm test` 53/53；`npm run e2e` pass | ✅ |
-| 发布 | — | 1.0.6 tag、npm latest、GitHub Release body = CHANGELOG | 待发布 |
+| 发布 | — | 1.0.6 tag、npm latest、GitHub Release body = CHANGELOG | ✅ |
 
 ## 八、决策记录
 
@@ -124,5 +124,5 @@
 
 ## 九、自测反馈台
 
-- 暂无 Issue；施工与验证记录见 checklist。
+- 2026-11-02：1.0.6 发布完成——tag `v1.0.6`，npm `latest=1.0.6`，GitHub Release body 与 1.0.6 正式块一致，asset `dsh-token-dash-1.0.6.tgz` 已上传。施工与验证记录见 checklist。
 

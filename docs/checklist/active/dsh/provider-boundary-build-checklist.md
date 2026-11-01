@@ -14,7 +14,7 @@
 | 3 VM | `buildSummary` 输出 `pricingLinks` / `windows` | ✅ |
 | 4 UI | 删除 `LINKS`，订阅卡改 `windows` | ✅ |
 | 5 测试 | L1 + E2E 全绿，回归 P1/P2/P3 | ✅ |
-| 6 发布 | 1.0.6 CHANGELOG/tag/npm/Release | 进行中 |
+| 6 发布 | 1.0.6 CHANGELOG/tag/npm/Release | ✅ |
 
 ## 决策记录
 
@@ -114,7 +114,7 @@
 | UI 无 provider 硬编码 | ✅ | `grep LINKS client.js` 为空；无五家 id 字符串 |
 | L1 | ✅ | `npm test` 53/53 pass |
 | E2E | ✅ | `npm run e2e` pass；P3 link 数 5 |
-| 桌面走查 | 待验收 | 发布后桌面 profile 安装 1.0.6 走查 |
+| 桌面走查 | 未走查 | 发布链路已核验；桌面 profile 仍为 1.0.5，未自动安装 |
 
 ## 施工提醒
 
@@ -134,4 +134,5 @@
 - 2026-11-02：创建 checklist；用户授权按 plan 执行并发布 1.0.6。
 - 2026-11-02（迭代）：确认 adapter 内部解析不改，只在 `readProviders`/`readSubscriptions` 出口统一 snapshot；补 UI 无 provider 硬编码与 E2E 链接数 5 两项回归。
 - 2026-11-02（施工）：registry / snapshot / VM / UI 完成；L1 53/53、E2E pass；版本 1.0.6，待打包发布。
+- 2026-11-02（发布）：tag `v1.0.6`，release/publish 双 workflow success，npm latest 1.0.6，Release body 与 CHANGELOG 一致，asset 已上传。
 
