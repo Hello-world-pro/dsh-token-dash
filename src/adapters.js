@@ -225,6 +225,32 @@ function visibleEntry(entry, prefs) {
   return entry !== null && prefs?.billingModes?.[entry.id] !== 'hide'
 }
 
+/** Adapter → VM boundary: normalize ad-hoc adapter rows into ProviderSnapshot. */
+export function toSnapshot(entry) {
+  const error = entry.error ?? entry._error ?? null
+  const quotaError = entry.quotaError ?? entry._quotaError ?? null
+  const balance = entry.balance ?? null
+  const status = error !== null
+    ? 'error'
+    : balance?.status === 'unconfigured'
+      ? 'unconfigured'
+      : balance?.status === 'error'
+        ? 'error'
+        : 'ok'
+  return {
+    id: entry.id,
+    name: entry.name,
+    kind: entry.kind === 'subscription' ? 'subscription' : 'api',
+    currency: entry.currency,
+    status,
+    balance,
+    windows: Array.isArray(entry.windows) ? entry.windows : Array.isArray(entry.plans) ? entry.plans : [],
+    error,
+    quotaError,
+    fetchedAt: entry.fetchedAt ?? Date.now(),
+  }
+}
+
 /** Query configured providers; each failure is isolated. Balance/credits are always requested (P2 shows them regardless of the P1-only toggle, #31). */
 export async function readProviders(ctx, prefs) {
   const results = await Promise.allSettled([deepseek(ctx), glm(ctx, prefs), kimi(ctx, prefs), openrouter(ctx), qwen(ctx)])
@@ -233,7 +259,7 @@ export async function readProviders(ctx, prefs) {
     if (result.status === 'fulfilled' && visibleEntry(result.value, prefs)) {
       const value = result.value
       value.currency = value.currency ?? providerCurrency(normalizeProvider(value.id))
-      out.push(value)
+      out.push(toSnapshot(value))
     }
   }
   return out
@@ -250,8 +276,8 @@ export async function readSubscriptions(ctx, prefs) {
   ])
   const kimiEntry = kimiQuota.state === 'ok' ? kimiQuota.entry : kimiQuota.state === 'fallback' ? { id: 'moonshot', kind: 'api', currency: 'CNY' } : null
   const out = []
-  if (visibleEntry(glmEntry, prefs)) out.push(glmEntry)
-  if (visibleEntry(kimiEntry, prefs)) out.push(kimiEntry)
+  if (visibleEntry(glmEntry, prefs)) out.push(toSnapshot(glmEntry))
+  if (visibleEntry(kimiEntry, prefs)) out.push(toSnapshot(kimiEntry))
   return out
 }
 
@@ -263,29 +289,29 @@ export function logAdapterEvents(log, providers) {
   for (const item of providers) {
     if (item.id === 'deepseek-official') {
       if (item.balance?.status === 'ok') info('adapter.deepseek', 'balance.ok', { amount: item.balance.amount })
-      else if (item.balance?.status === 'unconfigured') info('adapter.deepseek', 'balance.auth', errorMeta(item._error))
-      else if (item.balance !== undefined) info('adapter.deepseek', 'balance.error', { status: item.balance.status, ...errorMeta(item._error ?? item.balance._error) })
+      else if (item.balance?.status === 'unconfigured') info('adapter.deepseek', 'balance.auth', errorMeta(item.error))
+      else if (item.balance !== undefined) info('adapter.deepseek', 'balance.error', { status: item.balance.status, ...errorMeta(item.error ?? item.balance._error) })
       continue
     }
     if (item.id === 'zhipu' || item.id === 'moonshot') {
       const module = item.id === 'zhipu' ? 'adapter.glm' : 'adapter.kimi'
       if (item.kind === 'subscription') {
-        const windows = (item.plans ?? []).length
+        const windows = (item.windows ?? []).length
         if (windows > 0) info(module, 'quota.ok', { windows })
-        else if (item._quotaError?.kind === 'parse') info(module, 'quota.parse', {})
-        else info(module, 'quota.fail', { windows: 0, ...errorMeta(item._quotaError) })
-      } else if (item._quotaError !== undefined && item._quotaError !== null) {
-        info(module, 'quota.fail', { ...errorMeta(item._quotaError) })
+        else if (item.quotaError?.kind === 'parse') info(module, 'quota.parse', {})
+        else info(module, 'quota.fail', { windows: 0, ...errorMeta(item.quotaError) })
+      } else if (item.quotaError !== undefined && item.quotaError !== null) {
+        info(module, 'quota.fail', { ...errorMeta(item.quotaError) })
       } else {
         info(module, 'quota.miss', {})
       }
       if (item.id === 'moonshot' && item.balance?.status === 'ok') info('adapter.kimi', 'balance.ok', { amount: item.balance.amount })
-      if (item.id === 'moonshot' && item.balance?.status === 'error') info('adapter.kimi', 'balance.error', { status: 'error', ...errorMeta(item._error ?? item.balance._error) })
+      if (item.id === 'moonshot' && item.balance?.status === 'error') info('adapter.kimi', 'balance.error', { status: 'error', ...errorMeta(item.error ?? item.balance._error) })
       continue
     }
     if (item.id === 'openrouter') {
       if (item.balance?.status === 'ok') info('adapter.openrouter', 'credits.ok', { amount: item.balance.amount })
-      else if (item.balance !== undefined) info('adapter.openrouter', 'credits.error', { status: item.balance.status, ...errorMeta(item._error ?? item.balance._error) })
+      else if (item.balance !== undefined) info('adapter.openrouter', 'credits.error', { status: item.balance.status, ...errorMeta(item.error ?? item.balance._error) })
       continue
     }
     if (item.id === 'qwen') {

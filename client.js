@@ -11,14 +11,6 @@ window.__ModuleLoader__.load({
 
     const API = '/token-dash/api'
     const PKG = 'dsh-token-dash'
-    const LINKS = [
-      ['DeepSeek', 'https://api-docs.deepseek.com/quick_start/pricing'],
-      ['GLM', 'https://docs.bigmodel.cn/cn/guide/start/pricing'],
-      ['Kimi', 'https://platform.moonshot.cn/docs/pricing/chat'],
-      ['OpenRouter', 'https://openrouter.ai/models'],
-      ['Qwen', 'https://help.aliyun.com/zh/model-studio/billing-for-alibaba-cloud-model-studio'],
-    ]
-
     const COLORS = { primary: '#6ea8ff', warn: '#f0a020', over: '#e05a5a' }
     const budgetColor = (state) => (state === 'over' ? COLORS.over : state === 'warn' ? COLORS.warn : COLORS.primary)
     const percentColor = (value) => (value >= 100 ? COLORS.over : value >= 80 ? COLORS.warn : COLORS.primary)
@@ -175,11 +167,11 @@ window.__ModuleLoader__.load({
     }
 
     function subscriptionText(provider) {
-      const plans = Array.isArray(provider.plans) ? provider.plans : []
-      if (plans.length === 0) return '套餐查询失败'
-      const text = plans.slice(0, 2).map((plan) => `${windowLabel[plan.key] ?? plan.key} ${fmtUsed(plan.usedPercent)}`).join(' · ')
-      if (plans.length === 1) {
-        const reset = fmtReset(plans[0].resetAt)
+      const windows = Array.isArray(provider.windows) ? provider.windows : []
+      if (windows.length === 0) return '套餐查询失败'
+      const text = windows.slice(0, 2).map((plan) => `${windowLabel[plan.key] ?? plan.key} ${fmtUsed(plan.usedPercent)}`).join(' · ')
+      if (windows.length === 1) {
+        const reset = fmtReset(windows[0].resetAt)
         if (reset !== null) return `${text} · 重置 ${reset}`
       }
       return text
@@ -187,14 +179,14 @@ window.__ModuleLoader__.load({
 
     /** 订阅窗口节点：百分比按官方原值着色；withReset 时单窗口附重置时间（P1）。 */
     function subscriptionNodes(provider, withReset = false) {
-      const plans = Array.isArray(provider.plans) ? provider.plans : []
-      if (plans.length === 0) return [h('span', { key: 'fail' }, '套餐查询失败')]
-      const nodes = plans.slice(0, 2).map((plan, index) => h(React.Fragment, { key: plan.key },
+      const windows = Array.isArray(provider.windows) ? provider.windows : []
+      if (windows.length === 0) return [h('span', { key: 'fail' }, '套餐查询失败')]
+      const nodes = windows.slice(0, 2).map((plan, index) => h(React.Fragment, { key: plan.key },
         index > 0 ? ' · ' : null,
         `${windowLabel[plan.key] ?? plan.key} `,
         h('b', { style: { ...styles.num, color: percentColor(plan.usedPercent ?? 0) } }, fmtUsed(plan.usedPercent))))
-      if (withReset && plans.length === 1) {
-        const reset = fmtReset(plans[0].resetAt)
+      if (withReset && windows.length === 1) {
+        const reset = fmtReset(windows[0].resetAt)
         if (reset !== null) nodes.push(h('span', { key: 'reset' }, ` · 重置 ${reset}`))
       }
       return nodes
@@ -283,7 +275,7 @@ window.__ModuleLoader__.load({
       if (current?.kind === 'subscription') {
         prefix = '[订阅]'
         bodyNodes = [
-          h('span', { key: 'plans' }, ...subscriptionNodes(current, true)),
+          h('span', { key: 'windows' }, ...subscriptionNodes(current, true)),
         ]
         ariaText = `${current.name}，订阅，账户套餐，${subscriptionText(current)}`
       } else if (current !== undefined) {
@@ -352,16 +344,16 @@ window.__ModuleLoader__.load({
     }
 
     function SubscriptionCard({ provider }) {
-      const plans = Array.isArray(provider.plans) ? provider.plans : []
-      const resets = plans.map((plan) => plan.resetAt).filter((ts) => Number.isFinite(ts) && ts > 0)
+      const windows = Array.isArray(provider.windows) ? provider.windows : []
+      const resets = windows.map((plan) => plan.resetAt).filter((ts) => Number.isFinite(ts) && ts > 0)
       const nextReset = resets.length > 0 ? Math.min(...resets) : null
       return h('div', { 'data-testid': `token-dash-sub-card-${provider.id}`, style: { ...styles.card, marginTop: 0 } },
         h('div', { style: styles.row }, h('b', { style: styles.nameEllipsis, title: provider.name }, provider.name), h('span', { style: styles.muted }, '订阅')),
-        plans.length === 0
+        windows.length === 0
           ? h('div', { style: { ...styles.muted, marginTop: 6 } }, '套餐查询失败')
           : h(React.Fragment, null,
               h('div', { style: { ...styles.row, marginTop: 6, flexWrap: 'wrap', justifyContent: 'flex-start' } }, subscriptionNodes(provider)),
-              plans.map((plan) => h('div', { key: plan.key, style: styles.bar },
+              windows.map((plan) => h('div', { key: plan.key, style: styles.bar },
                 h('div', { style: { ...styles.barFill, width: `${Math.min(100, plan.usedPercent ?? 0)}%` } }))),
               nextReset !== null ? h('div', { style: { ...styles.muted, marginTop: 2 } }, `重置 ${fmtReset(nextReset)}`) : null))
     }
@@ -713,7 +705,7 @@ window.__ModuleLoader__.load({
           h('div', { style: styles.row },
             h('span', null, '查看价格明细'),
             h('span', { style: { display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8 } },
-              LINKS.map(([label, url]) => h('a', { key: label, href: url, target: '_blank', rel: 'noopener', style: { ...styles.link, marginLeft: 0 } }, label)))),
+              (summary?.pricingLinks ?? []).map((link) => h('a', { key: link.id ?? link.label, href: link.url, target: '_blank', rel: 'noopener', style: { ...styles.link, marginLeft: 0 } }, link.label)))),
           h('div', { style: styles.row },
             h('span', { style: styles.muted }, `版本 ${version}`),
             updateControl))),

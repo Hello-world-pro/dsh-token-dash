@@ -5,10 +5,11 @@
 import { priceFor } from './pricing.js'
 import {
   canBeSubscription,
-  DEFAULT_MODELS,
+  defaultModelFor,
   modelLabel,
   normalizeModel,
   normalizeProvider,
+  pricingLinks,
   providerCurrency,
   providerFromModel,
   providerLabel,
@@ -190,6 +191,7 @@ function providerEmpty(providerId) {
     currency: providerCurrency(providerId),
     usage: { todayTokens: 0, monthTokens: 0, todayCost: 0, monthCost: 0, requests: 0 },
     models: [],
+    windows: [],
   }
 }
 
@@ -212,7 +214,8 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
       .map(([id]) => normalizeProvider(id)),
   )
 
-  for (const info of providerInfo) {
+  for (const item of providerInfo) {
+    const { plans: legacyPlans, ...info } = item
     const id = normalizeProvider(info.id ?? info.provider)
     if (id === 'unknown' || hidden.has(id)) continue
     const base = providerMap.get(id) ?? providerEmpty(id)
@@ -221,14 +224,14 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
       ...info,
       id,
       name: info.name ?? providerLabel(id),
-      kind: info.kind === 'subscription' || (info.kind === undefined && Array.isArray(info.plans) && info.plans.length > 0)
+      kind: info.kind === 'subscription' || (info.kind === undefined && (info.windows ?? legacyPlans ?? []).length > 0)
         ? 'subscription'
         : 'api',
       canSubscribe: canBeSubscription(id),
       currency: info.currency === 'USD' ? 'USD' : (info.currency === 'CNY' ? 'CNY' : providerCurrency(id)),
       usage: { ...base.usage, ...(info.usage ?? {}) },
       balance: info.balance ?? base.balance,
-      plans: info.plans ?? base.plans,
+      windows: info.windows ?? legacyPlans ?? base.windows ?? [],
     })
   }
 
@@ -302,7 +305,7 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
   for (const info of providerInfo) {
     const id = normalizeProvider(info.id ?? info.provider)
     if (id === 'unknown' || hidden.has(id)) continue
-    const fallbackModel = DEFAULT_MODELS[id]
+    const fallbackModel = defaultModelFor(id)
     if (fallbackModel === undefined) continue
     const key = `${id}:${fallbackModel}`
     // provider 已有任意真实模型行时不再补默认行（含 '-' 占位语义）
@@ -425,6 +428,7 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
     apiTotals,
     currentProviderId: current,
     breakdown: { models },
+    pricingLinks: pricingLinks(),
     showBalance: prefs?.showBalance !== false,
     showMonthTokens: prefs?.showMonthTokens !== false,
     updatedAt: now,

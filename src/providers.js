@@ -1,6 +1,6 @@
 /**
- * Provider identity, billing mode and currency.
- * Pure functions only; no I/O.
+ * Provider registry: identity, billing mode, currency, default model,
+ * model ownership/labels and official pricing links. Pure data + lookups.
  */
 
 const ALIASES = {
@@ -22,22 +22,76 @@ const ALIASES = {
   openrouter: 'openrouter',
 }
 
-const NAMES = {
-  'deepseek-official': 'DeepSeek 官方',
-  zhipu: '智谱 AI',
-  moonshot: 'Kimi',
-  qwen: '通义千问',
-  openrouter: 'OpenRouter',
-  unknown: '未知来源',
-}
+/** Display order is also the P3 pricing-link order. */
+export const PROVIDER_ORDER = ['deepseek-official', 'zhipu', 'moonshot', 'openrouter', 'qwen']
 
-const SUBSCRIPTION = new Set(['zhipu', 'moonshot'])
-const CURRENCY = {
-  'deepseek-official': 'CNY',
-  zhipu: 'CNY',
-  moonshot: 'CNY',
-  qwen: 'CNY',
-  openrouter: 'USD',
+const PROVIDERS = {
+  'deepseek-official': {
+    id: 'deepseek-official',
+    label: 'DeepSeek 官方',
+    currency: 'CNY',
+    subscription: false,
+    defaultModel: 'deepseek-v4.1-flash',
+    prefixes: [/^deepseek/],
+    modelLabels: {
+      'deepseek-flash': 'DeepSeek-V4.1-Flash',
+      'deepseek-v4.1-flash': 'DeepSeek-V4.1-Flash',
+      'deepseek-v4-flash': 'DeepSeek-V4.1-Flash',
+      'deepseek-pro': 'DeepSeek-V4.1-Pro',
+      'deepseek-v4-pro': 'DeepSeek-V4.1-Pro',
+    },
+    pricingUrl: 'https://api-docs.deepseek.com/quick_start/pricing',
+  },
+  zhipu: {
+    id: 'zhipu',
+    label: '智谱 AI',
+    currency: 'CNY',
+    subscription: true,
+    defaultModel: 'glm-5.3',
+    prefixes: [/^glm/],
+    modelLabels: {
+      'glm-5.3': 'GLM-5.3',
+      'glm-5.3-flash': 'GLM-5.3-Flash',
+    },
+    pricingUrl: 'https://docs.bigmodel.cn/cn/guide/start/pricing',
+  },
+  moonshot: {
+    id: 'moonshot',
+    label: 'Kimi',
+    currency: 'CNY',
+    subscription: true,
+    defaultModel: 'kimi-k3',
+    prefixes: [/^kimi/, /^moonshot/],
+    modelLabels: {
+      'kimi-k3': 'Kimi K3',
+      'kimi-k3.1-pro': 'Kimi K3.1 Pro',
+      'kimi-k2.7-code': 'Kimi K2.7 Code',
+    },
+    pricingUrl: 'https://platform.moonshot.cn/docs/pricing/chat',
+  },
+  openrouter: {
+    id: 'openrouter',
+    label: 'OpenRouter',
+    currency: 'USD',
+    subscription: false,
+    defaultModel: '-',
+    prefixes: [],
+    modelLabels: {},
+    pricingUrl: 'https://openrouter.ai/models',
+  },
+  qwen: {
+    id: 'qwen',
+    label: '通义千问',
+    currency: 'CNY',
+    subscription: false,
+    defaultModel: 'qwen3.8-max',
+    prefixes: [/^qwen/],
+    modelLabels: {
+      'qwen3.8-max': 'Qwen3.8-Max',
+      'qwen3.8-flash': 'Qwen3.8-Flash',
+    },
+    pricingUrl: 'https://help.aliyun.com/zh/model-studio/billing-for-alibaba-cloud-model-studio',
+  },
 }
 
 export function normalizeProvider(raw) {
@@ -46,21 +100,26 @@ export function normalizeProvider(raw) {
   return ALIASES[id] ?? id
 }
 
+/** Registry lookup; unknown ids return null. */
+export function providerDescriptor(raw) {
+  return PROVIDERS[normalizeProvider(raw)] ?? null
+}
+
 export function providerLabel(raw) {
   const id = normalizeProvider(raw)
-  return NAMES[id] ?? id
+  return PROVIDERS[id]?.label ?? id
 }
 
 export function isSupportedProvider(raw) {
-  return Object.prototype.hasOwnProperty.call(NAMES, normalizeProvider(raw)) && normalizeProvider(raw) !== 'unknown'
+  return providerDescriptor(raw) !== null
 }
 
 export function providerCurrency(raw) {
-  return CURRENCY[normalizeProvider(raw)] ?? 'CNY'
+  return providerDescriptor(raw)?.currency ?? 'CNY'
 }
 
 export function canBeSubscription(raw) {
-  return SUBSCRIPTION.has(normalizeProvider(raw))
+  return providerDescriptor(raw)?.subscription === true
 }
 
 export function providerKind(raw, mode) {
@@ -69,50 +128,40 @@ export function providerKind(raw, mode) {
   return canBeSubscription(id) ? 'subscription' : 'api'
 }
 
-/** #41：模型名前缀 → provider 归因（DSH 会话事件无 provider 标注时，unknown 行按此兜底归属）。 */
-const MODEL_OWNER_RULES = [
-  [/^deepseek/, 'deepseek-official'],
-  [/^glm/, 'zhipu'],
-  [/^kimi|^moonshot/, 'moonshot'],
-  [/^qwen/, 'qwen'],
-]
+/** Configured provider default model; '-' means a placeholder row (OpenRouter). */
+export function defaultModelFor(raw) {
+  return providerDescriptor(raw)?.defaultModel
+}
 
+/** Derived compatibility export for callers that still read the table. */
+export const DEFAULT_MODELS = Object.fromEntries(
+  PROVIDER_ORDER.map((id) => [id, PROVIDERS[id].defaultModel]),
+)
+
+/** Model-name prefixes → provider attribution when DSH events carry no provider. */
 export function providerFromModel(modelId) {
   const id = normalizeModel(modelId)
   if (id === 'unknown') return null
-  for (const [pattern, owner] of MODEL_OWNER_RULES) {
-    if (pattern.test(id)) return owner
+  for (const providerId of PROVIDER_ORDER) {
+    if (PROVIDERS[providerId].prefixes.some((pattern) => pattern.test(id))) return providerId
   }
   return null
 }
 
-/** #44/#45：已配置 provider 的默认模型——明细表在本月无真实消耗行时补一行（数值 0），保证"配置即可见"。
- * OpenRouter 为中转无默认模型：值为 '-' 表示占位行（OpenRouter / -），该 provider 出现任何真实模型行后不再补。 */
-export const DEFAULT_MODELS = {
-  'deepseek-official': 'deepseek-v4.1-flash',
-  zhipu: 'glm-5.3',
-  moonshot: 'kimi-k3',
-  qwen: 'qwen3.8-max',
-  openrouter: '-',
-}
-
 export function modelLabel(raw) {
   const id = normalizeModel(raw)
-  const labels = {
-    'deepseek-flash': 'DeepSeek-V4.1-Flash',
-    'deepseek-v4.1-flash': 'DeepSeek-V4.1-Flash',
-    'deepseek-v4-flash': 'DeepSeek-V4.1-Flash',
-    'deepseek-pro': 'DeepSeek-V4.1-Pro',
-    'deepseek-v4-pro': 'DeepSeek-V4.1-Pro',
-    'glm-5.3': 'GLM-5.3',
-    'glm-5.3-flash': 'GLM-5.3-Flash',
-    'kimi-k3': 'Kimi K3',
-    'kimi-k3.1-pro': 'Kimi K3.1 Pro',
-    'kimi-k2.7-code': 'Kimi K2.7 Code',
-    'qwen3.8-max': 'Qwen3.8-Max',
-    'qwen3.8-flash': 'Qwen3.8-Flash',
+  for (const providerId of PROVIDER_ORDER) {
+    const label = PROVIDERS[providerId].modelLabels[id]
+    if (label !== undefined) return label
   }
-  return labels[id] ?? id
+  return id
+}
+
+/** Five official pricing pages, in display order; UI consumes this via the VM. */
+export function pricingLinks() {
+  return PROVIDER_ORDER
+    .map((id) => ({ id, label: PROVIDERS[id].label, url: PROVIDERS[id].pricingUrl }))
+    .filter((link) => typeof link.url === 'string' && link.url !== '')
 }
 
 /** Only folds casing/provider prefix/date suffixes; never merges generations. */

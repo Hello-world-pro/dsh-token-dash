@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { logAdapterEvents, parseGlmQuota, parseKimiQuota, parseOpenRouterCredits, readProviders, readSubscriptions } from '../../src/adapters.js'
+import { logAdapterEvents, parseGlmQuota, parseKimiQuota, parseOpenRouterCredits, readProviders, readSubscriptions, toSnapshot } from '../../src/adapters.js'
 
 test('GLM parses TOKENS_LIMIT unit 3/6 and ignores TIME_LIMIT', () => {
   const windows = parseGlmQuota({
@@ -63,7 +63,7 @@ test('手动订阅模式：GLM quota 401 保留订阅卡（套餐查询失败）
     const zhipu = providers.find((item) => item.id === 'zhipu')
     assert.equal(zhipu.kind, 'subscription')
     assert.equal(zhipu.name, 'GLM Coding')
-    assert.deepEqual(zhipu.plans, [])
+    assert.deepEqual(zhipu.windows, [])
   } finally {
     restore()
   }
@@ -76,7 +76,7 @@ test('手动订阅模式：Kimi coding quota 失败保留订阅卡', async () =>
     const moonshot = providers.find((item) => item.id === 'moonshot')
     assert.equal(moonshot.kind, 'subscription')
     assert.equal(moonshot.name, 'Kimi Coding')
-    assert.deepEqual(moonshot.plans, [])
+    assert.deepEqual(moonshot.windows, [])
   } finally {
     restore()
   }
@@ -109,6 +109,25 @@ test('Qwen 国际站 Key 按 USD，国内站按 CNY', async () => {
   assert.equal(domestic.find((item) => item.id === 'qwen').currency, 'CNY')
 })
 
+test('toSnapshot 统一 windows/error/status，不泄漏旧字段', () => {
+  const snap = toSnapshot({
+    id: 'zhipu',
+    kind: 'subscription',
+    currency: 'CNY',
+    plans: [{ key: '5h' }],
+    _quotaError: { kind: 'parse' },
+  })
+  assert.deepEqual(snap.windows, [{ key: '5h' }])
+  assert.equal(snap.quotaError.kind, 'parse')
+  assert.equal(snap.status, 'ok')
+  assert.equal('plans' in snap, false)
+  assert.equal('_quotaError' in snap, false)
+  const failed = toSnapshot({ id: 'deepseek-official', kind: 'api', currency: 'CNY', _error: { kind: 'http', status: 500 }, balance: { status: 'error' } })
+  assert.equal(failed.status, 'error')
+  assert.deepEqual(failed.error, { kind: 'http', status: 500 })
+  assert.equal('_error' in failed, false)
+})
+
 test('#46 logAdapterEvents 按 §2.5 事件表映射侦测结果', () => {
   const events = []
   const log = { info: (module, event, meta) => events.push([module, event, meta]) }
@@ -121,7 +140,7 @@ test('#46 logAdapterEvents 按 §2.5 事件表映射侦测结果', () => {
     { id: 'moonshot', kind: 'api', currency: 'CNY', balance: { status: 'ok', amount: 8.5 } },
     { id: 'openrouter', kind: 'api', currency: 'USD', balance: { status: 'ok', amount: 7.66 } },
     { id: 'qwen', kind: 'api', currency: 'USD' },
-  ])
+  ].map(toSnapshot))
   assert.deepEqual(events.map(([m, e]) => `${m} ${e}`), [
     'adapter.deepseek balance.ok',
     'adapter.deepseek balance.auth',
@@ -145,7 +164,7 @@ test('#47 错误链路日志：错误分类与 quota.parse 还原原因', () => 
     { id: 'zhipu', kind: 'subscription', currency: 'CNY', plans: [], _quotaError: { kind: 'parse' } },
     { id: 'zhipu', kind: 'api', currency: 'CNY', _quotaError: { kind: 'http', status: 401 } },
     { id: 'moonshot', kind: 'api', currency: 'CNY', _error: { kind: 'network' }, balance: { status: 'error' } },
-  ])
+  ].map(toSnapshot))
   assert.deepEqual(events.map(([m, e]) => `${m} ${e}`), [
     'adapter.deepseek balance.error',
     'adapter.deepseek balance.auth',

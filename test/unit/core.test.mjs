@@ -215,7 +215,7 @@ test('hide 模式：provider 与模型行整体不出现在 VM', () => {
   addRecord(state, { ts: now, provider: 'zhipu', model: 'glm-5.3', input: 300_000, cacheRead: 0, cacheWrite: 0, output: 44_000 })
   addRecord(state, { ts: now, provider: 'deepseek-account', model: 'deepseek-v4.1-flash', input: 108_000, cacheRead: 0, cacheWrite: 0, output: 16_000 })
   const providers = [
-    { id: 'zhipu', kind: 'subscription', currency: 'CNY', plans: [{ key: '5h', usedPercent: 10 }] },
+    { id: 'zhipu', kind: 'subscription', currency: 'CNY', windows: [{ key: '5h', usedPercent: 10 }] },
     { id: 'deepseek-official', kind: 'api', currency: 'CNY' },
   ]
   const summary = buildSummary(state, { billingModes: { zhipu: 'hide' } }, now, providers)
@@ -230,7 +230,7 @@ test('provider 排序：当前 provider 置顶，其余按今日消耗降序', (
   addRecord(state, { ts: now, provider: 'zhipu', model: 'glm-5.3', input: 900_000, cacheRead: 0, cacheWrite: 0, output: 44_000 })
   addRecord(state, { ts: now, provider: 'deepseek-account', model: 'deepseek-v4.1-flash', input: 100_000, cacheRead: 0, cacheWrite: 0, output: 16_000 })
   const summary = buildSummary(state, { budgets: {} }, now, [
-    { id: 'zhipu', kind: 'subscription', currency: 'CNY', plans: [] },
+    { id: 'zhipu', kind: 'subscription', currency: 'CNY', windows: [] },
     { id: 'deepseek-official', kind: 'api', currency: 'CNY' },
   ])
   // 最后一条消息 provider 是 deepseek-account（当前 provider），置顶；zhipu 今日消耗更高排第二

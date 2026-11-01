@@ -7,8 +7,8 @@ const version = JSON.parse(readFileSync('package.json', 'utf8')).version
 
 test('release notes 提取当前版本完整块', () => {
   const output = execFileSync(process.execPath, ['scripts/release-notes.mjs', version], { encoding: 'utf8' })
-  assert.match(output, /### 新增/)
-  assert.match(output, /### 修改/)
+  assert.match(output, /^### (新增|修改)$/m)
+  assert.match(output, /^- /m)
   assert.ok(!output.includes('## ['), 'body 不应包含版本标题')
 })
 

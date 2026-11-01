@@ -71,12 +71,12 @@ function stopTree(child) {
 }
 
 const now = Date.now()
-const provider = (id, name, kind, currency, budget, plans = [], balance = null) => ({
+const provider = (id, name, kind, currency, budget, windows = [], balance = null) => ({
   id, name, kind, currency, canSubscribe: id === 'zhipu' || id === 'moonshot',
   usage: { todayTokens: 12_000, monthTokens: 1_280_000, todayCost: id === 'openrouter' ? 0.12 : 0.04, monthCost: id === 'openrouter' ? 4.68 : 12.34, requests: 12 },
   ...(budget === null ? {} : { budget }),
   ...(balance === null ? {} : { balance }),
-  ...(plans.length === 0 ? {} : { plans }),
+  ...(windows.length === 0 ? {} : { windows }),
 })
 const apiBudget = (amount, currency, used, percent) => ({ amount, used, remaining: Math.max(0, amount - used), percent, state: percent >= 1 ? 'over' : percent >= 0.8 ? 'warn' : 'ok', currency })
 const model = (providerId, providerName, modelId, displayName, kind, currency, cost, priced = true) => ({
@@ -97,7 +97,18 @@ const baseModels = [
   model('zhipu', 'GLM Coding', 'glm-5.3', 'GLM-5.3', 'subscription', 'CNY', 0),
   model('moonshot', 'Kimi Coding', 'kimi-k3', 'Kimi K3', 'subscription', 'CNY', 0),
 ]
-const baseSummary = { providers: baseProviders, breakdown: { models: baseModels }, showBalance: true, version: '1.0.5', refreshMs: 60000, currentProviderId: 'deepseek-official', updatedAt: now, stale: false }
+const baseSummary = {
+  providers: baseProviders,
+  breakdown: { models: baseModels },
+  pricingLinks: [
+    { id: 'deepseek-official', label: 'DeepSeek 官方', url: 'https://api-docs.deepseek.com/quick_start/pricing' },
+    { id: 'zhipu', label: '智谱 AI', url: 'https://docs.bigmodel.cn/cn/guide/start/pricing' },
+    { id: 'moonshot', label: 'Kimi', url: 'https://platform.moonshot.cn/docs/pricing/chat' },
+    { id: 'openrouter', label: 'OpenRouter', url: 'https://openrouter.ai/models' },
+    { id: 'qwen', label: '通义千问', url: 'https://help.aliyun.com/zh/model-studio/billing-for-alibaba-cloud-model-studio' },
+  ],
+  showBalance: true, version: '1.0.6', refreshMs: 60000, currentProviderId: 'deepseek-official', updatedAt: now, stale: false,
+}
 
 const env = { ...process.env, DSH_HOME: home }
 let server
@@ -407,10 +418,10 @@ try {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { ok: true, command: 'dsh plugin --profile desktop update dsh-token-dash' } }) })
   })
   await page.route('**/token-dash/api/update', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { current: '1.0.5', latest: '1.0.6', hasUpdate: true, published: true } }) })
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { current: '1.0.6', latest: '1.0.7', hasUpdate: true, published: true } }) })
   })
   await jsClick(settings.getByRole('button', { name: '检查更新' }))
-  await settings.getByText('发现 1.0.6').waitFor({ timeout: 5000 })
+  await settings.getByText('发现 1.0.7').waitFor({ timeout: 5000 })
   await jsClick(settings.getByRole('button', { name: '更新', exact: true }))
   await settings.getByText('已更新，重启 DSH 后生效').waitFor({ timeout: 5000 })
   assert.equal(installCalled, 1)

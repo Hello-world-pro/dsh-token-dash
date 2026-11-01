@@ -12,7 +12,7 @@ test('providers and apiTotals are separated by billing mode and currency', () =>
   const providers = [
     { id: 'deepseek-official', kind: 'api', currency: 'CNY', balance: { amount: 10, status: 'ok', currency: 'CNY' } },
     { id: 'openrouter', kind: 'api', currency: 'USD' },
-    { id: 'zhipu', kind: 'subscription', currency: 'CNY', plans: [{ key: '5h', usedPercent: 42.5 }] },
+    { id: 'zhipu', kind: 'subscription', currency: 'CNY', windows: [{ key: '5h', usedPercent: 42.5 }] },
   ]
   const summary = buildSummary(state, {
     budgets: { 'deepseek-official': { amount: 100, currency: 'CNY' }, openrouter: { amount: 50, currency: 'USD' } },
@@ -25,6 +25,8 @@ test('providers and apiTotals are separated by billing mode and currency', () =>
   assert.equal(summary.apiTotals.USD.budget, 50)
   assert.ok(summary.breakdown.models.filter((item) => item.kind === 'subscription').length >= 0)
   assert.equal(summary.breakdown.models.some((item) => item.providerId === 'zhipu' && item.share === 0), true)
+  assert.equal(summary.pricingLinks.length, 5)
+  assert.deepEqual(summary.pricingLinks.map((item) => item.label), ['DeepSeek 官方', '智谱 AI', 'Kimi', 'OpenRouter', '通义千问'])
 })
 
 test('no providers yields an empty VM', () => {
@@ -32,4 +34,14 @@ test('no providers yields an empty VM', () => {
   assert.deepEqual(summary.providers, [])
   assert.deepEqual(summary.breakdown.models, [])
   assert.equal(summary.currentProviderId, null)
+})
+
+test('旧 plans 输入只作为兼容读取，VM 输出不保留 plans', () => {
+  const summary = buildSummary(emptyState(), {}, now, [
+    { id: 'zhipu', kind: 'subscription', currency: 'CNY', plans: [{ key: '5h', usedPercent: 10 }] },
+  ])
+  const provider = summary.providers.find((item) => item.id === 'zhipu')
+  assert.equal(provider.kind, 'subscription')
+  assert.deepEqual(provider.windows, [{ key: '5h', usedPercent: 10 }])
+  assert.equal('plans' in provider, false)
 })

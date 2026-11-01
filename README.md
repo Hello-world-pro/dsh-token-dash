@@ -43,7 +43,7 @@ dsh plugin --profile desktop add dsh-token-dash
 dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash
 
 # 方式三：从 Releases 下载 dsh-token-dash-x.y.z.tgz 后本地安装（离线场景）
-dsh plugin --profile desktop add /path/to/dsh-token-dash-1.0.5.tgz
+dsh plugin --profile desktop add /path/to/dsh-token-dash-1.0.6.tgz
 ```
 
 更新：`update` 同名命令（npm / github: 各自同名），或在插件设置页（P3 → 检查更新）内完成。卸载：`remove` 同名命令，数据保留在 `$DSH_HOME/dsh-token-dash/`。
@@ -123,7 +123,7 @@ P3 · 设置
 │ 价格与版本                                                │
 │ ┌──────────────────────────────────────────────────────┐ │
 │ │ 查看价格明细       DeepSeek GLM Kimi OpenRouter Qwen │ │
-│ │ 版本 1.0.5                                 [检查更新] │ │
+│ │ 版本 1.0.6                                 [检查更新] │ │
 │ └──────────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────┘
 

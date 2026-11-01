@@ -43,7 +43,7 @@ dsh plugin --profile desktop add dsh-token-dash
 dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash
 
 # Option 3: download dsh-token-dash-x.y.z.tgz from Releases and install locally (offline)
-dsh plugin --profile desktop add /path/to/dsh-token-dash-1.0.5.tgz
+dsh plugin --profile desktop add /path/to/dsh-token-dash-1.0.6.tgz
 ```
 
 Update: run `update` with the same name, or use the in-app updater (settings → check for updates). Remove: run `remove` with the same name; data stays in `$DSH_HOME/dsh-token-dash/`.
@@ -104,7 +104,7 @@ P3 · Settings
 │   View logs   [Open log folder]   [Export logs]           │
 │ Pricing & version                                         │
 │   View pricing       DeepSeek GLM Kimi OpenRouter Qwen    │
-│   Version 1.0.5                             [Check update]│
+│   Version 1.0.6                             [Check update]│
 └──────────────────────────────────────────────────────────┘
 
 UI transitions
