@@ -337,4 +337,5 @@ git -C D:\Projects\Context-Engineer push origin main
 - 2026-11-01：本 checklist 归档至 `docs/checklist/archived/dsh/`。
 - 2026-11-01：代码仓提交 `3dc715b`、CE 提交 `d13530f`，均已推送 `origin/main`。
 - 2026-11-01：迁移关闭；业务开发未自动开始，等待具体任务/用户指定。
+- 2026-11-02：后续 skill 归属调整另开 checklist：`docs/checklist/active/dsh/skill-ownership-adjust-build-checklist.md`；本文件不重开。
 - 踩坑 0：无阻断；junction 创建一次成功。
