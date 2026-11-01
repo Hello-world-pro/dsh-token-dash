@@ -1,6 +1,6 @@
 # dsh-token-dash 设计文档
 
-> 面向贡献者的一页式架构说明。需求背景与决策记录见 [计划文档](plan/active/feature_token_dash.md)。
+> 面向贡献者的一页式架构说明。需求背景见 [主计划](plan/active/feature_token_dash.md)，Provider/VM/UI 边界收口见 [边界计划](plan/active/feature_provider_boundary.md)。
 
 ## 总体架构
 
@@ -14,15 +14,18 @@
 │  │ 会话事件监听 session/event     │             │ P1 底栏 Pill（两槽位）          │  │
 │  │ → collect.ingest 三层归属      │   /summary   │ P2 浮层看板 / P3 设置          │  │
 │  │ → daily.json（本地存储）        │ ──────────→ │ fetch 轮询（refreshMs 可配）    │  │
-│  │ readProviders 侦测五家供应商   │ ←────────── │ POST /prefs /log /refresh …    │  │
-│  │ buildSummary 聚合 VM          │             └────────────────────────────────┘  │
-│  │ web 路由 /token-dash/api/*    │                                          │
-│  └──────────────────────────────┘                                          │
+│  │ readProviders → Snapshot      │ ←────────── │ POST /prefs /log /refresh …    │  │
+│  │ buildSummary(state, prefs,    │             └────────────────────────────────┘  │
+│  │   now, snapshots) → VM        │                                             │
+│  │ providerRegistry（元数据）     │                                             │
+│  │ web 路由 /token-dash/api/*    │                                             │
+│  └──────────────────────────────┘                                             │
 └────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 - **host 端**只做数据：采集、归属、聚合、侦测、路由、日志；无 UI。
 - **client 端**只做展示：Pill 常驻 + 浮层（P2 看板 / P3 设置），无业务计算。
+- **provider 边界**：adapter 只输出 `ProviderSnapshot`；VM 只输出 `SummaryVM`；UI 只消费 VM，不知道 provider id / 价格页 URL。
 - 两端只通过 `/token-dash/api/*` HTTP 前缀路由通信。
 
 ## 数据流
@@ -37,10 +40,36 @@
   → store 持久化 daily.json（2s 防抖 flush，原子写 tmp+rename）
 
 浏览器请求 /summary
-  → readProviders（30s TTL 缓存；DeepSeek/Kimi/OpenRouter 余额、GLM/Kimi 订阅配额）
-  → core.buildSummary（当月口径聚合 + 配置即可见的默认模型行）
-  → VM JSON（providers / breakdown.models / apiTotals / version / refreshMs）
+  → readProviders（30s TTL 缓存；五家余额/配额）
+  → toSnapshot（统一 windows/error/quotaError/status/fetchedAt）
+  → core.buildSummary(state, prefs, now, snapshots)
+       ← providerRegistry（默认模型/币种/前缀/展示名/价格页）
+  → SummaryVM（providers / breakdown.models / apiTotals / pricingLinks / version / refreshMs）
+  → client 只读 VM
 ```
+
+`readSubscriptions`（P3「重新检测」）走同一个 snapshot 出口，不请求余额接口。
+
+## Provider / VM / UI 边界
+
+```text
+ProviderDescriptor（静态，providers.js）
+  id / label / currency / subscription / defaultModel
+  prefixes / modelLabels / pricingUrl
+
+ProviderSnapshot（adapters.js → VM 的唯一 DTO）
+  id / name / kind / currency / status(ok|error|unconfigured)
+  balance / windows[] / error / quotaError / fetchedAt
+
+SummaryVM（core.js → client 的唯一 DTO）
+  providers[] / breakdown.models[] / today / month
+  cost / apiTotals / currentProviderId / pricingLinks[] / version / refreshMs
+```
+
+- **Adapters**：只负责外部请求、解析、错误分类；出口用 `toSnapshot` 归一化，不把 `plans` / `_error` 等内部字段带进 VM。
+- **VM**：纯聚合，不做 IO；通过 `providerRegistry` 查元数据，不直接 import provider 数据表；输出 `windows` 和 `pricingLinks`。
+- **UI**：只读 `SummaryVM`；按 `kind` / `status` / `currency` 渲染，不出现 provider id、价格页 URL、默认模型等 provider 知识。
+- **兼容**：VM 可读取旧 `plans` 输入，但输出只保留 `windows`；`DEFAULT_MODELS` 保留为派生导出，供旧调用方过渡。
 
 ## 文件目录组织
 
@@ -51,8 +80,8 @@ dsh-token-dash/
 ├── src/
 │   ├── core.js            纯聚合：buildSummary（VM）、addRecord、月/日键、排序、预算
 │   ├── collect.js         会话事件采集：recordFromEvent / headerFromEvent / ingest / backfill
-│   ├── adapters.js        供应商侦测（五家 API/订阅）+ 事件日志映射 logAdapterEvents
-│   ├── providers.js       provider 常量：归一化、显示名、币种、模型前缀归属、默认模型表
+│   ├── adapters.js        供应商侦测（五家 API/订阅）+ toSnapshot 边界 + 事件日志映射
+│   ├── providers.js       provider registry：别名/展示名/币种/默认模型/前缀/展示名/价格页
 │   ├── pricing.js         价格：内置 catalog + 社区价格表 + OpenRouter 路由价
 │   ├── catalog.json       内置模型价格目录（官方价，随包发布，pricing.js 消费）
 │   ├── store.js           持久化：DSH_HOME 解析、daily/prefs 读写（原子写）、flusher
@@ -75,11 +104,12 @@ dsh-token-dash/
 
 | 模块 | 职责 | 不做什么 |
 |---|---|---|
-| core | VM 聚合、月/日口径、排序、预算计算 | 不做 IO、不读时钟（now 注入） |
+| core | VM 聚合、月/日口径、排序、预算计算 | 不做 IO、不读时钟（now 注入）、不直接读 provider 数据表 |
 | collect | 事件提取与归属、水位去重、历史回填 | 不落盘（交 store） |
-| adapters | 外部接口请求与解析、错误分类 | 不做 UI、不做价格匹配 |
+| adapters | 外部接口请求与解析、错误分类、`toSnapshot` | 不做 UI、不做价格匹配、不定义 provider 元数据 |
+| providers | descriptor registry、别名/币种/默认模型/前缀/价格页 | 不做 IO、不请求接口 |
 | store | 文件读写与原子性 | 不做业务逻辑 |
-| client | 渲染与交互 | 不做业务计算（数字全部来自 VM） |
+| client | 渲染与交互 | 不做业务计算（数字全部来自 VM）、不硬编码 provider |
 
 ## 日志体系
 
@@ -95,3 +125,6 @@ dsh-token-dash/
 3. **余额语义**：余额 = 账户余额（adapter 查询），预算剩余只进进度条
 4. **纯 JS 无构建**：源码即产物——GitHub 安装长期可用；npm 发布时 `files` 字段控制包内容
 5. **只读本地数据**（REQ-14）：不统计标题生成、不发起计费请求、凭据经宿主解析不落盘
+6. **Provider 边界收口**：五家固定 provider；adapter 输出 `ProviderSnapshot`，VM 输出 `SummaryVM`，UI 只消费 VM；provider 差异留在 descriptor/adapter，不扩散到 VM/UI
+7. **不做 provider 插件系统**：不拆 per-provider 文件、不引入 DI；五家规模用单文件 registry，避免过度抽象
+
