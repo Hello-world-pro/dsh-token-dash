@@ -1,6 +1,6 @@
 # dsh-token-dash 设计文档
 
-> 面向贡献者的一页式架构说明。需求背景与决策记录见 [计划文档](../docs/plan/active/dsh/feature_token_dash.md)。
+> 面向贡献者的一页式架构说明。需求背景与决策记录见 [计划文档](../plan/active/token-dash/plan.md)。
 
 ## 总体架构
 

@@ -1,10 +1,10 @@
 # dsh-token-dash 施工 checklist（UI 框线图版）
 
-> 依据 plan：`docs/plan/active/dsh/feature_token_dash.md`<br>
+> 依据 plan：`../../../plan/active/token-dash/plan.md`<br>
 > 生命周期：**已完成并归档**（2026-11-01）<br>
 > 当前状态：**已完成**——v0.2 UI 施工 + #24-#47 五轮反馈迭代全部闭环；最终 L1 37/37、E2E pass；用户真实环境验收通过；v1.0.0 已发布 GitHub（tag + Release tarball）；plan 回写双去向完成（feature §2.2/§五/§八决策/§九闭环卡/§十发布记录）<br>
 > 更新时间：2026-11-01（终态收口归档）<br>
-> 工程根：`dsh-tokenDash`（包名 `dsh-token-dash`）<br>
+> 工程根：`dsh-token-dash`（包名 `dsh-token-dash`）<br>
 > 参考：`dsh-desktop-statusbar`、`dsh-status-bar`、`dsh-token-wall`、`cc-switch` Usage HUD
 
 ## 阶段总览
@@ -373,7 +373,7 @@ P3 设置视图 ──查看价格明细──> 官方价格页（新窗口）
 - 不做日志自动上传/远程分析；只导出文件，由用户自行提供。
 - 不做完整组件代码、状态矩阵、组件级样式稿。
 
-> 施工步骤统一在 plan `docs/plan/active/dsh/feature_token_dash.md` §3.3 管理；测试矩阵在 plan §5.2-§5.4；本文件只保留页面布局与决策。
+> 施工步骤统一在 plan `../../../plan/active/token-dash/plan.md` §3.3 管理；测试矩阵在 plan §5.2-§5.4；本文件只保留页面布局与决策。
 
 ## 移交 / 遗留
 
@@ -405,5 +405,5 @@ P3 设置视图 ──查看价格明细──> 官方价格页（新窗口）
 ## 执行日志 + 踩坑
 
 - 2026-10-31：v0.2 重写；旧 v0.1 阶段完成记录与旧 Issue 已废弃，不再作为当前交付事实。
-- 2026-11-01：用户反馈 P3 与规划卡片未对齐；对照本 checklist 框线图逐文件走查代码，发现 6 组偏差（含余额显示预算剩余、"重新检测"被 30s 缓存挡住等），Issue #24-#29、代码证据与修复方向见 plan `feature_token_dash.md` §9.1；本轮只改文档，未动代码。
+- 2026-11-01：用户反馈 P3 与规划卡片未对齐；对照本 checklist 框线图逐文件走查代码，发现 6 组偏差（含余额显示预算剩余、"重新检测"被 30s 缓存挡住等），Issue #24-#29、代码证据与修复方向见 plan `plan.md` §9.1；本轮只改文档，未动代码。
 - 2026-11-01（施工）：D-13~D-16 定案后完成 Issue #24-#29 施工：host 端（hide 模式、/providers/refresh、skipBalance、Qwen INTL→USD、summary 透出 version/refreshMs、手动订阅保留、日志模块 config→boot、/update/install spawn）+ client 端（P3 三段按钮/分区计数/状态行/检查更新完整流程/删除本月 Token、P2 余额语义与卡片重排/订阅卡重置+套餐名、P1 状态色/省略/aria、浮层锚定+动态方向+dialog 语义）；删除 v0.1 死模块 `src/balance.js`。L1 30/30、E2E pass。**D-15 修订：Esc 按键不做处理**（关闭走右上按钮）；焦点归还/双 Pill 实例/i18n 遗留，详见 plan §9.1。desktop profile 为 junction link，改动即生效，重启 DSH 装载。

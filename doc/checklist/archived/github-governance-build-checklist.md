@@ -2,7 +2,7 @@
 
 > 依据：学习 JvedioNext 的标签系统、Issue 模板与 Actions 治理（2026-11-01 gh api 实地取证）<br>
 > 状态：**已完成**（阶段 1-4 全部 ✅，用户网页验收通过；回写双去向完成：feature §十已补记治理基建落地）<br>
-> 生命周期：本文件归档至 `docs/checklist/archived/dsh/`
+> 生命周期：本文件归档至 `doc/checklist/archived/`
 
 ## 一、标签系统（11 个，英文命名，`gh label create`）
 
@@ -182,7 +182,7 @@ contact_links:
 
 ## plan 回写候选
 
-1. ~~feature_token_dash.md §十补记：社区治理基建（标签/模板/Actions）落地情况 + 英文 README~~ → **已回写**（2026-11-01，§十"Issue 治理体系"与"发布流程文档化"条目）
+1. ~~plan.md §十补记：社区治理基建（标签/模板/Actions）落地情况 + 英文 README~~ → **已回写**（2026-11-01，§十"Issue 治理体系"与"发布流程文档化"条目）
 
 ## 执行日志 + 踩坑
 
