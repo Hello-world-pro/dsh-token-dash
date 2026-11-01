@@ -1,6 +1,7 @@
-# 推送版本 tag 触发 npm staged publishing：校验 tag 与 package.json 版本一致，
-# 用 stage-only token 把包送入暂存区（npmjs.com → Packages → Staged Packages），
-# 维护者在网页上 2FA 审批后正式发布（granular token 直发权限 2027-01 废弃，官方推荐 stage 流程）。
+# 推送版本 tag 触发 npm 发布：校验 tag 与 package.json 版本一致，provenance 附源信息。
+# 认证走 Trusted Publishing（OIDC）：npm 包设置里已信任本 workflow（publish + stage + dist-tag），
+# 无需任何 NPM_TOKEN secret（granular token 直发权限 2027-01 废弃，此模式为官方推荐）。
+# 注意：首次发布验证过配置后，之后推 tag 即全自动上线（无人工审批关口）。
 name: publish
 
 on:
@@ -11,7 +12,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # npm provenance 需要 OIDC
+  id-token: write # npm provenance / OIDC 必需
 
 concurrency:
   group: publish-${{ github.ref }}
@@ -25,7 +26,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24 # Node 24 自带 npm ≥ 11.15（npm stage publish 的最低要求）
+          node-version: 24
           registry-url: https://registry.npmjs.org
 
       - name: 校验 tag 与 package.json 版本一致
@@ -40,9 +41,17 @@ jobs:
           fi
           echo "PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
 
-      # 裸命令（官方文档未确认 --access/--tag 参数支持；unscoped 包默认 public）。
-      # 新包首次 stage 会发布 0.0.0-stage 占位版本（官方流程的一部分）。
-      - name: Stage package for release
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm stage publish
+      - name: 升级 npm CLI（Trusted Publishing 需要 11.5.1+，setup-node 自带版本偏旧）
+        run: |
+          npm install -g npm@latest
+          npm --version
+
+      # npm publish 会先执行 prepublishOnly：npm test（L1 单测，node 内置 runner 零依赖）。
+      # OIDC 直发模式：不设置 NODE_AUTH_TOKEN，npm CLI 检测到 CI 的 OIDC 环境后自动换取短期令牌。
+      - name: 发布到 npm
+        run: |
+          ARGS=(--provenance --access public)
+          if [[ "$PKG_VERSION" == *-* ]]; then
+            ARGS+=(--tag next)
+          fi
+          npm publish "${ARGS[@]}"

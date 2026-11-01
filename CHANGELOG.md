@@ -2,6 +2,16 @@
 
 本文件记录每个版本的**新增**与**修改**。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.0.2] - 2026-11-01
+
+### 新增
+
+- npm 发布切换 Trusted Publishing（OIDC 直发）：推 tag 全自动上线，免 token、含 provenance 溯源
+
+### 修改
+
+- 文档：`doc/release.md` 发版流程对齐 Trusted Publishing 实录；双语 README 开发节补发版说明
+
 ## [1.0.1] - 2026-11-01
 
 ### 新增

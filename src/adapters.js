@@ -118,7 +118,7 @@ async function deepseek(ctx) {
   const account = ctx.get?.('deepseekAccount')
   if (account !== undefined && typeof account.getBalance === 'function') {
     try {
-      const data = await account.getBalance({ version: '1.0.1', locale: 'zh-CN', timezoneOffsetSeconds: -new Date().getTimezoneOffset() * 60 })
+      const data = await account.getBalance({ version: '1.0.2', locale: 'zh-CN', timezoneOffsetSeconds: -new Date().getTimezoneOffset() * 60 })
       if (data?.status === 'ready') {
         const wallets = [...(Array.isArray(data.value) ? data.value : Object.values(data.value ?? {})), ...(data.bonusWallets ?? [])]
         const amount = wallets.filter((wallet) => wallet?.currency === undefined || wallet.currency === 'CNY')

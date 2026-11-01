@@ -69,7 +69,7 @@ const baseModels = [
   model('zhipu', 'GLM Coding', 'glm-5.3', 'GLM-5.3', 'subscription', 'CNY', 0),
   model('moonshot', 'Kimi Coding', 'kimi-k3', 'Kimi K3', 'subscription', 'CNY', 0),
 ]
-const baseSummary = { providers: baseProviders, breakdown: { models: baseModels }, showBalance: true, version: '1.0.1', refreshMs: 60000, currentProviderId: 'deepseek-official', updatedAt: now, stale: false }
+const baseSummary = { providers: baseProviders, breakdown: { models: baseModels }, showBalance: true, version: '1.0.2', refreshMs: 60000, currentProviderId: 'deepseek-official', updatedAt: now, stale: false }
 
 const env = { ...process.env, DSH_HOME: home }
 let server
@@ -314,10 +314,10 @@ try {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { ok: true, command: 'dsh plugin --profile desktop update dsh-token-dash' } }) })
   })
   await page.route('**/token-dash/api/update', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { current: '1.0.1', latest: '1.0.2', hasUpdate: true, published: true } }) })
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { current: '1.0.2', latest: '1.0.3', hasUpdate: true, published: true } }) })
   })
   await jsClick(settings.getByRole('button', { name: '检查更新' }))
-  await settings.getByText('发现 1.0.2').waitFor({ timeout: 5000 })
+  await settings.getByText('发现 1.0.3').waitFor({ timeout: 5000 })
   await jsClick(settings.getByRole('button', { name: '更新', exact: true }))
   await settings.getByText('已更新，重启 DSH 后生效').waitFor({ timeout: 5000 })
   assert.equal(installCalled, 1)
