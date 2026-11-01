@@ -5,7 +5,8 @@
 </p>
 
 <p align="center">
-  Track daily/monthly model spend and budget headroom right next to the DSH input box: paste an API Key and the plan is auto-detected (subscription or pay-as-you-go), set a monthly budget, and consumption is estimated locally in real time.
+  Track daily/monthly model spend and budget headroom right next to the DSH input box:<br />
+  paste an API Key and the plan is auto-detected (subscription or pay-as-you-go), set a monthly budget, and consumption is estimated locally in real time.
 </p>
 
 <p align="center">
@@ -16,6 +17,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/github/v/tag/spartawhy117/dsh-token-dash?label=version&sort=semver" alt="version" />
+  <img src="https://img.shields.io/npm/dt/dsh-token-dash?logo=npm&label=npm%20downloads" alt="npm downloads" />
   <img src="https://img.shields.io/github/downloads/spartawhy117/dsh-token-dash/total?label=downloads" alt="downloads" />
   <img src="https://img.shields.io/github/license/spartawhy117/dsh-token-dash" alt="license" />
   <img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen" alt="node" />
@@ -64,12 +66,16 @@ P2 · Floating dashboard (opens right above the pill; cards appear as API keys a
 │ Token Dashboard                       Refresh Settings × │
 │ Pay-as-you-go (3 detected)                   just now   │
 │ ┌──────────────────────────────────────────────────────┐ │
-│ │ DeepSeek  Budget ¥79.13/¥95.80 · 91.9%   Today Bal.  │ │
+│ │ DeepSeek  Budget ¥91.90/¥100.00 · 91.9%  Today Bal.  │ │
 │ │ [=========================================-------]   │ │
 │ └──────────────────────────────────────────────────────┘ │
 │ ┌──────────────────────────────────────────────────────┐ │
-│ │ OpenRouter  Budget $23.52/$62.00 · 38.0%  Today Bal.  │ │
+│ │ OpenRouter  Budget $22.80/$60.00 · 38.0%  Today Bal.  │ │
 │ │ [==================--------------------------------] │ │
+│ └──────────────────────────────────────────────────────┘ │
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ Qwen        Budget ¥0.40/¥5.00 · 8.0%     Today Bal. │ │
+│ │ [====----------------------------------------------] │ │
 │ └──────────────────────────────────────────────────────┘ │
 │ Subscriptions (2 detected)                                │
 │ ┌────────────────────────────┐ ┌────────────────────────┐ │
@@ -84,9 +90,10 @@ P2 · Floating dashboard (opens right above the pill; cards appear as API keys a
 P3 · Settings
 ┌──────────────────────────────────────────────────────────┐
 │ ← Back   Token Dashboard                          [Close] │
-│ API billing (2 detected)                                  │
-│   DeepSeek        Monthly budget [ 500.00 ]  CNY          │
-│   OpenRouter      Monthly budget [ 50.00 ]   USD          │
+│ API billing (3 detected)                                  │
+│   DeepSeek        Monthly budget [ 100.00 ]  CNY         │
+│   OpenRouter      Monthly budget [ 60.00 ]   USD         │
+│   Qwen            Monthly budget [ 5.00 ]    CNY         │
 │ Subscriptions (2 detected)                  [Rescan]      │
 │   GLM Coding                     5h 42% / Week 18%        │
 │   Kimi Coding                    5h 30% / Week 12%        │
@@ -96,6 +103,7 @@ P3 · Settings
 │ Logs                                                      │
 │   View logs   [Open log folder]   [Export logs]           │
 │ Pricing & version                                         │
+│   View pricing       DeepSeek GLM Kimi OpenRouter Qwen    │
 │   Version 1.0.5                             [Check update]│
 └──────────────────────────────────────────────────────────┘
 
@@ -138,7 +146,7 @@ UI transitions
 
 ## Logs & privacy
 
-When filing a bug, attach `~/.dsh/logs/dsh-token-dash/` (already redacted). Error log entries carry `errorKind` (http/timeout/network/parse) and `httpStatus`, which usually pinpoints the cause:
+When filing a bug, attach `$DSH_HOME/logs/dsh-token-dash/` (already redacted). Error log entries carry `errorKind` (http/timeout/network/parse) and `httpStatus`, which usually pinpoints the cause:
 
 ```bash
 npm run logs -- --tail 50                # tail recent logs
@@ -155,7 +163,7 @@ npm run e2e   # end-to-end (temp DSH_HOME + web profile + Playwright)
 npm run pack  # build the release tarball into build/
 ```
 
-Releases: pushing a `v*` tag triggers the GitHub Release (tarball) and an npm staged publish automatically (goes live after a maintainer approves it on npmjs.com with 2FA); see [docs/release.md](./docs/release.md) for the full checklist.
+Releases: pushing a `v*` tag triggers the GitHub Release (tarball) and a direct npm publish automatically (Trusted Publishing via OIDC, with provenance — no manual approval step); see [docs/release.md](./docs/release.md) for the full checklist.
 
 ## Acknowledgements
 

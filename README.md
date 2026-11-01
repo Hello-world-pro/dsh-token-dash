@@ -5,7 +5,8 @@
 </p>
 
 <p align="center">
-  在 DSH 输入框旁看清每日/每月模型消耗与预算余量：API Key 一填即自动识别订阅还是按量计费，月度预算可设、消耗实时估算。
+  在 DSH 输入框旁看清每日/每月模型消耗与预算余量：<br />
+  API Key 一填即自动识别订阅还是按量计费，月度预算可设、消耗实时估算。
 </p>
 
 <p align="center">
@@ -16,6 +17,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/github/v/tag/spartawhy117/dsh-token-dash?label=version&sort=semver" alt="version" />
+  <img src="https://img.shields.io/npm/dt/dsh-token-dash?logo=npm&label=npm%20downloads" alt="npm downloads" />
   <img src="https://img.shields.io/github/downloads/spartawhy117/dsh-token-dash/total?label=downloads" alt="downloads" />
   <img src="https://img.shields.io/github/license/spartawhy117/dsh-token-dash" alt="license" />
   <img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen" alt="node" />
@@ -31,7 +33,7 @@
 
 ## 安装
 
-Requires DSH `0.2.1` or newer，三种方式任选：
+需要 DSH `0.2.1` 或更新版本，三种方式任选：
 
 ```bash
 # 方式一：npm 安装（推荐）
@@ -64,15 +66,15 @@ P2 · 浮层看板（pill 正上方弹出；卡片与行随 API Key 侦测动态
 │ Token 看板                                   刷新 设置 关闭│
 │ API 按量（已检测 3）                          刚刚        │
 │ ┌──────────────────────────────────────────────────────┐ │
-│ │ DeepSeek 官方 预算 ¥79.13/¥95.80 · 91.9%  今日  余额 │ │
+│ │ DeepSeek 官方 预算 ¥91.90/¥100.00 · 91.9% 今日  余额 │ │
 │ │ [=========================================-------]   │ │
 │ └──────────────────────────────────────────────────────┘ │
 │ ┌──────────────────────────────────────────────────────┐ │
-│ │ OpenRouter   预算 $23.52/$62.00 · 38.0%   今日  余额 │ │
+│ │ OpenRouter   预算 $22.80/$60.00 · 38.0%   今日  余额 │ │
 │ │ [==================--------------------------------] │ │
 │ └──────────────────────────────────────────────────────┘ │
 │ ┌──────────────────────────────────────────────────────┐ │
-│ │ Qwen（百炼） 预算 ¥0.02/¥0.25 · 8.0%      今日  余额 │ │
+│ │ 通义千问     预算 ¥0.40/¥5.00 · 8.0%      今日  余额 │ │
 │ │ [====----------------------------------------------] │ │
 │ └──────────────────────────────────────────────────────┘ │
 │ 订阅套餐（已检测 2）                                      │
@@ -82,26 +84,27 @@ P2 · 浮层看板（pill 正上方弹出；卡片与行随 API Key 侦测动态
 │ │ 重置 14:05                 │ │ 重置 15:20             │ │
 │ └────────────────────────────┘ └────────────────────────┘ │
 │ API 费用明细 / 本月                        DSH 本机估算  │
-│ CNY  合计 ¥4.96                                          │
-│ DeepSeek 官方 / DeepSeek-V4.1-Flash  99.6%      ¥4.94   │
-│ Qwen / Qwen3.8-Max                    0.4%      ¥0.02   │
-│ USD   合计 $0.12                                         │
-│ OpenRouter / DeepSeek-V4.1-Flash    100.0%     $0.12    │
+│ CNY  合计 ¥92.30                                         │
+│ DeepSeek 官方 / DeepSeek-V4.1-Flash  99.6%      ¥91.90  │
+│ 通义千问 / Qwen3.8-Max                0.4%      ¥0.40   │
+│ USD   合计 $22.80                                        │
+│ OpenRouter / DeepSeek-V4.1-Flash    100.0%     $22.80   │
 │ 模型用量明细 / 本月                             合计 1.31M│
 │ 模型                          请求    输入    命中    输出 │
 │ DeepSeek 官方 / V4.1-Flash      48   0.11M  0.20M  0.02M│
 │ OpenRouter / V4.1-Flash         12   0.02M  0.01M  0.01M│
-│ Qwen / Qwen3.8-Max              24   0.05M  0.02M  0.01M│
-│ GLM Coding / GLM-5.3            64   0.30M  0.60M  0.04M│
+│ 通义千问 / Qwen3.8-Max          24   0.05M  0.02M  0.01M│
+│ GLM Coding / GLM-5.3            64   0.30M  0.52M  0.04M│
 └──────────────────────────────────────────────────────────┘
 
 P3 · 设置
 ┌──────────────────────────────────────────────────────────┐
 │ ← 返回   Token 看板                              [关闭]  │
-│ API 计费（已检测 2）                                      │
+│ API 计费（已检测 3）                                      │
 │ ┌──────────────────────────────────────────────────────┐ │
-│ │ DeepSeek 官方      月度预算  [ 500.00 ]  CNY          │ │
-│ │ OpenRouter         月度预算  [ 50.00 ]   USD          │ │
+│ │ DeepSeek 官方      月度预算  [ 100.00 ]  CNY         │ │
+│ │ OpenRouter         月度预算  [ 60.00 ]   USD         │ │
+│ │ 通义千问           月度预算  [ 5.00 ]    CNY         │ │
 │ └──────────────────────────────────────────────────────┘ │
 │ 订阅计费（已检测 2）                      [重新检测]      │
 │ ┌──────────────────────────────────────────────────────┐ │
@@ -119,6 +122,7 @@ P3 · 设置
 │ └──────────────────────────────────────────────────────┘ │
 │ 价格与版本                                                │
 │ ┌──────────────────────────────────────────────────────┐ │
+│ │ 查看价格明细       DeepSeek GLM Kimi OpenRouter Qwen │ │
 │ │ 版本 1.0.5                                 [检查更新] │ │
 │ └──────────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────┘
@@ -162,7 +166,7 @@ UI 交互转移
 
 ## 日志与隐私
 
-报障时附上 `~/.dsh/logs/dsh-token-dash/`（已脱敏），错误日志带 `errorKind`（http/timeout/network/parse）与 `httpStatus`，可直接定位原因：
+报障时附上 `$DSH_HOME/logs/dsh-token-dash/`（已脱敏），错误日志带 `errorKind`（http/timeout/network/parse）与 `httpStatus`，可直接定位原因：
 
 ```bash
 npm run logs -- --tail 50                # 查看最近日志
@@ -179,7 +183,7 @@ npm run e2e   # 端到端（临时 DSH_HOME + web profile + Playwright）
 npm run pack  # 发布 tarball 生成到 build/
 ```
 
-发版：推 `v*` tag 自动触发 GitHub Release（tarball）与 npm 暂存（staged publishing，网页 2FA 审批后上线）；完整流程见 [docs/release.md](./docs/release.md)。
+发版：推 `v*` tag 自动触发 GitHub Release（tarball）与 npm 直发（Trusted Publishing / OIDC，含 provenance 溯源，无需人工审批）；完整流程见 [docs/release.md](./docs/release.md)。
 
 ## 致谢
 
