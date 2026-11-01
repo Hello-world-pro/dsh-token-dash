@@ -1,6 +1,6 @@
 # 推送版本 tag 触发 npm 发布：校验 tag 与 package.json 版本一致，provenance 附源信息。
-# 认证走 npm Trusted Publishing（OIDC）：npm 账号侧预先信任本仓库的 publish.yml，
-# 无需在 Secrets 存 NPM_TOKEN（模板参考 dsh-token-usage-lao，适配零依赖：无 install 步骤）。
+# 认证：Granular Access Token（仓库 secret NPM_TOKEN，仅 publish 权限）；
+# 后续可切换 Trusted Publishing（OIDC，npm 包设置里预信任本 workflow 后删除 token）。
 name: publish
 
 on:
@@ -26,9 +26,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          # 刻意不配 registry-url：setup-node 配了它就会写 .npmrc 并注入占位 NODE_AUTH_TOKEN，
-          # 那个假 token 会盖过 Trusted Publishing 的 OIDC 认证，发布时报 401 token is invalid。
-          # npm 默认 registry 就是 registry.npmjs.org，无需额外指定。
+          registry-url: https://registry.npmjs.org
 
       - name: 校验 tag 与 package.json 版本一致
         run: |
@@ -42,17 +40,10 @@ jobs:
           fi
           echo "PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
 
-      - name: 升级 npm CLI（Trusted Publishing 需要 11.5.1+，setup-node 自带版本偏旧）
-        run: |
-          npm install -g npm@latest
-          npm --version
-
       # npm publish 会先执行 prepublishOnly：npm test（L1 单测，node 内置 runner 零依赖）。
-      # 认证由 OIDC 在发布时向 npm 换取短期令牌，NODE_AUTH_TOKEN 必须为空，
-      # 否则 npm 会优先使用静态 token 而跳过 OIDC。
       - name: 发布到 npm
         env:
-          NODE_AUTH_TOKEN: ""
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           ARGS=(--provenance --access public)
           if [[ "$PKG_VERSION" == *-* ]]; then

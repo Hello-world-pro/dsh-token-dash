@@ -2,6 +2,20 @@
 
 本文件记录每个版本的**新增**与**修改**。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.0.1] - 2026-11-01
+
+### 新增
+
+- npm 分发通道：`dsh plugin --profile desktop add dsh-token-dash`（README 安装段三方式）
+- `publish.yml`：tag 触发自动发布 npm（provenance 附源信息）
+- GitHub Issue 治理体系：标签 11 个、双语 Issue 模板（Bug 强制日志附件）、模板合规检查与超时自动关闭两个 Actions
+- 英文版 `README.en.md`（中英互链）
+
+### 修改
+
+- 根目录整理：`catalog.json` 移入 `src/`（与消费者同目录）
+- 新增 `tools/logs.mjs` 日志查看工具（`npm run logs`）、`doc/release.md` 发版 checklist、`doc/design.md` 设计文档
+
 ## [1.0.0] - 2026-11-01
 
 首个正式版。
