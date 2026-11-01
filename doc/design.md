@@ -54,9 +54,9 @@ dsh-token-dash/
 │   ├── adapters.js        供应商侦测（五家 API/订阅）+ 事件日志映射 logAdapterEvents
 │   ├── providers.js       provider 常量：归一化、显示名、币种、模型前缀归属、默认模型表
 │   ├── pricing.js         价格：内置 catalog + 社区价格表 + OpenRouter 路由价
+│   ├── catalog.json       内置模型价格目录（官方价，随包发布，pricing.js 消费）
 │   ├── store.js           持久化：DSH_HOME 解析、daily/prefs 读写（原子写）、flusher
 │   └── diagnostics.js     日志器（JSONL、脱敏、轮转）与日志导出
-├── catalog.json           内置模型价格目录（官方价，随包发布）
 ├── locale/                预留 i18n 词条（zh.json，暂未接线）
 ├── tools/logs.mjs         常驻日志查看工具（npm run logs）
 ├── scripts/e2e.mjs        端到端测试（临时 DSH_HOME + web profile + Playwright）

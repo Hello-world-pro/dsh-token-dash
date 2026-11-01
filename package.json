@@ -13,7 +13,6 @@
     "index.js",
     "client.js",
     "src",
-    "catalog.json",
     "locale",
     "doc/pic",
     "cordis.patch.yml",

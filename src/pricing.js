@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { normalizeModel, normalizeProvider, providerCurrency } from './providers.js'
 
-const BUNDLED = JSON.parse(readFileSync(new URL('../catalog.json', import.meta.url), 'utf8'))
+const BUNDLED = JSON.parse(readFileSync(new URL('./catalog.json', import.meta.url), 'utf8'))
 const GITEE = 'https://gitee.com/oyw125/model-price-table/raw/master/model_pricing.json'
 const GITHUB = 'https://raw.githubusercontent.com/LaoYueHanNi/model-price-table/master/model_pricing.json'
 const ROUTER = 'https://openrouter.ai/api/v1/models'
