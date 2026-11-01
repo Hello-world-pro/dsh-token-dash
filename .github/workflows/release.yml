@@ -22,7 +22,13 @@ jobs:
           node-version: 20
 
       - name: Resolve release tag
-        run: echo "RELEASE_TAG=v$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if [[ "$VERSION" == *-local.* ]]; then
+            echo "::error::本地构建版本 ${VERSION} 不能创建 GitHub Release"
+            exit 1
+          fi
+          echo "RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
 
       - name: Pack tarball
         run: npm run pack

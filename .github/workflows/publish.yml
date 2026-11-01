@@ -39,6 +39,10 @@ jobs:
               exit 1
             fi
           fi
+          if [[ "$PKG_VERSION" == *-local.* ]]; then
+            echo "::error::本地构建版本 ${PKG_VERSION} 不能发布到 npm"
+            exit 1
+          fi
           echo "PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
 
       - name: 升级 npm CLI（Trusted Publishing 需要 11.5.1+，setup-node 自带版本偏旧）

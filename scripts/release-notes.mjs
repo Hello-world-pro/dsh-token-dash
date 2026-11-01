@@ -10,6 +10,10 @@ import { dirname, resolve } from 'node:path'
 const args = process.argv.slice(2)
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
 const version = args[0] !== undefined && !args[0].startsWith('-') ? args[0] : pkg.version
+if (version.includes('-local.')) {
+  console.error(`本地构建版本 ${version} 不能用于 Release notes`)
+  process.exit(2)
+}
 const outIndex = args.indexOf('--out')
 const out = outIndex === -1 ? null : args[outIndex + 1]
 if (outIndex !== -1 && (out === undefined || out === '')) {

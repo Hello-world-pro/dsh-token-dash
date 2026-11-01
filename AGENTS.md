@@ -69,7 +69,7 @@ npm pack --dry-run
 
 - AI 只准备到“可发布”，不执行 `npm publish`、不推 tag；发布由用户明确授权。
 - npm 包只含 `lib` / `cordis.patch.yml` / `locale` / `README.md` / `LICENSE`。
-- 发布流程见 `docs/release.md`；历史发布 checklist 见 `docs/checklist/archived/dsh/token-dash-release-checklist.md`。
+- 发布流程见 `docs/release.md` 与 `.agents/skills/dsh-token-dash-release/SKILL.md`；历史发布 checklist 见 `docs/checklist/archived/dsh/token-dash-release-checklist.md`。
 
 ## 安全
 
