@@ -6,6 +6,43 @@
 
 DSH 底栏 Token 看板：月度预算、订阅配额、账户余额、模型费用/用量明细与诊断日志，全程本地估算、只读本地数据。
 
+## 安装
+
+Requires DSH `0.2.1` or newer. 两种方式任选：
+
+**方式一：GitHub 仓库直装**（推荐，本插件纯 JavaScript 无构建，源码即产物）
+
+```bash
+dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash
+```
+
+**方式二：Release 产物安装**（离线 / 网络受限场景）——从 [Releases](https://github.com/spartawhy117/dsh-token-dash/releases) 下载 `dsh-token-dash-x.y.z.tgz` 后：
+
+```bash
+dsh plugin --profile desktop add /path/to/dsh-token-dash-1.0.0.tgz
+```
+
+> 包声明了 `dsh.bundle`，`add` 会自动把插件接入 profile——安装即用，首次启动会自动回填安装前的历史会话数据。
+
+## 更新
+
+```bash
+dsh plugin --profile desktop update github:spartawhy117/dsh-token-dash
+```
+
+也可以在插件设置页（P3 → 检查更新）内完成：发现新版本 → 确认 → 自动执行更新 → 重启生效。用方式二（tgz）安装的，重新下载新版 tgz 后 `add` 覆盖安装。
+
+## 卸载
+
+```bash
+dsh plugin --profile desktop remove github:spartawhy117/dsh-token-dash
+```
+
+数据文件保留在 `$DSH_HOME/dsh-token-dash/`（消耗记录、预算与模式偏好），不再需要时手动删除。
+
+> [!NOTE]
+> npm 源安装将在后续版本提供。届时若从 `github:` 安装切换到 npm 包名，需要先 `remove` 旧名再 `add` 新名（不同安装名无法原地 `update`），数据不受影响。
+
 ![dashboard](doc/pic/panel-dashboard.png)
 
 ## 功能特性
@@ -65,43 +102,6 @@ P3 · 设置
 │ 价格与版本 · 版本 1.0.0                     [检查更新]   │
 └──────────────────────────────────────────────────────────┘
 ```
-
-## 安装
-
-Requires DSH `0.2.1` or newer. 两种方式任选：
-
-**方式一：GitHub 仓库直装**（推荐，本插件纯 JavaScript 无构建，源码即产物）
-
-```bash
-dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash
-```
-
-**方式二：Release 产物安装**（离线 / 网络受限场景）——从 [Releases](https://github.com/spartawhy117/dsh-token-dash/releases) 下载 `dsh-token-dash-x.y.z.tgz` 后：
-
-```bash
-dsh plugin --profile desktop add /path/to/dsh-token-dash-1.0.0.tgz
-```
-
-> 包声明了 `dsh.bundle`，`add` 会自动把插件接入 profile——安装即用，首次启动会自动回填安装前的历史会话数据。
-
-## 更新
-
-```bash
-dsh plugin --profile desktop update github:spartawhy117/dsh-token-dash
-```
-
-也可以在插件设置页（P3 → 检查更新）内完成：发现新版本 → 确认 → 自动执行更新 → 重启生效。用方式二（tgz）安装的，重新下载新版 tgz 后 `add` 覆盖安装。
-
-## 卸载
-
-```bash
-dsh plugin --profile desktop remove github:spartawhy117/dsh-token-dash
-```
-
-数据文件保留在 `$DSH_HOME/dsh-token-dash/`（消耗记录、预算与模式偏好），不再需要时手动删除。
-
-> [!NOTE]
-> npm 源安装将在后续版本提供。届时若从 `github:` 安装切换到 npm 包名，需要先 `remove` 旧名再 `add` 新名（不同安装名无法原地 `update`），数据不受影响。
 
 ## 使用说明
 
