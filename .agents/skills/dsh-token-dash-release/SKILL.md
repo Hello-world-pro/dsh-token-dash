@@ -45,6 +45,8 @@ description: 管理 dsh-token-dash 的本地候选包、CHANGELOG 修改历史�
 
 ## 本地打包（不发布）
 
+> **硬门槛：只有用户在当前轮显式说出“本地打包 / 本地版本 / 候选包”才执行。** 完成 issue、修复、测试或提交后不得自动本地打包、改 `package.json` 版本、写 local CHANGELOG 块或安装本地包；不得以“顺手验证”为由绕过。
+
 1. 执行版本基准核验；确认目标 base 版本与下一个 `-local.N`（同 base 取 CHANGELOG / 历史 local 最大值 +1）。
 2. 更新 `package.json` 为 `X.Y.Z-local.N`；同步 `scripts/e2e.mjs` 两处版本 fixture（`baseSummary.version`、update mock 的 `current`）。
 3. 在 CHANGELOG 顶部新增或更新该 local 块，记录本次修改。

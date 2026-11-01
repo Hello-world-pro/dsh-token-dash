@@ -4,6 +4,8 @@
 
 ## 本地打包（不发布）
 
+> 仅当用户显式要求“本地打包 / 本地版本 / 候选包”时执行；完成 issue 或修复后不得自动打包。
+
 1. 读 `.agents/skills/dsh-token-dash-release/references/official-release-version.md` 确认正式版基准，并确定目标 `X.Y.Z-local.N`（同 base 取历史最大值 +1）。
 2. 改 `package.json` 为 `X.Y.Z-local.N`；同步 `scripts/e2e.mjs` 两处版本字符串（`baseSummary.version`、update mock 的 `current`）。
 3. 在 `CHANGELOG.md` 顶部新增/更新 `## [X.Y.Z-local.N] - YYYY-MM-DD`，标题下加 `> 本地构建，未发布`，记录本次修改。
