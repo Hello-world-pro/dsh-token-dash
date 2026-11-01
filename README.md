@@ -1,6 +1,10 @@
 <h1 align="center">dsh-token-dash</h1>
 
 <p align="center">
+  简体中文 | <a href="./README.en.md">English</a>
+</p>
+
+<p align="center">
   在 DSH 输入框旁看清每日/每月模型消耗与预算余量：API Key 一填即自动识别订阅还是按量计费，月度预算可设、消耗实时估算。
 </p>
 

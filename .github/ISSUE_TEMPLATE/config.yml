@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 使用问题先查 README / Check the README first
+    url: https://github.com/spartawhy117/dsh-token-dash#readme
+    about: 安装、日志排查、隐私边界说明 / Install, troubleshooting & privacy notes

@@ -1,0 +1,30 @@
+name: 功能建议 / Feature Request
+description: 新功能或体验改进建议 / Suggest a new feature or improvement
+title: "[Feature] "
+labels: [enhancement, triage]
+body:
+  - type: dropdown
+    id: module
+    attributes:
+      label: 建议模块 / Module
+      multiple: true
+      options:
+        - 界面 UI（Pill / 看板 Dashboard / 设置 Settings）
+        - 数据 Data（费用 / 用量 / 余额 / 订阅数字 / cost & usage numbers）
+        - 日志 Logging
+        - 安装与更新 Install & Update
+        - 其它 Other
+    validations:
+      required: true
+  - type: textarea
+    id: content
+    attributes:
+      label: 建议内容 / Your suggestion
+      description: 想要什么、为什么 / What you want and why
+    validations:
+      required: true
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 使用场景 / Use case
+      description: 什么情况下需要它（帮助评估优先级）/ When you need it (helps prioritize)

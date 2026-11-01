@@ -1,0 +1,185 @@
+# 校验 issue 模板必填项：Bug 强制日志附件（仅 bug，enhancement 不校验日志）；
+# 模块下拉选项映射英文标签自动打标；违规打 template-incomplete 并评论（2 小时补充期限）。
+name: issue-template-compliance
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate issue template compliance
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            if (!issue || issue.pull_request) return;
+            const issueNumber = issue.number;
+            const body = issue.body || "";
+            const existingLabels = issue.labels.map((label) => label.name);
+
+            const complianceLabel = "template-incomplete";
+            const complianceMarker = "<!-- issue-template-compliance -->";
+            const otherModuleMarker = "<!-- issue-other-module-reminder -->";
+            const isBug = existingLabels.includes("bug");
+            const isEnhancement = existingLabels.includes("enhancement");
+            if (!isBug && !isEnhancement) return; // 非模板入口创建的 issue 不校验
+
+            const moduleLabelMap = [
+              { match: /界面|UI/i, name: "ui", color: "1D76DB", description: "界面显示与交互（Pill / 看板 / 设置）/ UI & interaction" },
+              { match: /数据|Data/i, name: "data", color: "0E8A16", description: "数字与归属：采集/聚合/费用估算/侦测/余额/订阅配额 / cost, usage, attribution & provider data" },
+              { match: /日志|Logging/i, name: "logging", color: "F9D0C4", description: "日志输出/排查工具相关 / logging & diagnostics" },
+              { match: /安装与更新|Install/i, name: "install-update", color: "C5DEF5", description: "安装/更新/发版流程相关 / install, update & release" },
+              { match: /其它|Other/i, name: "other", color: "E99695", description: "未归类的其它问题或建议 / uncategorized" },
+            ];
+            const moduleLabelNames = ["ui", "data", "logging", "install-update", "other"];
+
+            function escapeRegExp(text) {
+              return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            }
+
+            // 双语 heading：如 "### 问题模块 / Module"——按中文关键词前缀匹配
+            function extractSection(keyword) {
+              const pattern = new RegExp(`###\\s+[^\\n]*${escapeRegExp(keyword)}[^\\n]*\\n([\\s\\S]*?)(?=\\n###\\s+|\\s*$)`);
+              const match = body.match(pattern);
+              return match ? match[1].trim() : "";
+            }
+
+            function normalize(text) {
+              return (text || "")
+                .replace(/\r/g, "")
+                .replace(/_No response_/gi, "")
+                .replace(/<!--[\s\S]*?-->/g, "")
+                .trim();
+            }
+
+            function extractCheckedOptions(keyword) {
+              const section = extractSection(keyword);
+              return section
+                .split("\n")
+                .map((line) => line.trim())
+                .filter((line) => /^- \[x\]/i.test(line))
+                .map((line) => line.replace(/^- \[x\]\s*/i, "").trim());
+            }
+
+            const violations = [];
+
+            const checkedModules = extractCheckedOptions("模块");
+            if (checkedModules.length === 0) {
+              violations.push("问题模块未勾选 / Module is not selected");
+            }
+
+            if (isBug) {
+              const version = normalize(extractSection("插件版本"));
+              if (version === "") violations.push("插件版本缺失 / Plugin version is missing");
+              const dshVersion = normalize(extractSection("DSH 版本"));
+              if (dshVersion === "") violations.push("DSH 版本缺失 / DSH version is missing");
+              const whatHappened = normalize(extractSection("问题描述"));
+              if (whatHappened === "") violations.push("问题描述为空 / Problem description is empty");
+              const steps = normalize(extractSection("复现步骤"));
+              if (steps === "") violations.push("复现步骤为空 / Reproduction steps are empty");
+
+              // 日志段强制附件：必须是上传文件的 markdown 链接（占位文字不算）
+              const logsRaw = extractSection("日志文件");
+              const logsText = normalize(logsRaw);
+              if (logsText === "") {
+                violations.push("日志文件未提供 / Log file is missing");
+              } else {
+                const hasAttachment = /github\.com\/user-attachments\//.test(logsRaw) || /\[[^\]]*\.(zip|log|txt|gz|7z)[^)]*\]\(/i.test(logsRaw);
+                if (!hasAttachment) {
+                  violations.push("日志未以附件上传（只写文字或粘贴片段不通过）/ Logs must be uploaded as an attachment (plain text or snippets do not pass)");
+                }
+              }
+            }
+
+            if (isEnhancement) {
+              const content = normalize(extractSection("建议内容"));
+              if (content === "") violations.push("建议内容为空 / Suggestion is empty");
+            }
+
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner: context.repo.owner, repo: context.repo.repo, name });
+              } catch (error) {
+                if (error.status === 404) {
+                  await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name, color, description });
+                } else {
+                  throw error;
+                }
+              }
+            }
+
+            async function addLabel(name) {
+              if (!existingLabels.includes(name)) {
+                await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number: issueNumber, labels: [name] });
+              }
+            }
+
+            async function removeLabel(name) {
+              if (existingLabels.includes(name)) {
+                await github.rest.issues.removeLabel({ owner: context.repo.owner, repo: context.repo.repo, issue_number: issueNumber, name });
+              }
+            }
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: issueNumber, per_page: 100,
+            });
+            const existingComment = comments.find((comment) => comment.body && comment.body.includes(complianceMarker));
+            const existingOtherModuleComment = comments.find((comment) => comment.body && comment.body.includes(otherModuleMarker));
+
+            if (violations.length > 0) {
+              await ensureLabel(complianceLabel, "B60205", "模板必填项未通过自动检查 / template check failed");
+              await addLabel(complianceLabel);
+
+              const commentBody = `${complianceMarker}
+            这个 issue 目前没有通过模板检查 / This issue did not pass the template check.
+
+            **需要补充的内容 / Missing:**
+            ${violations.map((item) => `- ${item}`).join("\n")}
+
+            请在 **2 小时** 内编辑当前 issue 完成补充；超时后系统会自动关闭 / Please edit this issue within **2 hours**; it will be closed automatically afterwards.
+            如果你认为这是误判，可以直接回复说明 / Reply if you believe this is a mistake.`;
+
+              if (existingComment) {
+                await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: existingComment.id, body: commentBody });
+              } else {
+                await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: issueNumber, body: commentBody });
+              }
+
+              core.info(`Issue #${issueNumber} failed compliance: ${violations.join("; ")}`);
+              return;
+            }
+
+            await removeLabel(complianceLabel);
+            if (existingComment) {
+              await github.rest.issues.deleteComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: existingComment.id });
+            }
+
+            // 模块勾选 → 英文标签自动打标
+            for (const checked of checkedModules) {
+              const rule = moduleLabelMap.find((rule) => rule.match.test(checked));
+              if (rule === undefined) continue;
+              await ensureLabel(rule.name, rule.color, rule.description);
+              await addLabel(rule.name);
+            }
+
+            // 勾"其它"提醒改具体模块
+            const selectedOther = checkedModules.some((item) => /其它|Other/i.test(item));
+            if (selectedOther) {
+              const otherCommentBody = `${otherModuleMarker}
+            你当前勾选了"其它"模块 / You selected "Other".
+            如果这个问题可以归到更具体的模块（界面 UI / 数据 Data / 日志 Logging / 安装与更新 Install & Update），建议修改，处理会更快 / Consider a more specific module for faster triage.`;
+              if (!existingOtherModuleComment) {
+                await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: issueNumber, body: otherCommentBody });
+              }
+            } else if (existingOtherModuleComment) {
+              await github.rest.issues.deleteComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: existingOtherModuleComment.id });
+            }
+
+            core.info(`Issue #${issueNumber} passed compliance.`);

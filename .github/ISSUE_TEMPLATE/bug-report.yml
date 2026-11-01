@@ -1,0 +1,66 @@
+name: 缺陷报告 / Bug Report
+description: 功能异常或行为与预期不符 / Something isn't working as expected
+title: "[Bug] "
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！Thanks for reporting!
+        请先看 [README 常见问题 / Troubleshooting](https://github.com/spartawhy117/dsh-token-dash#readme)，确认未与已有 issue 重复 / check existing issues first.
+  - type: dropdown
+    id: module
+    attributes:
+      label: 问题模块 / Module
+      description: 勾选出现问题的大致位置（可多选）/ Where the problem is (multiple choices)
+      multiple: true
+      options:
+        - 界面 UI（Pill / 看板 Dashboard / 设置 Settings）
+        - 数据 Data（费用 / 用量 / 余额 / 订阅数字 / cost & usage numbers）
+        - 日志 Logging
+        - 安装与更新 Install & Update
+        - 其它 Other
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: 插件版本 / Plugin version
+      description: 设置页底部"价格与版本"可见 / shown at the bottom of the settings page
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DSH 版本 / DSH version
+      placeholder: "0.2.1"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 问题描述 / What happened
+      description: 具体现象与期望行为的差异 / What you saw vs. what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      placeholder: |
+        1. 打开 … / Open …
+        2. 点击 … / Click …
+        3. 看到 … / See …
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志文件（必填，必须上传）/ Log file (required, must upload)
+      description: |
+        **必须上传日志文件 / A log file MUST be uploaded**：把 `~/.dsh/logs/dsh-token-dash/` 目录打包成 zip 拖入本框 / zip the directory and drag it into this box.
+        日志已脱敏（不含 API Key、不含对话内容）/ Logs are redacted (no API keys, no conversation content)；错误日志带 errorKind/httpStatus，可直接定位原因.
+        ⚠️ 只写"已上传 / uploaded"等文字、或只粘贴片段**不会通过自动检查**——工作流校验本框内必须包含附件链接，缺失将打 template-incomplete 标签并在 2 小时后自动关闭 / plain text or snippets alone will NOT pass the automated check; a missing attachment gets the issue closed after 2 hours.
+    validations:
+      required: true
