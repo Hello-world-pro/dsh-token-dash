@@ -1,6 +1,6 @@
-# 推送版本 tag 触发 npm 发布：校验 tag 与 package.json 版本一致，provenance 附源信息。
-# 认证：Granular Access Token（仓库 secret NPM_TOKEN，仅 publish 权限）；
-# 后续可切换 Trusted Publishing（OIDC，npm 包设置里预信任本 workflow 后删除 token）。
+# 推送版本 tag 触发 npm staged publishing：校验 tag 与 package.json 版本一致，
+# 用 stage-only token 把包送入暂存区（npmjs.com → Packages → Staged Packages），
+# 维护者在网页上 2FA 审批后正式发布（granular token 直发权限 2027-01 废弃，官方推荐 stage 流程）。
 name: publish
 
 on:
@@ -40,13 +40,13 @@ jobs:
           fi
           echo "PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
 
-      # npm publish 会先执行 prepublishOnly：npm test（L1 单测，node 内置 runner 零依赖）。
-      - name: 发布到 npm
+      # npm stage publish 需要 npm CLI ≥ 11.21；把包送入暂存区，维护者在 npmjs.com 2FA 审批后正式发布。
+      - name: Stage package for release
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          ARGS=(--provenance --access public)
+          ARGS=(--access public)
           if [[ "$PKG_VERSION" == *-* ]]; then
             ARGS+=(--tag next)
           fi
-          npm publish "${ARGS[@]}"
+          npm stage publish "${ARGS[@]}"
