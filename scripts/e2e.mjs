@@ -95,7 +95,7 @@ let currentSummary = {
   providers: [...apiProviders, ...subProviders],
   breakdown: { models },
   pricingLinks,
-  catalog: { version: 1, updatedAt: '2026-11-02', source: 'community-gitee' },
+  catalog: { version: 1, updatedAt: '1793591115', source: 'community-gitee', url: 'https://gitee.com/oyw125/model-price-table' },
   showBalance: true,
   version: '1.0.7',
   refreshMs: 60000,
@@ -115,6 +115,9 @@ const usageFor = (range) => ({
 })
 let failSummary = false
 let failUsage = false
+let updateAvailable = false
+let updateRequests = 0
+let usageDelay = 0
 const env = { ...process.env, DSH_HOME: home }
 let server
 let browser
@@ -152,10 +155,14 @@ try {
   })
   await page.route('**/token-dash/api/usage*', async (route) => {
     const range = new URL(route.request().url()).searchParams.get('range') ?? 'today'
+    if (usageDelay > 0) await new Promise((resolveDelay) => setTimeout(resolveDelay, usageDelay))
     if (failUsage) return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ ok: false, reason: 'mock-usage' }) })
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: usageFor(range) }) })
   })
-  await page.route('**/token-dash/api/update', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: false, latest: '1.0.7', current: '1.0.7' } }) }))
+  await page.route('**/token-dash/api/update', (route) => {
+    updateRequests += 1
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '1.0.8', current: '1.0.7' } }) })
+  })
   await page.route('**/open-in-app/open', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }))
   await page.route('**/token-dash/api/logs/export*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { content: '{"type":"header"}\n' } }) }))
 
@@ -179,6 +186,8 @@ try {
   assert.ok(await pill.isVisible())
   assert.match(await pill.innerText(), /\[API\]/)
   assert.match(await pill.innerText(), /¥49\.86/)
+  await page.waitForTimeout(4300)
+  assert.ok(updateRequests >= 1, 'startup update check should run once')
 
   const jsClick = (locator) => locator.evaluate((node) => node.click())
   const openPanel = async () => {
@@ -194,17 +203,65 @@ try {
   assert.match(await panel.innerText(), /¥12\.34\/¥100\.00/)
   assert.match(await panel.innerText(), /余额 ¥49\.86/)
   assert.match(await panel.innerText(), /DeepSeek-V4\.1-Flash/)
-  assert.match(await panel.innerText(), /Tokens 320k/)
+  assert.match(await panel.innerText(), /Tokens 320k \[100k\/200k\/20k\]/)
   assert.match(await panel.innerText(), /请求 12/)
   assert.match(await panel.innerText(), /命中 /)
+  const usageLine = panel.getByTestId('token-dash-usage-line').first()
+  assert.match(await usageLine.innerText(), /Tokens 320k .*请求 12\s*命中 /s)
+  assert.ok((await usageLine.boundingBox()).height < 24, 'usage metrics should stay on one line')
 
-  // P2 info tooltip and segment capsules.
+  // Header icon buttons share one control size.
   const info = panel.getByRole('button', { name: '查看支持的 API Key 范围' })
+  const refreshButton = panel.getByTestId('token-dash-refresh')
+  const closeButton = panel.getByTestId('token-dash-close')
+  const [infoBox, refreshBox, closeBox] = await Promise.all([info.boundingBox(), refreshButton.boundingBox(), closeButton.boundingBox()])
+  for (const [name, box] of [['info', infoBox], ['refresh', refreshBox], ['close', closeBox]]) {
+    assert.ok(box !== null && Math.abs(box.width - 22) < 0.5 && Math.abs(box.height - 22) < 0.5, `${name} header button ${box?.width}x${box?.height} should be 22x22`)
+  }
+
+  // Support tooltip is a fixed overlay, independent from panel clipping.
   await jsClick(info)
   await page.waitForTimeout(100)
-  await page.waitForTimeout(100)
   assert.match(await panel.innerText(), /目前支持 DeepSeek \/ Kimi \/ GLM \/ OpenRouter \/ Qwen API Key/)
+  const headerTip = page.getByRole('tooltip')
+  await headerTip.waitFor({ timeout: 5000 })
+  assert.equal(await headerTip.evaluate((node) => getComputedStyle(node).position), 'fixed')
+  const headerTipBox = await headerTip.boundingBox()
+  assert.ok(headerTipBox !== null && headerTipBox.x >= 0 && headerTipBox.x + headerTipBox.width <= 1280, 'header tooltip should stay inside viewport')
+  assert.ok(Math.abs((headerTipBox.x + headerTipBox.width / 2) - (infoBox.x + infoBox.width / 2)) < 1.5, 'header tooltip should be centered on trigger')
+  await jsClick(info)
+
+  // Detail rows no longer carry per-model info buttons; one legend lives on Real Tokens.
+  assert.equal(await panel.getByRole('button', { name: /DeepSeek-V4\.1-Flash Token 明细/ }).count(), 0)
+  const tokenInfo = panel.getByRole('button', { name: 'Tokens 括号说明' })
+  assert.equal(await tokenInfo.count(), 1)
+  assert.equal(await tokenInfo.evaluate((node) => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)')
+  assert.equal(await tokenInfo.evaluate((node) => getComputedStyle(node).borderTopStyle), 'none')
+  await jsClick(tokenInfo)
+  await page.waitForTimeout(100)
+  const modelTip = page.getByRole('tooltip')
+  await modelTip.waitFor({ timeout: 5000 })
+  assert.equal(await modelTip.evaluate((node) => getComputedStyle(node).position), 'fixed')
+  assert.match(await modelTip.innerText(), /Tokens 括号顺序：输入 \/ 缓存 \/ 输出/)
+  const inlineBox = await tokenInfo.boundingBox()
+  const modelTipBox = await modelTip.boundingBox()
+  assert.ok(modelTipBox !== null && inlineBox !== null, 'legend tooltip and trigger should have boxes')
+  assert.ok(modelTipBox.y + modelTipBox.height <= inlineBox.y + 1, 'legend tooltip should default above trigger')
+  assert.ok(modelTipBox.width < 220, `legend tooltip width ${modelTipBox.width} should fit content`)
+  assert.ok(Math.abs((modelTipBox.x + modelTipBox.width / 2) - (inlineBox.x + inlineBox.width / 2)) < 1.5, 'legend tooltip should be centered on trigger')
+  await page.screenshot({ path: join(tmpRoot, 'e2e', 'tooltip.png'), fullPage: true })
+  await jsClick(tokenInfo)
   assert.equal(await panel.getByRole('tab').count(), 6) // 2 tabs + 4 range items
+
+  // Range switch must keep the previous complete view while loading.
+  usageDelay = 600
+  await jsClick(panel.getByRole('tab', { name: '近30天' }))
+  await page.waitForTimeout(120)
+  assert.match(await panel.innerText(), /Tokens 320k \[100k\/200k\/20k\]/)
+  assert.ok(!(await panel.innerText()).includes('Tokens 0'))
+  await page.waitForTimeout(650)
+  usageDelay = 0
+  assert.match(await panel.innerText(), /近30天/)
 
   // P2 range and detail.
   await jsClick(panel.getByRole('tab', { name: '近7天' }))
@@ -228,13 +285,60 @@ try {
   assert.ok(!(await settings.innerText()).includes('清空日志'))
   assert.ok(!(await settings.innerText()).includes('本月 Token'))
   assert.equal(await settings.locator('select').count(), 0)
+
+  // Refresh interval must stay compact and the title must stay on one line.
+  const refreshSegment = settings.getByTestId('token-dash-refresh-segment')
+  const refreshSegmentBox = await refreshSegment.boundingBox()
+  assert.ok(refreshSegmentBox !== null && refreshSegmentBox.width <= 170, `refresh segment width ${refreshSegmentBox?.width} should be <= 170`)
+  const refreshLabel = settings.getByText('刷新间隔', { exact: true })
+  assert.equal(await refreshLabel.evaluate((node) => node.getClientRects().length), 1)
+
+  // Logs and prices are separate single-column sections in the restored order.
+  const logSection = settings.getByTestId('token-dash-log-section')
+  const priceSection = settings.getByTestId('token-dash-price-section')
+  assert.equal(await logSection.count(), 1)
+  assert.equal(await priceSection.count(), 1)
+  const logBox = await logSection.boundingBox()
+  const priceBox = await priceSection.boundingBox()
+  assert.ok(logBox !== null && priceBox !== null)
+  assert.ok(logBox.y + logBox.height <= priceBox.y + 1, 'log section should be above price section')
+  assert.equal(await logSection.locator('b').first().evaluate((node) => node.getClientRects().length), 1)
+  assert.equal(await settings.locator('section').count(), 0)
   assert.equal(await panel.getByRole('button', { name: '查看支持的 API Key 范围' }).count(), 0)
   await page.screenshot({ path: join(tmpRoot, 'e2e', 'p3-v2.png'), fullPage: true })
-  assert.equal(await settings.getByRole('link').count(), 5)
+  const priceLinks = settings.getByTestId('token-dash-price-links').getByRole('link')
+  assert.equal(await priceLinks.count(), 5)
+  assert.ok(!(await settings.innerText()).includes('查看价格明细'))
+  assert.ok(!(await settings.innerText()).includes('1793591115'))
+  assert.match(await settings.innerText(), /价格表 2026-\d{2}-\d{2}/)
+  const community = settings.getByRole('link', { name: '社区' })
+  assert.equal(await community.count(), 1)
+  assert.equal(await community.getAttribute('href'), 'https://gitee.com/oyw125/model-price-table')
+  assert.match(await settings.innerText(), /版本 1\.0\.7/)
+  assert.ok(!(await settings.innerText()).includes('· 已保存'))
 
   // Price links share a row.
-  const linkBoxes = await settings.getByRole('link').evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().top))
+  const linkBoxes = await priceLinks.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().top))
   assert.ok(Math.max(...linkBoxes) - Math.min(...linkBoxes) < 2, 'price links should share one row')
+
+  // Update check must restore the button after "up to date".
+  const updateButton = settings.getByTestId('token-dash-update')
+  await updateButton.waitFor({ timeout: 5000 })
+  await jsClick(updateButton)
+  await page.waitForTimeout(250)
+  assert.match(await settings.innerText(), /已是最新/)
+  assert.equal(await updateButton.isEnabled(), true)
+  await page.waitForTimeout(1800)
+  assert.match(await settings.innerText(), /版本 1\.0\.7/)
+  assert.equal(await updateButton.isVisible(), true)
+
+  // Available state opens an explicit confirm, not an auto install.
+  updateAvailable = true
+  await jsClick(updateButton)
+  await page.waitForTimeout(250)
+  assert.match(await settings.innerText(), /发现 1\.0\.8/)
+  await jsClick(settings.getByRole('button', { name: '取消' }))
+  updateAvailable = false
 
   // Budget valid/invalid.
   const budgetInput = settings.getByTestId('token-dash-budget-input-deepseek-official')
@@ -246,6 +350,11 @@ try {
   }, value)
   await setBudget('200.50')
   await page.waitForTimeout(500)
+  assert.match(await settings.innerText(), /已保存/)
+  assert.ok(!(await settings.innerText()).includes('版本 1.0.7 · 已保存'))
+  await page.waitForTimeout(1800)
+  assert.match(await settings.innerText(), /版本 1\.0\.7/)
+  assert.ok(!(await settings.innerText()).includes('· 已保存'))
   const savedPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
   assert.equal(savedPrefs.budgets['deepseek-official'].amount, 200.5)
   await setBudget('-1')

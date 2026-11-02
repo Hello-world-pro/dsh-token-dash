@@ -89,6 +89,7 @@ test('社区价格表二次归一化后仍保留平坦价目', async () => {
   try {
     const info = await loadCommunityPricing({ force: true })
     assert.equal(info.source, 'community-gitee')
+    assert.equal(info.url, 'https://gitee.com/oyw125/model-price-table')
     const price = priceFor('deepseek-official', 'deepseek-flash', Date.UTC(2026, 10, 2, 0))
     assert.equal(price.input, 1)
     assert.equal(price.output, 4)

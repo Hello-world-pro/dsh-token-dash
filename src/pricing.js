@@ -8,11 +8,14 @@ import { normalizeModel, normalizeProvider, providerCurrency } from './providers
 const BUNDLED = JSON.parse(readFileSync(new URL('./catalog.json', import.meta.url), 'utf8'))
 const GITEE = 'https://gitee.com/oyw125/model-price-table/raw/master/model_pricing.json'
 const GITHUB = 'https://raw.githubusercontent.com/LaoYueHanNi/model-price-table/master/model_pricing.json'
+const GITEE_PAGE = 'https://gitee.com/oyw125/model-price-table'
+const GITHUB_PAGE = 'https://github.com/LaoYueHanNi/model-price-table'
 const ROUTER = 'https://openrouter.ai/api/v1/models'
 
 let catalog = normalizeCatalog(BUNDLED)
 let catalogUpdatedAt = BUNDLED.updatedAt ?? null
 let catalogSource = 'bundled'
+let catalogUrl = null
 let routerPrices = null
 let communityCache = { at: 0, value: null }
 
@@ -148,7 +151,7 @@ export function priceFor(provider, model, ts = Date.now()) {
 }
 
 export function catalogInfo() {
-  return { version: catalog.version ?? null, source: catalogSource, updatedAt: catalogUpdatedAt, models: allEntries().length }
+  return { version: catalog.version ?? null, source: catalogSource, updatedAt: catalogUpdatedAt, url: catalogUrl, models: allEntries().length }
 }
 
 export function setCatalogForTests(models) {
@@ -209,6 +212,7 @@ export async function loadCommunityPricing({ force = false } = {}) {
       if (parsed.models.length === 0) throw new Error('empty-catalog')
       catalog = parsed
       catalogSource = url === GITEE ? 'community-gitee' : 'community-github'
+      catalogUrl = url === GITEE ? GITEE_PAGE : GITHUB_PAGE
       catalogUpdatedAt = raw?.updatedAt === undefined ? null : String(raw.updatedAt)
       communityCache = { at: Date.now(), value: catalogInfo() }
       return catalogInfo()
