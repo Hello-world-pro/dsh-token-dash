@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/icon.png" alt="dsh-token-dash" width="96" height="96" />
+</p>
+
 <h1 align="center">dsh-token-dash</h1>
 
 <p align="center">
@@ -22,6 +26,7 @@
   <img src="https://img.shields.io/github/downloads/spartawhy117/dsh-token-dash/total?label=downloads" alt="downloads" />
   <img src="https://img.shields.io/github/license/spartawhy117/dsh-token-dash" alt="license" />
   <img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen" alt="node" />
+  <a href="https://awesome-dsh-plugin.com/zh/p/spartawhy117/dsh-token-dash"><img src="https://img.shields.io/badge/awesome--dsh--plugin-listed-6ea8ff" alt="awesome-dsh-plugin" /></a>
 </p>
 
 - **厂商支持**：DeepSeek（DS 账号 / API Key）、GLM Coding（订阅）、Kimi Coding（订阅）、Kimi / OpenRouter / Qwen（按量，OpenRouter USD、Qwen 国内 CNY / 国际 USD）——填 Key 自动识别订阅或按量计费
