@@ -58,23 +58,23 @@ Screenshots below use mock data so the full layout is visible at once:
 **P1 · Bottom bar pill** (home workspace row / activity row under the chat input; click to open the panel, click outside or `×` to close)
 
 <p align="center">
-  <img src="./docs/pic/pill-home.png" alt="Home pill" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-home.png" alt="Home pill" />
 </p>
 
 <p align="center">
-  <img src="./docs/pic/pill-session.png" alt="Session pill" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-session.png" alt="Session pill" />
 </p>
 
 **P2 · Floating dashboard (usage tab)**: monthly budgets and subscriptions, time range, two summary tiles, per-model breakdown
 
 <p align="center">
-  <img src="./docs/pic/panel-dashboard.png" alt="Dashboard" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-dashboard.png" alt="Dashboard" />
 </p>
 
 **P3 · Settings tab**: API billing, subscriptions, display, data & logs, pricing & version
 
 <p align="center">
-  <img src="./docs/pic/settings.png" alt="Settings" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/settings.png" alt="Settings" />
 </p>
 
 ---

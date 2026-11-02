@@ -14,7 +14,6 @@
     "client.js",
     "src",
     "locale",
-    "docs/pic",
     "cordis.patch.yml",
     "README.md",
     "LICENSE",

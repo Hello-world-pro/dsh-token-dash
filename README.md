@@ -58,23 +58,23 @@ dsh plugin --profile desktop add /path/to/dsh-token-dash-1.1.0.tgz
 **P1 · 底栏 Pill**（首页工作区行 / 会话输入框下方活动行；点击展开看板，点击浮层外或 `×` 收起）
 
 <p align="center">
-  <img src="./docs/pic/pill-home.png" alt="首页 Pill" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-home.png" alt="首页 Pill" />
 </p>
 
 <p align="center">
-  <img src="./docs/pic/pill-session.png" alt="会话 Pill" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-session.png" alt="会话 Pill" />
 </p>
 
 **P2 · 浮层看板（用量 tab）**：本月预算与订阅、时间范围、两格统计卡、按模型明细
 
 <p align="center">
-  <img src="./docs/pic/panel-dashboard.png" alt="浮层看板" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-dashboard.png" alt="浮层看板" />
 </p>
 
 **P3 · 设置 tab**：API 计费、订阅、显示、数据与日志、价格与版本
 
 <p align="center">
-  <img src="./docs/pic/settings.png" alt="设置" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/settings.png" alt="设置" />
 </p>
 
 ---
