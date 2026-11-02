@@ -250,7 +250,21 @@ export function apply(ctx) {
     if (webServer === undefined) return
     const refreshProviderCache = async () => {
       const data = await readProviders(scoped, prefs)
-      providerCache = { at: Date.now(), data }
+      const hadProviders = providerCache.hadProviders === true || data.length > 0
+      // 空快照不写 TTL：宿主服务未就绪时下一次请求立刻重试，避免整分钟空态
+      providerCache = {
+        at: data.length === 0 ? 0 : Date.now(),
+        data,
+        hadProviders,
+        degraded: data.length === 0 && hadProviders,
+      }
+      if (data.length === 0) {
+        logger.warn('provider', 'probe.miss', {
+          misses: data.misses ?? [],
+          credentials: scoped.get?.('credentials') !== undefined,
+          account: scoped.get?.('deepseekAccount') !== undefined,
+        })
+      }
       logAdapterEvents(logger, data)
       if (stampProviderKinds(state, data)) {
         logger.info('provider', 'kind.stamp', { ids: Object.keys(state.providerKinds) })
@@ -269,6 +283,7 @@ export function apply(ctx) {
             const summary = buildSummary(state, prefs, Date.now(), providerCache.data)
             summary.version = CURRENT_VERSION
             summary.refreshMs = prefs.refreshMs
+            summary.providersDegraded = providerCache.degraded === true
             summary.catalog = catalogInfo()
             logger.info('vm', 'build', { providers: summary.providers.length, api: summary.providers.filter((item) => item.kind === 'api').length, subscription: summary.providers.filter((item) => item.kind === 'subscription').length })
             json(res, 200, { ok: true, data: summary })
@@ -299,7 +314,7 @@ export function apply(ctx) {
             map.delete('zhipu')
             map.delete('moonshot')
             for (const item of subs) map.set(item.id, item)
-            providerCache = { at: Date.now(), data: [...map.values()] }
+            providerCache = { at: Date.now(), data: [...map.values()], hadProviders: true, degraded: false }
             if (stampProviderKinds(state, subs)) flusher.schedule()
             logAdapterEvents(logger, subs)
             logger.info('provider', 'subscriptions.refreshed', { ids: subs.map((item) => item.id) })

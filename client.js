@@ -41,6 +41,7 @@ window.__ModuleLoader__.load({
       '订阅套餐（账户级，已检测 {count}）': 'Subscription plan (account-wide, {count} detected)',
       '重新检测订阅配额': 'Recheck subscription quota',
       '未检测到已配置供应商': 'No configured provider detected',
+      '供应商探测失败': 'Provider probe failed',
       '时间范围': 'Time range',
       '刷新失败，保留上次数据': 'Refresh failed; keeping previous data',
       '范围数据加载失败': 'Range data failed to load',
@@ -840,7 +841,12 @@ window.__ModuleLoader__.load({
             h(Icon, { name: 'refresh', size: 12 }))))
         fixed.push(...subscriptions.map((provider) => h(QuotaRow, { key: provider.id, provider, reset: true })))
       }
-      if (fixed.length === 0) fixed.push(h('div', { key: 'empty', style: styles.empty }, tr('未检测到已配置供应商')))
+      if (fixed.length === 0) {
+        const degraded = summary?.providersDegraded === true
+        fixed.push(h('div', { key: 'empty', style: styles.empty },
+          degraded ? tr('供应商探测失败') : tr('未检测到已配置供应商'),
+          degraded ? h('button', { type: 'button', style: styles.button, onClick: onRetry }, tr('重试')) : null))
+      }
       return h(React.Fragment, null,
         h('div', { style: styles.section }, ...fixed),
         h('div', { style: { marginTop: 10 } }, h(Segmented, {

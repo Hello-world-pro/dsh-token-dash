@@ -102,6 +102,20 @@ test('hide 模式过滤；showBalance=false 仍请求余额（#31：开关只控
   }
 })
 
+test('readProviders 空结果附带 misses，区分未配置与隐藏', async () => {
+  const none = await readProviders(ctxWith({}), {})
+  assert.equal(none.length, 0)
+  assert.deepEqual(none.misses, [
+    'deepseek-official:none',
+    'zhipu:none',
+    'moonshot:none',
+    'openrouter:none',
+    'qwen:none',
+  ])
+  const hidden = await readProviders(ctxWith({ DASHSCOPE_API_KEY: 'sk-test' }), { billingModes: { qwen: 'hide' } })
+  assert.equal(hidden.misses.includes('qwen:hidden'), true)
+})
+
 test('Qwen 国际站 Key 按 USD，国内站按 CNY', async () => {
   const intl = await readProviders(ctxWith({ DASHSCOPE_INTL_API_KEY: 'sk-test' }), {})
   assert.equal(intl.find((item) => item.id === 'qwen').currency, 'USD')

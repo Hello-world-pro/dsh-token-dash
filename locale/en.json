@@ -41,6 +41,7 @@
   "订阅套餐（账户级，已检测 {count}）": "Subscription plan (account-wide, {count} detected)",
   "重新检测订阅配额": "Recheck subscription quota",
   "未检测到已配置供应商": "No configured provider detected",
+  "供应商探测失败": "Provider probe failed",
   "时间范围": "Time range",
   "刷新失败，保留上次数据": "Refresh failed; keeping previous data",
   "范围数据加载失败": "Range data failed to load",

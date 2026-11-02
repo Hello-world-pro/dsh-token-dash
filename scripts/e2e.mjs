@@ -97,7 +97,7 @@ let currentSummary = {
   pricingLinks,
   catalog: { version: 1, updatedAt: '1793591115', source: 'community-gitee', url: 'https://gitee.com/oyw125/model-price-table' },
   showBalance: true,
-  version: '1.1.0-local.6',
+  version: '1.1.0-local.7',
   refreshMs: 60000,
   currentProviderId: 'deepseek-official',
   updatedAt: now,
@@ -186,7 +186,7 @@ try {
   })
   await page.route('**/token-dash/api/update', (route) => {
     updateRequests += 1
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '1.1.0-local.7', current: '1.1.0-local.6' } }) })
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '1.1.0-local.8', current: '1.1.0-local.7' } }) })
   })
   await page.route('**/open-in-app/open', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }))
   await page.route('**/token-dash/api/logs/export*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { content: '{"type":"header"}\n' } }) }))
@@ -340,7 +340,7 @@ try {
   const community = settings.getByRole('link', { name: '社区' })
   assert.equal(await community.count(), 1)
   assert.equal(await community.getAttribute('href'), 'https://gitee.com/oyw125/model-price-table')
-  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.6/)
+  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.7/)
   assert.ok(!(await settings.innerText()).includes('· 已保存'))
 
   // Price links share a row.
@@ -355,14 +355,14 @@ try {
   assert.match(await settings.innerText(), /已是最新/)
   assert.equal(await updateButton.isEnabled(), true)
   await page.waitForTimeout(1800)
-  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.6/)
+  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.7/)
   assert.equal(await updateButton.isVisible(), true)
 
   // Available state opens an explicit confirm, not an auto install.
   updateAvailable = true
   await jsClick(updateButton)
   await page.waitForTimeout(250)
-  assert.match(await settings.innerText(), /发现 1\.1\.0-local\.7/)
+  assert.match(await settings.innerText(), /发现 1\.1\.0-local\.8/)
   await jsClick(settings.getByRole('button', { name: '取消' }))
   updateAvailable = false
 
@@ -378,9 +378,9 @@ try {
   await setBudget('200.50')
   await page.waitForTimeout(500)
   assert.match(await settings.innerText(), /已保存/)
-  assert.ok(!(await settings.innerText()).includes('版本 1.1.0-local.6 · 已保存'))
+  assert.ok(!(await settings.innerText()).includes('版本 1.1.0-local.7 · 已保存'))
   await page.waitForTimeout(1800)
-  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.6/)
+  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.7/)
   assert.ok(!(await settings.innerText()).includes('· 已保存'))
   const savedPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
   assert.equal(savedPrefs.budgets['deepseek-official'].amount, 200.5)
@@ -428,10 +428,17 @@ try {
   await page.waitForTimeout(300)
   assert.match(await panel.innerText(), /范围数据加载失败/)
   failUsage = false
-  currentSummary = { ...currentSummary, providers: [], updatedAt: now - 300000 }
+  currentSummary = { ...currentSummary, providers: [], providersDegraded: false, updatedAt: now - 300000 }
   await jsClick(panel.getByTestId('token-dash-refresh'))
   await page.waitForTimeout(300)
   assert.match(await panel.innerText(), /未检测到已配置供应商/)
+  // 探测失败与"未配置"区分：曾探测到 provider、本次为空
+  currentSummary = { ...currentSummary, providersDegraded: true }
+  await jsClick(panel.getByTestId('token-dash-refresh'))
+  await page.waitForTimeout(300)
+  assert.match(await panel.innerText(), /供应商探测失败/)
+  assert.equal(await panel.getByRole('button', { name: '重试' }).count() >= 1, true)
+  currentSummary = { ...currentSummary, providersDegraded: false }
   assert.match(await pill.innerText(), /--/)
   assert.equal(await page.locator('[data-testid=token-dash-refresh] span').count(), 1)
 

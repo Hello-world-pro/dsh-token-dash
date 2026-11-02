@@ -254,17 +254,27 @@ export function toSnapshot(entry) {
   }
 }
 
-/** Query configured providers; each failure is isolated. Balance/credits are always requested (P2 shows them regardless of the P1-only toggle, #31). */
+const ADAPTER_IDS = ['deepseek-official', 'zhipu', 'moonshot', 'openrouter', 'qwen']
+
+/**
+ * Query configured providers; each failure is isolated. Balance/credits are always requested
+ * (P2 shows them regardless of the P1-only toggle, #31). 空档原因挂在返回数组的 `misses` 上：
+ * `<id>:none` 未配置、`:error` 请求失败、`:hidden` 被计费模式隐藏。
+ */
 export async function readProviders(ctx, prefs) {
   const results = await Promise.allSettled([deepseek(ctx), glm(ctx, prefs), kimi(ctx, prefs), openrouter(ctx), qwen(ctx)])
   const out = []
-  for (const result of results) {
-    if (result.status === 'fulfilled' && visibleEntry(result.value, prefs)) {
-      const value = result.value
-      value.currency = value.currency ?? providerCurrency(normalizeProvider(value.id))
-      out.push(toSnapshot(value))
-    }
-  }
+  const misses = []
+  results.forEach((result, index) => {
+    const id = ADAPTER_IDS[index]
+    if (result.status !== 'fulfilled') { misses.push(`${id}:error`); return }
+    if (result.value === null) { misses.push(`${id}:none`); return }
+    if (visibleEntry(result.value, prefs) !== true) { misses.push(`${id}:hidden`); return }
+    const value = result.value
+    value.currency = value.currency ?? providerCurrency(normalizeProvider(value.id))
+    out.push(toSnapshot(value))
+  })
+  out.misses = misses
   return out
 }
 

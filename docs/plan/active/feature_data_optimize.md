@@ -1004,3 +1004,122 @@ const importData = async (file) => {
 ## 九、自测反馈台（活跃期，归档前删除）
 
 > Issue 的追加、完成、状态和轻量压缩见 `references/issue_templates.md`；未完成 Issue 必须先终结或迁移，才能归档普通 Plan。
+
+### Issue #1 [待用户验证] 2026-11-02 空 provider 快照被缓存 30s，首次探测失败最长 1 分钟显示"未检测到已配置供应商"
+
+#### 9.1 复现
+
+- 当前：升级或冷启动后首次打开面板，固定区显示 `未检测到已配置供应商`；日志连续出现 `vm build {providers:0}`，30–60s 后才恢复。
+- 期望：探测为空时下一次请求立刻重试，不做 30s 缓存。
+- 影响：用户误以为插件没读到 Key（2026-11-02 桌面 1.1.0-local.6 实测，08:54:36/08:54:36/08:55:06 三次空 build，08:55:42 恢复）。
+
+#### 9.2 关键时序
+
+```text
+[/summary 或 /usage]
+   └─ providerCache.at 过期 ──► readProviders
+          └─ 五个适配器全部返回 null（宿主凭据/账户服务未就绪）
+                 └─ providerCache = { at: now, data: [] }   ◄── 空结果也写 30s TTL
+                        └─ 客户端 60s 轮询期间一直是空快照
+```
+
+#### 9.3 结论
+
+- 根因：`refreshProviderCache` 不区分"探测失败"与"确实没有 provider"，空数组同样写入 `at: now`，恢复依赖下一次 TTL。
+- 修复前/后：空结果同样缓存 30s → 空结果 `at: 0`，下一次请求即刻重试。
+- 不变路径：非空快照仍走 30s TTL；`/providers/refresh` 局部刷新行为不变。
+
+#### 9.4 修复实施
+
+- `index.js` · `refreshProviderCache()`：按结果长度决定是否写 TTL，并记录空档日志。
+
+```diff
+-      providerCache = { at: Date.now(), data }
++      // 空快照不写 TTL：宿主服务未就绪时下一次请求立刻重试，避免整分钟空态
++      providerCache = { at: data.length === 0 ? 0 : Date.now(), data, hadProviders }
+```
+
+#### 9.6 验收
+
+- 环境与方式：L1 单测 + `npm run e2e`；桌面冷启动复测。
+- 结果：代码已落地（`providerCache.at = 0`）；自动化只覆盖不变路径（非空快照仍 30s TTL），空档分支无单测入口，等待桌面冷启动复测。
+- 剩余风险：若用户确实没有任何 Key，每次请求都会重跑五个适配器（1 分钟 2 次，可接受）。
+
+### Issue #2 [已修复] 2026-11-02 探测失败与"未配置供应商"共用同一空态文案
+
+#### 9.1 复现
+
+- 当前：快照为空时固定区只显示 `未检测到已配置供应商`，分不清"没配 Key"与"探测失败"，也没有就地重试入口。
+- 期望：曾有 provider、本次探测为空时显示 `供应商探测失败` + `重试`；从未探测到 provider 时保持原文案。
+
+#### 9.3 结论
+
+- 根因：`buildSummary` 只消费快照条目，空数组无法表达失败；`providerCache` 也没有记录历史状态。
+- 修复：`providerCache` 增 `hadProviders`；`/summary` 输出 `providersDegraded`；client 据此切换空态文案与重试按钮（复用 `styles.empty` / `styles.button`，零样式改动）。
+
+#### 9.4 修复实施
+
+- `index.js` · `refreshProviderCache()` / `/summary`：维护 `hadProviders`，注入 `summary.providersDegraded`。
+- `client.js` · `UsageContent`：空态按 `providersDegraded` 分支。
+
+```diff
+-      if (fixed.length === 0) fixed.push(h('div', { key: 'empty', style: styles.empty }, tr('未检测到已配置供应商')))
++      if (fixed.length === 0) {
++        const degraded = summary?.providersDegraded === true
++        fixed.push(h('div', { key: 'empty', style: styles.empty },
++          degraded ? tr('供应商探测失败') : tr('未检测到已配置供应商'),
++          degraded ? h('button', { type: 'button', style: styles.button, onClick: onRetry }, tr('重试')) : null))
++      }
+```
+
+#### 9.6 验收
+
+- 环境与方式：Playwright mock `providersDegraded: true` 断言文案与重试按钮。
+- 结果：`npm run e2e` 通过（2026-11-02）：空态显示 `供应商探测失败` 且存在 `重试`；`providersDegraded: false` 时仍为 `未检测到已配置供应商`。
+- 剩余风险：真实宿主降级路径仍待桌面复测（与 Issue #1 同源）。
+
+### Issue #3 [已修复] 2026-11-02 适配器返回空时无任何日志，无法区分"未配 Key"与"服务未就绪"
+
+#### 9.1 复现
+
+- 当前：`readProviders` 结果为空时 `logAdapterEvents` 无条目可记，日志里只有 `vm build {providers:0}`，无法判断是缺 Key、被 hide 还是宿主服务未注入。
+- 期望：空结果也能留下每个适配器的空档原因。
+
+#### 9.3 结论
+
+- 修复：`readProviders` 在返回数组上附带 `misses`（`<id>:none|error|hidden`）；宿主空结果时记 `[TD:provider] probe.miss`，附带 `credentials` / `deepseekAccount` 服务是否存在。
+- 不变路径：返回值仍是数组，现有调用与单测不受影响。
+
+#### 9.4 修复实施
+
+- `src/adapters.js` · `readProviders()`：逐项记录空档原因。
+- `index.js` · `refreshProviderCache()`：空结果时落日志。
+
+```diff
++  const ADAPTER_IDS = ['deepseek-official', 'zhipu', 'moonshot', 'openrouter', 'qwen']
+...
+-  const out = []
+-  for (const result of results) {
+-    if (result.status === 'fulfilled' && visibleEntry(result.value, prefs)) {
++  const out = []
++  const misses = []
++  results.forEach((result, index) => {
++    const id = ADAPTER_IDS[index]
++    if (result.status !== 'fulfilled') { misses.push(`${id}:error`); return }
++    if (result.value === null) { misses.push(`${id}:none`); return }
++    if (visibleEntry(result.value, prefs) !== true) { misses.push(`${id}:hidden`); return }
++    {
+       const value = result.value
+       value.currency = value.currency ?? providerCurrency(normalizeProvider(value.id))
+       out.push(toSnapshot(value))
+     }
+-  }
++  })
++  out.misses = misses
+   return out
+```
+
+#### 9.6 验收
+
+- 环境与方式：L1 断言 `misses` 内容；桌面空档后用 `[TD:provider] probe.miss` 确认原因。
+- 结果：`npm test` 通过（2026-11-02）：无 Key 时 `misses` 为五项 `:none`；被 hide 的 provider 记 `:hidden`。
