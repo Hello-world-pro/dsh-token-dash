@@ -2,7 +2,7 @@
 
 > 状态：**待验收**（v2.28 实现完成；L1 62 pass + 1 local skip、L3 E2E 通过；桌面待用户验证）<br>
 > 回归：已有 E2E-UI-16~27；本轮 E2E-UI-28~30（单行明细、刷新胶囊、日志/价格分区）通过。<br>
-> 本地包：`build/dsh-token-dash-1.1.0-local.5.tgz` 已打包；desktop 当前仍为 local.4，未安装本地包。<br>
+> 本地包：`build/dsh-token-dash-1.1.0-local.5.tgz`；desktop 已安装，重启 DSH 生效。<br>
 > 反馈：2026-11-02 用户启动 DSH 校验；历史 12 项与新增 4 项均已收口，见 §九。<br>
 > 创建时间：2026-11-02<br>
 > 关联逻辑根：`dsh-token-dash`<br>
