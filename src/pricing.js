@@ -148,7 +148,7 @@ export function priceFor(provider, model, ts = Date.now()) {
 }
 
 export function catalogInfo() {
-  return { source: catalogSource, updatedAt: catalogUpdatedAt, models: allEntries().length }
+  return { version: catalog.version ?? null, source: catalogSource, updatedAt: catalogUpdatedAt, models: allEntries().length }
 }
 
 export function setCatalogForTests(models) {

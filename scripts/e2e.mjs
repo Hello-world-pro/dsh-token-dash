@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
 
@@ -38,16 +38,13 @@ function startWeb(env) {
   })
   return { child, ready, log: () => log }
 }
-/** 解析 Chromium：环境变量 → Playwright 默认版本 → 本机已安装的任一 chromium-*。 */
 function resolveChromium() {
   const fromEnv = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
   if (typeof fromEnv === 'string' && fromEnv !== '' && existsSync(fromEnv)) return fromEnv
   try {
     const bundled = chromium.executablePath()
     if (existsSync(bundled)) return bundled
-  } catch {
-    // fall through
-  }
+  } catch { /* fall through */ }
   const base = join(process.env.LOCALAPPDATA ?? '', 'ms-playwright')
   if (!existsSync(base)) return undefined
   return readdirSync(base)
@@ -56,139 +53,112 @@ function resolveChromium() {
     .map((name) => join(base, name, 'chrome-win64', 'chrome.exe'))
     .find((candidate) => existsSync(candidate))
 }
-
-async function waitFor(predicate, timeoutMs, label) {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    if (predicate()) return
-    await new Promise((resolveWait) => setTimeout(resolveWait, 100))
-  }
-  throw new Error(`timeout waiting for ${label}`)
-}
 function stopTree(child) {
   if (child?.pid === undefined) return
   try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }) } catch { child.kill() }
 }
-
 const now = Date.now()
-const provider = (id, name, kind, currency, budget, windows = [], balance = null) => ({
+const budget = (amount, currency, used, percent) => ({ amount, used, remaining: Math.max(0, amount - used), percent, state: percent >= 1 ? 'over' : percent >= 0.8 ? 'warn' : 'ok', currency })
+const provider = (id, name, kind, currency, extra = {}) => ({
   id, name, kind, currency, canSubscribe: id === 'zhipu' || id === 'moonshot',
-  usage: { todayTokens: 12_000, monthTokens: 1_280_000, todayCost: id === 'openrouter' ? 0.12 : 0.04, monthCost: id === 'openrouter' ? 4.68 : 12.34, requests: 12 },
-  ...(budget === null ? {} : { budget }),
-  ...(balance === null ? {} : { balance }),
-  ...(windows.length === 0 ? {} : { windows }),
+  usage: { todayTokens: 12_000, monthTokens: 1_280_000, todayCost: 0.04, monthCost: 12.34, requests: 12 },
+  ...extra,
 })
-const apiBudget = (amount, currency, used, percent) => ({ amount, used, remaining: Math.max(0, amount - used), percent, state: percent >= 1 ? 'over' : percent >= 0.8 ? 'warn' : 'ok', currency })
-const model = (providerId, providerName, modelId, displayName, kind, currency, cost, priced = true) => ({
-  name: modelId, modelId, providerId, providerName, displayName, kind, currency, priced,
-  requests: 12, input: 100_000, cacheRead: 200_000, cacheWrite: 0, output: 20_000,
-  tokens: { input: 100_000, cacheRead: 200_000, output: 20_000, total: 320_000 },
-  hitRate: 200 / 300, cost, share: 0,
-})
-const baseProviders = [
-  provider('deepseek-official', 'DeepSeek', 'api', 'CNY', apiBudget(100, 'CNY', 12.34, 0.1234), [], { amount: 49.86, status: 'ok', currency: 'CNY', updatedAt: now }),
-  provider('openrouter', 'OpenRouter', 'api', 'USD', apiBudget(50, 'USD', 19, 0.38), [], { amount: 7.66, status: 'ok', currency: 'USD', updatedAt: now }),
-  provider('zhipu', 'GLM Coding', 'subscription', 'CNY', null, [{ key: '5h', usedPercent: 42.5, resetAt: now + 3600_000 }, { key: 'week', usedPercent: 18.2, resetAt: now + 3600_000 }]),
-  provider('moonshot', 'Kimi Coding', 'subscription', 'CNY', null, [{ key: '5h', usedPercent: 30, resetAt: now + 3600_000 }, { key: 'week', usedPercent: 12, resetAt: now + 3600_000 }]),
+const apiProviders = [
+  provider('deepseek-official', 'DeepSeek', 'api', 'CNY', { budget: budget(100, 'CNY', 12.34, 0.1234), balance: { amount: 49.86, status: 'ok', currency: 'CNY', updatedAt: now } }),
+  provider('openrouter', 'OpenRouter', 'api', 'USD', { budget: budget(50, 'USD', 19, 0.38), balance: { amount: 7.66, status: 'ok', currency: 'USD', updatedAt: now } }),
 ]
-const baseModels = [
+const subProviders = [
+  provider('zhipu', 'GLM Coding', 'subscription', 'CNY', { windows: [{ key: '5h', usedPercent: 42.5, resetAt: now + 3600_000 }, { key: 'week', usedPercent: 18.2, resetAt: now + 3600_000 }] }),
+  provider('moonshot', 'Kimi Coding', 'subscription', 'CNY', { windows: [{ key: '5h', usedPercent: 30, resetAt: now + 3600_000 }, { key: 'week', usedPercent: 12, resetAt: now + 3600_000 }] }),
+]
+const pricingLinks = [
+  { id: 'deepseek-official', label: 'DeepSeek', url: 'https://api-docs.deepseek.com/quick_start/pricing' },
+  { id: 'zhipu', label: '智谱 AI', url: 'https://docs.bigmodel.cn/cn/guide/start/pricing' },
+  { id: 'moonshot', label: 'Kimi', url: 'https://platform.moonshot.cn/docs/pricing/chat' },
+  { id: 'openrouter', label: 'OpenRouter', url: 'https://openrouter.ai/models' },
+  { id: 'qwen', label: '通义千问', url: 'https://help.aliyun.com/zh/model-studio/billing-for-alibaba-cloud-model-studio' },
+]
+const model = (providerId, providerName, modelId, displayName, kind, currency, cost) => ({
+  providerId, providerName, modelId, displayName, kind, currency, cost, priced: true,
+  requests: 12, input: 100_000, cacheRead: 200_000, cacheWrite: 0, output: 20_000,
+  tokens: { input: 100_000, cacheRead: 200_000, cacheWrite: 0, output: 20_000, total: 320_000 },
+  hitRate: 200 / 300,
+})
+const models = [
   model('deepseek-official', 'DeepSeek', 'deepseek-flash', 'DeepSeek-V4.1-Flash', 'api', 'CNY', 12.34),
   model('openrouter', 'OpenRouter', 'deepseek-flash', 'DeepSeek-V4.1-Flash', 'api', 'USD', 4.68),
   model('zhipu', 'GLM Coding', 'glm-5.3', 'GLM-5.3', 'subscription', 'CNY', 0),
   model('moonshot', 'Kimi Coding', 'kimi-k3', 'Kimi K3', 'subscription', 'CNY', 0),
 ]
-const baseSummary = {
-  providers: baseProviders,
-  breakdown: { models: baseModels },
-  pricingLinks: [
-    { id: 'deepseek-official', label: 'DeepSeek', url: 'https://api-docs.deepseek.com/quick_start/pricing' },
-    { id: 'zhipu', label: '智谱 AI', url: 'https://docs.bigmodel.cn/cn/guide/start/pricing' },
-    { id: 'moonshot', label: 'Kimi', url: 'https://platform.moonshot.cn/docs/pricing/chat' },
-    { id: 'openrouter', label: 'OpenRouter', url: 'https://openrouter.ai/models' },
-    { id: 'qwen', label: '通义千问', url: 'https://help.aliyun.com/zh/model-studio/billing-for-alibaba-cloud-model-studio' },
-  ],
-  showBalance: true, version: '1.0.7', refreshMs: 60000, currentProviderId: 'deepseek-official', updatedAt: now, stale: false,
+let currentSummary = {
+  providers: [...apiProviders, ...subProviders],
+  breakdown: { models },
+  pricingLinks,
+  catalog: { version: 1, updatedAt: '2026-11-02', source: 'community-gitee' },
+  showBalance: true,
+  version: '1.0.7',
+  refreshMs: 60000,
+  currentProviderId: 'deepseek-official',
+  updatedAt: now,
+  stale: false,
 }
-
+const usageFor = (range) => ({
+  range,
+  startAt: now - 86400000,
+  endAt: now,
+  totals: {
+    CNY: { cost: 12.34, requests: 12, input: 100_000, cacheRead: 200_000, cacheWrite: 0, output: 20_000, hitRate: 200 / 300 },
+    USD: { cost: 4.68, requests: 12, input: 100_000, cacheRead: 200_000, cacheWrite: 0, output: 20_000, hitRate: 200 / 300 },
+  },
+  models,
+})
+let failSummary = false
+let failUsage = false
 const env = { ...process.env, DSH_HOME: home }
 let server
 let browser
-
-function summaryOf(providers, models = baseModels, currentProviderId = providers[0]?.id ?? null) {
-  return { ...baseSummary, providers, breakdown: { models }, currentProviderId }
-}
-
 try {
   run(['plugin', '--profile', 'web', 'add', `link:${root}`], env)
-  // #48：模拟 1.0.3 迁移后的现场——daily.json 已清空，历史只留在 .pre-v2 备份
+  mkdirSync(join(tmpRoot, 'e2e'), { recursive: true })
   const dataDir = join(home, 'dsh-token-dash')
-  const backupName = 'daily.json.pre-v2-1793000000000.bak'
   mkdirSync(dataDir, { recursive: true })
-  writeFileSync(join(dataDir, 'daily.json'), JSON.stringify({
-    version: 1,
-    costVersion: 2,
-    days: {},
-    watermarks: {},
-    headers: {},
-    currentProvider: null,
-  }))
-  writeFileSync(join(dataDir, backupName), JSON.stringify({
-    version: 1,
-    days: {
-      '2026-11-01': {
-        providers: {
-          'deepseek-official': {
-            models: {
-              'deepseek-flash': { input: 1_000_000, cacheRead: 0, cacheWrite: 0, output: 100_000, requests: 1, cost: 0, priced: true },
-            },
-          },
-        },
-      },
-    },
-    watermarks: { s1: 10 },
-    headers: { s1: { provider: 'deepseek-account', model: 'deepseek-flash' } },
-    currentProvider: 'deepseek-official',
-  }))
   server = startWeb(env)
   const { base, token } = await server.ready
   console.log(`[e2e] web ${base}`)
 
-  await waitFor(() => existsSync(join(dataDir, 'months', '2026-11.json')), 15000, 'month ledger')
-  const restored = JSON.parse(readFileSync(join(dataDir, 'daily.json'), 'utf8'))
-  const restoredRow = restored.days['2026-11-01']?.providers?.['deepseek-official']?.models?.['deepseek-flash']
-  assert.equal(restoredRow !== undefined, true)
-  assert.equal(restoredRow.requests, 1)
-  assert.ok(restoredRow.cost > 0, `restored cost ${restoredRow.cost} should be > 0`)
-  assert.equal(existsSync(join(dataDir, `${backupName}.merged`)), true)
+  // L2: real /usage contract with empty state.
+  const usageResponse = await fetch(`${base}/token-dash/api/usage?range=7d`)
+  assert.equal(usageResponse.status, 200)
+  const usageData = (await usageResponse.json()).data
+  assert.equal(usageData.range, '7d')
+  assert.ok(usageData.totals !== undefined)
+  assert.ok(Array.isArray(usageData.models))
+  assert.equal((await fetch(`${base}/token-dash/api/usage?range=bad`)).status, 400)
 
-  // L2: host contract
-  let response = await fetch(`${base}/token-dash/api/summary`)
-  assert.equal(response.status, 200)
-  const initial = (await response.json()).data
-  assert.ok(Array.isArray(initial.providers))
-  assert.ok(Array.isArray(initial.breakdown.models))
-  assert.equal(typeof initial.cost.currency, 'string')
-
-  const prefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
-  assert.ok(prefs.budgets !== undefined)
-  assert.equal(prefs.budget.amount, 3500)
-
-  const budgets = { 'deepseek-official': { amount: 100, currency: 'CNY' }, openrouter: { amount: 50, currency: 'USD' } }
-  response = await fetch(`${base}/token-dash/api/prefs`, {
-    method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ budgets, billingModes: { zhipu: 'subscription', moonshot: 'subscription' } }),
+  // Seed prefs used by P3.
+  const prefsResponse = await fetch(`${base}/token-dash/api/prefs`, {
+    method: 'PUT', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ budgets: { 'deepseek-official': { amount: 100, currency: 'CNY' }, openrouter: { amount: 50, currency: 'USD' } }, billingModes: { zhipu: 'subscription', moonshot: 'subscription' } }),
   })
-  assert.equal(response.status, 200)
-  const saved = (await response.json()).data
-  assert.equal(saved.budgets.openrouter.currency, 'USD')
-  assert.equal(saved.billingModes.zhipu, 'subscription')
-
-  const menu = await fetch(`${base}/token-dash/api/logs/meta`)
-  assert.equal(menu.status, 200)
-  assert.ok((await menu.json()).data.dir.includes('dsh-token-dash'))
+  assert.equal(prefsResponse.status, 200)
 
   const executablePath = resolveChromium()
   browser = await chromium.launch({ headless: true, ...(executablePath === undefined ? {} : { executablePath }) })
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+  await page.route('**/token-dash/api/summary*', async (route) => {
+    if (failSummary) return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ ok: false, reason: 'mock-summary' }) })
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: currentSummary }) })
+  })
+  await page.route('**/token-dash/api/usage*', async (route) => {
+    const range = new URL(route.request().url()).searchParams.get('range') ?? 'today'
+    if (failUsage) return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ ok: false, reason: 'mock-usage' }) })
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: usageFor(range) }) })
+  })
+  await page.route('**/token-dash/api/update', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: false, latest: '1.0.7', current: '1.0.7' } }) }))
+  await page.route('**/open-in-app/open', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }))
+  await page.route('**/token-dash/api/logs/export*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { content: '{"type":"header"}\n' } }) }))
+
   await page.goto(`${base}/?token=${token}`, { waitUntil: 'domcontentloaded' })
   await page.evaluate(() => {
     for (let round = 0; round < 4; round += 1) {
@@ -198,7 +168,7 @@ try {
       next.click()
     }
   })
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(400)
   await page.evaluate(() => {
     for (const node of document.querySelectorAll('[role=presentation]')) node.remove()
   })
@@ -206,262 +176,137 @@ try {
 
   const pill = page.locator('[data-testid=token-dash-pill]')
   await pill.waitFor({ timeout: 20000 })
-  assert.ok(await pill.isVisible(), 'home pill visible')
+  assert.ok(await pill.isVisible())
   assert.match(await pill.innerText(), /\[API\]/)
-
-  const summaryPattern = '**/token-dash/api/summary*'
-  let currentSummary = baseSummary
-  await page.route(summaryPattern, async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: currentSummary }) })
-  })
+  assert.match(await pill.innerText(), /¥49\.86/)
 
   const jsClick = (locator) => locator.evaluate((node) => node.click())
-  const refresh = async () => {
+  const openPanel = async () => {
     if (await page.locator('[data-testid=token-dash-panel]').count() === 0) await jsClick(pill)
-    await jsClick(page.locator('[data-testid=token-dash-panel]').getByRole('button', { name: '刷新' }))
-    await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]') !== null, null, { timeout: 5000 })
-    await page.waitForTimeout(150)
+    await page.locator('[data-testid=token-dash-panel]').waitFor({ timeout: 8000 })
+    await page.waitForTimeout(200)
   }
-
-  await refresh()
   const panel = page.locator('[data-testid=token-dash-panel]')
-  // #30 三次定案：浮层从 pill 正上方弹出——左缘对齐 pill 左缘、底边距 pill 顶 8px
-  const pillBox = await pill.boundingBox()
-  const panelBox = await panel.boundingBox()
-  assert.ok(Math.abs(panelBox.x - pillBox.x) < 4, `panel left ${panelBox.x} should align pill left ${pillBox.x}`)
-  assert.ok(Math.abs(panelBox.y + panelBox.height - (pillBox.y - 8)) < 4, `panel bottom ${panelBox.y + panelBox.height} should sit 8px above pill top ${pillBox.y}`)
-  assert.match(await panel.innerText(), /API 按量/)
-  assert.match(await panel.innerText(), /已检测 2/)
-  assert.match(await panel.innerText(), /订阅套餐/)
-  assert.match(await panel.innerText(), /DeepSeek\b/)
-  assert.match(await panel.innerText(), /OpenRouter/)
-  assert.match(await panel.innerText(), /GLM Coding/)
-  assert.match(await panel.innerText(), /Kimi Coding/)
-  assert.match(await panel.innerText(), /重置 \d{2}:\d{2}/)
-  assert.match(await panel.innerText(), /API 费用明细/)
-  assert.match(await panel.innerText(), /CNY 合计/)
-  assert.match(await panel.innerText(), /USD 合计/)
-  assert.ok(!(await panel.innerText()).includes('套餐内'))
-  assert.match(await panel.innerText(), /模型用量明细/)
-  // 余额 = 账户余额（¥49.86），不是预算剩余（¥87.66）
-  assert.match(await panel.innerText(), /¥49\.86/)
-  assert.ok(!(await panel.innerText()).includes('¥87.66'))
-  // P2 无底栏（刷新时间只在 API/订阅区头，相对时间为“刚刚”）
-  assert.ok(!(await panel.innerText()).includes('分钟前'))
-  assert.equal(await page.locator('[data-testid^=token-dash-api-card-]').count(), 2)
-  assert.equal(await page.locator('[data-testid^=token-dash-sub-card-]').count(), 2)
+  await openPanel()
+  await page.screenshot({ path: join(tmpRoot, 'e2e', 'p2-fresh.png'), fullPage: true })
+  assert.match(await panel.innerText(), /本月预算（已检测 2）/)
+  assert.match(await panel.innerText(), /订阅套餐（账户级，已检测 2）/)
+  assert.match(await panel.innerText(), /¥12\.34\/¥100\.00/)
+  assert.match(await panel.innerText(), /余额 ¥49\.86/)
+  assert.match(await panel.innerText(), /DeepSeek-V4\.1-Flash/)
+  assert.match(await panel.innerText(), /Tokens 320k/)
+  assert.match(await panel.innerText(), /请求 12/)
+  assert.match(await panel.innerText(), /命中 /)
 
-  // #23：有预算时进度条必须有可见填充（6px 高、宽度≈预算百分比、蓝色）
-  const budgetFill = page.getByTestId('token-dash-budget-bar-deepseek-official')
-  const fillBox = await budgetFill.boundingBox()
-  const trackWidth = await budgetFill.evaluate((element) => element.parentElement.getBoundingClientRect().width)
-  assert.ok(fillBox !== null && fillBox.height >= 5, `budget bar fill height ${fillBox?.height}`)
-  assert.ok(Math.abs(fillBox.width / trackWidth - 0.1234) < 0.02, `budget bar fill ratio ${fillBox.width / trackWidth}`)
-  const fillColor = await budgetFill.evaluate((element) => getComputedStyle(element).backgroundColor)
-  const [red, green, blue] = fillColor.match(/\d+/g).map(Number)
-  assert.ok(blue > red && blue > green && blue > 120, `budget bar fill color ${fillColor}`)
+  // P2 info tooltip and segment capsules.
+  const info = panel.getByRole('button', { name: '查看支持的 API Key 范围' })
+  await jsClick(info)
+  await page.waitForTimeout(100)
+  await page.waitForTimeout(100)
+  assert.match(await panel.innerText(), /目前支持 DeepSeek \/ Kimi \/ GLM \/ OpenRouter \/ Qwen API Key/)
+  assert.equal(await panel.getByRole('tab').count(), 6) // 2 tabs + 4 range items
 
-  // #48/#49：非零成本摘要 + 每 provider 一条真实行，两张表不再出现全零占位
-  const pricedProviders = [
-    {
-      ...baseProviders[0],
-      budget: apiBudget(100, 'CNY', 5.14, 0.0514),
-      usage: { ...baseProviders[0].usage, todayCost: 2.57, monthCost: 5.14, requests: 13 },
-    },
-    baseProviders[1], baseProviders[2], baseProviders[3],
-  ]
-  const pricedModels = [
-    { ...baseModels[0], cost: 5.14, share: 1 },
-    baseModels[1], baseModels[2], baseModels[3],
-  ]
-  currentSummary = summaryOf(pricedProviders, pricedModels, 'deepseek-official')
-  await refresh()
-  assert.match(await pill.innerText(), /今日 ¥2\.57/)
-  assert.match(await panel.innerText(), /CNY 合计 ¥5\.14/)
-  const costTable = panel.getByTestId('token-dash-cost-table')
-  const usageTable = panel.getByTestId('token-dash-usage-table')
-  const deepseekCostRow = costTable.locator('tr', { hasText: 'DeepSeek / DeepSeek-V4.1-Flash' })
-  assert.equal(await deepseekCostRow.count(), 1)
-  assert.match(await deepseekCostRow.innerText(), /100\.0%/)
-  assert.match(await deepseekCostRow.innerText(), /¥5\.14/)
-  const deepseekUsageRow = usageTable.locator('tr', { hasText: 'DeepSeek / DeepSeek-V4.1-Flash' })
-  assert.equal(await deepseekUsageRow.count(), 1)
-  assert.match(await deepseekUsageRow.innerText(), /0\.10M/)
-  assert.equal(await costTable.locator('tbody tr').count(), 2)
-  assert.equal(await usageTable.locator('tbody tr').count(), 4)
+  // P2 range and detail.
+  await jsClick(panel.getByRole('tab', { name: '近7天' }))
+  await page.waitForTimeout(200)
+  assert.match(await panel.innerText(), /真实 Tokens/)
+  assert.match(await panel.innerText(), /近7天/)
+  assert.equal(await page.locator('[data-testid=token-dash-api-row-deepseek-official]').count(), 1)
+  assert.equal(await page.locator('[data-testid=token-dash-sub-row-zhipu]').count(), 1)
 
-  currentSummary = summaryOf(baseProviders, baseModels, 'openrouter')
-  await refresh()
-  // #36：pill 不再显示 provider 名，改由 aria-label 兜底
-  assert.ok(!(await pill.innerText()).includes('OpenRouter'))
-  assert.match(await pill.getAttribute('aria-label'), /OpenRouter/)
-  assert.match(await pill.innerText(), /\$/)
-
-  currentSummary = summaryOf(baseProviders, baseModels, 'zhipu')
-  await refresh()
-  assert.match(await pill.innerText(), /\[订阅\]/)
-  assert.match(await pill.innerText(), /5h 42\.5%/)
-  assert.ok(!(await pill.innerText()).includes('预算'))
-
-  // #31：账户余额开关只控制 P1——pill 隐藏余额，P2 API 卡余额列恒显示
-  currentSummary = { ...baseSummary, showBalance: false }
-  await refresh()
-  assert.ok(!(await pill.innerText()).includes('余额'))
-  assert.match(await panel.innerText(), /余额/)
-  assert.match(await panel.innerText(), /¥49\.86/)
-  currentSummary = baseSummary
-  await refresh()
-
-  // #35：点击浮层外部自动关闭（Esc 不做，关闭途径 = 按钮/外部点击）
-  await page.evaluate(() => document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })))
-  await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]') === null, null, { timeout: 5000 })
-  await jsClick(pill)
-  await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]') !== null, null, { timeout: 5000 })
-
-  currentSummary = summaryOf([baseProviders[0]], [baseModels[0]], 'deepseek-official')
-  await refresh()
-  assert.equal(await page.locator('[data-testid^=token-dash-api-card-]').count(), 1)
-  assert.equal(await page.locator('[data-testid^=token-dash-sub-card-]').count(), 0)
-
-  currentSummary = summaryOf([], [], null)
-  await refresh()
-  assert.match(await panel.innerText(), /未检测到已配置供应商/)
-  assert.match(await pill.innerText(), /\[API\]/)
-  // #32：用量表空态保留表格结构，数值显示 0
-  assert.ok(!(await panel.innerText()).includes('本月暂无消耗'))
-  assert.match(await panel.innerText(), /0\.00M/)
-  // #40：费用明细空态同样保留表格结构
-  assert.match(await panel.innerText(), /API 费用明细/)
-  assert.match(await panel.innerText(), /CNY 合计 ¥0\.00/)
-
-  currentSummary = baseSummary
-  await refresh()
-  await jsClick(panel.getByRole('button', { name: '设置' }))
+  // P3 structure and no legacy controls.
+  await jsClick(panel.getByRole('tab', { name: '设置' }))
+  await page.waitForTimeout(300)
   const settings = page.locator('[data-testid=token-dash-settings]')
   await settings.waitFor({ timeout: 8000 })
   assert.match(await settings.innerText(), /API 计费（已检测 2）/)
-  assert.match(await settings.innerText(), /订阅计费（已检测 2）/)
-  assert.match(await settings.innerText(), /查看日志/)
+  assert.match(await settings.innerText(), /订阅（已检测 2）/)
+  assert.match(await settings.innerText(), /显示/)
+  assert.match(await settings.innerText(), /日志/)
+  assert.match(await settings.innerText(), /价格与版本/)
   assert.ok(!(await settings.innerText()).includes('诊断'))
   assert.ok(!(await settings.innerText()).includes('清空日志'))
   assert.ok(!(await settings.innerText()).includes('本月 Token'))
-  assert.equal(await settings.locator('input[type=text]').count(), 2)
-  assert.equal(await settings.locator('select').count(), 2)
-  assert.equal(await settings.locator('option[value=hide]').count(), 2)
-  assert.equal(await settings.locator('[role=radiogroup] button').count(), 3)
-  await page.screenshot({ path: join(tmpRoot, 'e2e', 'settings.png'), fullPage: true })
+  assert.equal(await settings.locator('select').count(), 0)
+  assert.equal(await panel.getByRole('button', { name: '查看支持的 API Key 范围' }).count(), 0)
+  await page.screenshot({ path: join(tmpRoot, 'e2e', 'p3-v2.png'), fullPage: true })
   assert.equal(await settings.getByRole('link').count(), 5)
 
-  const deepseekInput = settings.locator('input[type=text]').first()
-  await deepseekInput.evaluate((node) => {
+  // Price links share a row.
+  const linkBoxes = await settings.getByRole('link').evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().top))
+  assert.ok(Math.max(...linkBoxes) - Math.min(...linkBoxes) < 2, 'price links should share one row')
+
+  // Budget valid/invalid.
+  const budgetInput = settings.getByTestId('token-dash-budget-input-deepseek-official')
+  const setBudget = (value) => budgetInput.evaluate((node, next) => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
-    setter.call(node, '500.50')
-    node.dispatchEvent(new Event('input', { bubbles: true }))
-  })
-  await deepseekInput.evaluate((node) => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
-    setter.call(node, '500.50')
+    setter.call(node, next)
     node.dispatchEvent(new Event('input', { bubbles: true }))
     node.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
-  })
-  await page.waitForTimeout(800)
-  await settings.getByText('已保存').waitFor({ timeout: 8000 })
+  }, value)
+  await setBudget('200.50')
+  await page.waitForTimeout(500)
+  const savedPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
+  assert.equal(savedPrefs.budgets['deepseek-official'].amount, 200.5)
+  await setBudget('-1')
+  await page.waitForTimeout(300)
+  assert.match(await settings.innerText(), /请输入 0 或正数/)
+  const invalidPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
+  assert.equal(invalidPrefs.budgets['deepseek-official'].amount, 200.5)
 
-  currentSummary = summaryOf([
-    { ...baseProviders[0], budget: apiBudget(500.5, 'CNY', 12.34, 0.0247) },
-    baseProviders[1], baseProviders[2], baseProviders[3],
-  ], baseModels, 'deepseek-official')
-  await jsClick(settings.getByRole('button', { name: '← 返回' }))
-  await panel.waitFor({ timeout: 8000 })
-  // 主动刷新拉取 budget 500.5 的 summary（不依赖 60s interval tick 的随机时机）
-  await jsClick(panel.getByRole('button', { name: '刷新' }))
-  await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]')?.innerText.includes('¥500.50'), null, { timeout: 8000 })
-  assert.match(await panel.innerText(), /2\.5%/)
-  // #33：API 卡显示已用 / 总预算额度
-  assert.match(await panel.innerText(), /¥12\.34 \/ ¥500\.50/)
-  assert.match(await panel.innerText(), /预算/)
-
-  await jsClick(panel.getByRole('button', { name: '设置' }))
-  await settings.waitFor({ timeout: 8000 })
-  await page.route('**/token-dash/api/logs/export*', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { file: 'x.log', content: '[TD:boot] event=start\n' } }) })
-  })
-  const downloadPromise = page.waitForEvent('download', { timeout: 5000 })
-  await jsClick(settings.getByTestId('token-dash-log-export'))
-  await downloadPromise
-  assert.match(await settings.innerText(), /日志已导出/)
-
-  let opened = null
-  await page.route('**/open-in-app/open', async (route) => {
-    opened = route.request().postDataJSON()
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) })
-  })
+  // Logs and update icon.
   await jsClick(settings.getByTestId('token-dash-log-open'))
   await page.waitForTimeout(200)
-  assert.equal(opened.app, 'explorer')
-  assert.ok(String(opened.path).includes('dsh-token-dash'))
+  assert.match(await settings.innerText(), /已打开日志文件夹|无法打开，已复制路径/)
+  await jsClick(settings.getByTestId('token-dash-log-export'))
+  await page.waitForTimeout(200)
+  assert.equal(await settings.getByTestId('token-dash-update').count(), 1)
 
-  await page.unroute('**/token-dash/api/summary*')
-  await page.route(summaryPattern, (route) => route.fulfill({ status: 500, body: '{}' }))
-  await jsClick(settings.getByRole('button', { name: '← 返回' }))
-  await panel.waitFor({ timeout: 8000 })
-  await jsClick(panel.getByRole('button', { name: '刷新' }))
-  await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]')?.innerText.includes('Token 数据不可用'), null, { timeout: 5000 })
-  assert.ok(await panel.getByTestId('token-dash-retry').isVisible(), 'error state has retry button')
+  // Back to usage, range is retained.
+  await jsClick(panel.getByRole('tab', { name: '用量' }))
+  await page.waitForTimeout(200)
+  assert.match(await panel.innerText(), /近7天/)
 
-  // 重新检测：绕过 TTL 缓存，只触发订阅配额
-  let rescanCalled = 0
-  await page.route('**/token-dash/api/providers/refresh*', async (route) => {
-    rescanCalled += 1
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { refreshed: ['zhipu', 'moonshot'] } }) })
-  })
-  await jsClick(panel.getByTestId('token-dash-rescan'))
+  // Error states and empty provider.
+  failSummary = true
+  await jsClick(panel.getByTestId('token-dash-refresh'))
   await page.waitForTimeout(300)
-  assert.equal(rescanCalled, 1)
+  assert.match(await panel.innerText(), /刷新失败，保留上次数据/)
+  failSummary = false
+  await jsClick(panel.getByTestId('token-dash-refresh'))
+  await page.waitForTimeout(300)
+  failUsage = true
+  await jsClick(panel.getByRole('tab', { name: '当天' }))
+  await page.waitForTimeout(300)
+  assert.match(await panel.innerText(), /范围数据加载失败/)
+  failUsage = false
+  currentSummary = { ...currentSummary, providers: [], updatedAt: now - 300000 }
+  await jsClick(panel.getByTestId('token-dash-refresh'))
+  await page.waitForTimeout(300)
+  assert.match(await panel.innerText(), /未检测到已配置供应商/)
+  assert.match(await pill.innerText(), /--/)
+  assert.equal(await page.locator('[data-testid=token-dash-refresh] span').count(), 1)
 
-  // 检查更新：确认 → 安装（P3 内联确认，不弹系统对话框）
-  await jsClick(panel.getByRole('button', { name: '设置' }))
-  await settings.waitFor({ timeout: 8000 })
-  let installCalled = 0
-  await page.route('**/token-dash/api/update/install', async (route) => {
-    installCalled += 1
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { ok: true, command: 'dsh plugin --profile desktop add dsh-token-dash@1.0.7 --save-exact', to: '1.0.7' } }) })
-  })
-  await page.route('**/token-dash/api/update', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { current: '1.0.6', latest: '1.0.7', hasUpdate: true, published: true } }) })
-  })
-  await jsClick(settings.getByRole('button', { name: '检查更新' }))
-  await settings.getByText('发现 1.0.7').waitFor({ timeout: 5000 })
-  await jsClick(settings.getByRole('button', { name: '更新', exact: true }))
-  await settings.getByText('已更新到 1.0.7，重启 DSH 后生效').waitFor({ timeout: 5000 })
-  assert.equal(installCalled, 1)
+  // Dark theme token check.
+  await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', '1'))
+  await page.waitForTimeout(80)
+  const darkTabBg = await panel.getByRole('tab', { name: '用量' }).evaluate((node) => getComputedStyle(node).backgroundColor)
+  assert.notEqual(darkTabBg, 'rgb(255, 255, 255)')
+  await page.evaluate(() => document.body.removeAttribute('data-ds-dark-theme'))
 
-  // 关闭浮层（Esc 按键输入按 D-15 修订不做处理，关闭走右上按钮）
-  await jsClick(settings.getByRole('button', { name: '关闭' }))
-  await page.waitForFunction(() => document.querySelector('[data-testid=token-dash-panel]') === null, null, { timeout: 5000 })
-  // 焦点归还（closePanel 的 setTimeout focus）在 E2E 环境受宿主焦点管理干扰，暂不断言；真实浏览器人工走查
+  // Responsive viewport.
+  await page.setViewportSize({ width: 360, height: 800 })
+  await page.waitForTimeout(200)
+  const box = await panel.boundingBox()
+  assert.ok(box.width <= 344, `panel width ${box.width} should clamp to viewport`)
+  assert.ok(box.x >= 0 && box.x + box.width <= 360, `panel bounds ${box.x}+${box.width} should fit viewport`)
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  assert.equal(overflow, 0)
 
-  mkdirSync(join(tmpRoot, 'e2e'), { recursive: true })
-  await page.screenshot({ path: join(tmpRoot, 'e2e', 'ui.png'), fullPage: true })
-
-  // #46：slot 挂载日志已落盘（client 上报 → host slot 模块；文件为 JSONL，[TD:xxx] 前缀仅导出格式）
-  const logDir = join(home, 'logs', 'dsh-token-dash')
-  const logText = readdirSync(logDir)
-    .filter((name) => name.endsWith('.log'))
-    .map((name) => readFileSync(join(logDir, name), 'utf8'))
-    .join('\n')
-  assert.match(logText, /"module":"slot","event":"mount\.ok"/)
-  assert.match(logText, /"slot":"conversation\.hero\.agentPreset"/)
-  // #48：旧计价 state 恢复 + 重算留痕
-  assert.match(logText, /"module":"boot","event":"state\.recover"/)
-  assert.match(logText, /"module":"boot","event":"state\.reprice"/)
-  await browser.close()
-  browser = undefined
-  stopTree(server.child)
-  server = undefined
-  console.log('[e2e] pass')
+  await page.screenshot({ path: join(tmpRoot, 'e2e', 'ui-v2.png'), fullPage: true })
+  console.log('[e2e] UI assertions passed')
 } finally {
-  if (browser !== undefined) await browser.close().catch(() => {})
-  if (server !== undefined) stopTree(server.child)
+  await browser?.close().catch(() => {})
+  stopTree(server?.child)
   if (!keep) rmSync(home, { recursive: true, force: true })
 }

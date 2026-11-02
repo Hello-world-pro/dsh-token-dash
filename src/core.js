@@ -201,6 +201,125 @@ function normalizeProviderInfo(input) {
   return Object.entries(input).map(([id, value]) => ({ id, ...(value ?? {}) }))
 }
 
+/**
+ * Range-only aggregation for P2. Unlike buildSummary this never adds
+ * "configured but unused" default rows, and it does not touch month budgets.
+ */
+export function buildUsage(state, prefs, range, now, providerInfoInput) {
+  const allowed = new Set(['today', '7d', '30d', 'all'])
+  const selected = allowed.has(range) ? range : 'today'
+  const todayKey = localDayKey(now)
+  const dayKeys = Object.keys(state.days ?? {}).filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key)).sort()
+  const startKey = selected === 'all'
+    ? (dayKeys[0] ?? todayKey)
+    : localDayKey(now - (selected === '30d' ? 29 : selected === '7d' ? 6 : 0) * 86400000)
+  const hidden = new Set(
+    Object.entries(prefs?.billingModes ?? {})
+      .filter(([, mode]) => mode === 'hide')
+      .map(([id]) => normalizeProvider(id)),
+  )
+  const info = new Map()
+  for (const item of normalizeProviderInfo(providerInfoInput)) {
+    const id = normalizeProvider(item.id ?? item.provider)
+    if (id === 'unknown') continue
+    info.set(id, item)
+  }
+  const models = new Map()
+  const totals = {}
+  const add = (providerId, modelId, row) => {
+    if (hidden.has(providerId)) return
+    const meta = info.get(providerId)
+    const kind = meta?.kind === 'subscription' || (meta?.kind === undefined && (meta?.windows ?? []).length > 0)
+      ? 'subscription'
+      : 'api'
+    const currency = meta?.currency === 'USD' ? 'USD' : (meta?.currency === 'CNY' ? 'CNY' : providerCurrency(providerId))
+    const key = `${providerId}:${modelId}`
+    const entry = models.get(key) ?? {
+      providerId,
+      providerName: meta?.name ?? providerLabel(providerId),
+      modelId,
+      displayName: modelLabel(modelId),
+      kind,
+      currency,
+      requests: 0,
+      input: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+      output: 0,
+      cost: 0,
+      priced: true,
+    }
+    entry.requests += num(row.requests)
+    entry.input += num(row.input)
+    entry.cacheRead += num(row.cacheRead)
+    entry.cacheWrite += num(row.cacheWrite)
+    entry.output += num(row.output)
+    entry.cost += num(row.cost)
+    if (row.priced === false) entry.priced = false
+    entry.kind = kind
+    entry.currency = currency
+    models.set(key, entry)
+  }
+
+  for (const dayKey of dayKeys) {
+    if (dayKey < startKey || dayKey > todayKey) continue
+    const bucket = state.days[dayKey]
+    const providers = bucket.providers ?? { unknown: { models: bucket.models ?? {} } }
+    for (const [rawProvider, providerBucket] of Object.entries(providers)) {
+      const providerId = normalizeProvider(rawProvider)
+      if (providerId === 'unknown') {
+        for (const [rawModel, row] of Object.entries(providerBucket.models ?? {})) {
+          const owner = providerFromModel(rawModel)
+          if (owner !== null) add(owner, normalizeModel(rawModel), row)
+        }
+        continue
+      }
+      for (const [rawModel, row] of Object.entries(providerBucket.models ?? {})) {
+        add(providerId, normalizeModel(rawModel), row)
+      }
+    }
+  }
+
+  const rows = [...models.values()].map((entry) => {
+    const total = entry.input + entry.cacheRead + entry.cacheWrite + entry.output
+    const denominator = entry.input + entry.cacheRead + entry.cacheWrite
+    return {
+      ...entry,
+      tokens: { input: entry.input, cacheRead: entry.cacheRead, cacheWrite: entry.cacheWrite, output: entry.output, total },
+      hitRate: denominator > 0 ? entry.cacheRead / denominator : null,
+      cost: round2(entry.cost),
+    }
+  })
+  rows.sort((a, b) => b.cost - a.cost)
+
+  for (const row of rows) {
+    if (row.kind !== 'api') continue
+    const bucket = totals[row.currency] ?? { cost: 0, requests: 0, input: 0, cacheRead: 0, cacheWrite: 0, output: 0, hitRate: null }
+    bucket.cost += row.cost
+    bucket.requests += row.requests
+    bucket.input += row.input
+    bucket.cacheRead += row.cacheRead
+    bucket.cacheWrite += row.cacheWrite
+    bucket.output += row.output
+    totals[row.currency] = bucket
+  }
+  for (const bucket of Object.values(totals)) {
+    bucket.cost = round2(bucket.cost)
+    const denominator = bucket.input + bucket.cacheRead + bucket.cacheWrite
+    bucket.hitRate = denominator > 0 ? bucket.cacheRead / denominator : null
+  }
+
+  return {
+    range: selected,
+    startAt: dayStartTs(startKey) ?? now,
+    endAt: now,
+    startKey,
+    endKey: todayKey,
+    totals,
+    models: rows,
+  }
+}
+
 export function buildSummary(state, prefs, now, providerInfoInput) {
   const month = localMonthKey(now)
   const todayKey = localDayKey(now)

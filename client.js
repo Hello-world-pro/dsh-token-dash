@@ -1,6 +1,6 @@
 /**
- * dsh-token-dash — client half. P1 constraint pill, P2 dynamic provider cards,
- * P3 provider settings, log export and in-place update.
+ * dsh-token-dash — client half. P1 constraint pill, P2 usage tab, P3 settings tab.
+ * The visual contract lives in docs/ui-design.md v2.21.
  */
 window.__ModuleLoader__.load({
   id: 'dsh-token-dash',
@@ -11,35 +11,59 @@ window.__ModuleLoader__.load({
 
     const API = '/token-dash/api'
     const PKG = 'dsh-token-dash'
-    const COLORS = { primary: 'var(--dsw-alias-state-business-primary, #6ea8ff)', warn: '#f0a020', over: '#e05a5a' }
-    const budgetColor = (state) => (state === 'over' ? COLORS.over : state === 'warn' ? COLORS.warn : COLORS.primary)
-    const percentColor = (value) => (value >= 100 ? COLORS.over : value >= 80 ? COLORS.warn : COLORS.primary)
+    const RANGES = [
+      ['today', '当天'],
+      ['7d', '近7天'],
+      ['30d', '近30天'],
+      ['all', '全部'],
+    ]
+    const REFRESH_OPTIONS = [[30000, '30秒'], [60000, '1分钟'], [300000, '5分钟']]
+    const PRICE_LABELS = { zhipu: 'GLM', qwen: 'Qwen' }
+    const SPIN_CSS = '@keyframes td-spin{to{transform:rotate(360deg)}}'
 
-    const fmtMoney = (value, currency = 'CNY') => `${currency === 'USD' ? '$' : '¥'}${Number(value ?? 0).toFixed(2)}`
-    const fmtM = (value) => `${(Number(value ?? 0) / 1e6).toFixed(2)}M`
-    const fmtRatio = (value) => `${(Number(value ?? 0) * 100).toFixed(1)}%`
-    const fmtUsed = (value) => `${Number(value ?? 0).toFixed(1)}%`
-    const fmtAgo = (ts) => {
-      if (!Number.isFinite(ts)) return '加载中'
-      const seconds = Math.max(0, Math.round((Date.now() - ts) / 1000))
-      if (seconds < 60) return '刚刚'
-      if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`
-      return `${Math.floor(seconds / 3600)} 小时前`
+    const T = {
+      text: 'var(--dsw-alias-label-primary, var(--dsh-text, #eee))',
+      muted: 'var(--dsw-alias-label-secondary, rgba(235,235,235,.65))',
+      weak: 'var(--dsw-alias-label-tertiary, rgba(235,235,235,.45))',
+      accent: 'var(--dsw-alias-state-business-primary, #6ea8ff)',
+      warn: 'var(--dsw-alias-state-warn-primary, #f0a020)',
+      over: 'var(--dsw-alias-state-error-primary, #e05a5a)',
+      ok: 'var(--dsw-alias-state-success-primary, #4ed17e)',
+      border: 'var(--dsw-alias-border-l2, rgba(128,128,128,.25))',
+      section: 'color-mix(in srgb, var(--dsw-alias-label-primary, #eee) 3%, transparent)',
+      tile: 'color-mix(in srgb, var(--dsw-alias-label-primary, #eee) 4%, transparent)',
+      input: 'color-mix(in srgb, var(--dsw-alias-label-primary, #eee) 5%, transparent)',
+      segment: 'var(--dsw-alias-bg-module-platform, rgba(127,127,127,.10))',
+      segmentOn: 'var(--dsw-alias-button-elevated-fill, #fff)',
+      tooltip: 'var(--dsw-alias-tooltip-bg, #333)',
+      tooltipText: 'var(--dsw-alias-toast-label, #fff)',
+      focus: 'var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary, #6ea8ff))',
     }
-    const fmtReset = (ts) => {
+
+    const fmtMoney = (value, currency = 'CNY') => `${currency === 'USD' ? '$' : '¥'}${(Number(value ?? 0) || 0).toFixed(2)}`
+    const fmtTokens = (value) => {
+      const n = Math.max(0, Number(value) || 0)
+      const trim = (text) => text.replace(/\.0$/, '')
+      if (n < 1000) return String(Math.round(n))
+      if (n < 1e6) return `${trim((n / 1e3).toFixed(1))}k`
+      if (n < 1e9) return `${trim((n / 1e6).toFixed(1))}M`
+      return `${trim((n / 1e9).toFixed(1))}B`
+    }
+    const fmtRatio = (value) => `${trimZeros((Math.max(0, Number(value) || 0) * 100).toFixed(1))}%`
+    const fmtPercent = (value) => `${trimZeros((Number(value) || 0).toFixed(1))}%`
+    const trimZeros = (text) => text.replace(/\.0$/, '')
+    const fmtTime = (ts) => {
       if (!Number.isFinite(ts) || ts <= 0) return null
       const date = new Date(ts)
       const now = new Date()
       const pad = (value) => String(value).padStart(2, '0')
       const hm = `${pad(date.getHours())}:${pad(date.getMinutes())}`
-      if (date.toDateString() === now.toDateString()) return hm
-      return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${hm}`
+      return date.toDateString() === now.toDateString() ? hm : `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${hm}`
     }
-    const modelTitle = (model) => {
-      if (!model.providerId || model.providerId === 'unknown') return model.displayName ?? model.modelId
-      return [model.providerName, model.displayName ?? model.modelId].filter(Boolean).join(' / ')
-    }
-    const windowLabel = { '5h': '5h', week: '周', month: '月' }
+    const budgetColor = (state) => (state === 'over' ? T.over : state === 'warn' ? T.warn : T.accent)
+    const percentColor = (value) => (value >= 100 ? T.over : value >= 80 ? T.warn : T.accent)
+    const sourceLabel = (source) => String(source ?? '').includes('community') ? '社区' : '内置'
+    const linkLabel = (link) => PRICE_LABELS[link.id] ?? link.label
 
     async function getJson(path) {
       const res = await fetch(`${API}${path}`, { headers: { accept: 'application/json' } })
@@ -61,132 +85,200 @@ window.__ModuleLoader__.load({
 
     const styles = {
       pill: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        height: 24,
-        padding: '0 8px',
-        borderRadius: 999,
-        cursor: 'pointer',
-        maxWidth: '100%',
-        fontVariantNumeric: 'tabular-nums',
-        border: '1px solid var(--dsh-border, rgba(128,128,128,.25))',
-        color: 'var(--dsh-text, inherit)',
+        display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 8px',
+        borderRadius: 999, cursor: 'pointer', maxWidth: '100%', fontVariantNumeric: 'tabular-nums',
+        border: `1px solid ${T.border}`, color: T.text,
       },
       pillWrap: { position: 'relative', display: 'inline-flex', alignItems: 'center', marginLeft: 8 },
-      pillHover: { background: 'rgba(127,127,127,.12)' },
-      nameEllipsis: { maxWidth: '12em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+      pillHover: { background: 'color-mix(in srgb, currentColor 8%, transparent)' },
       hint: {
         position: 'absolute', right: 12, bottom: 30, padding: '5px 8px', borderRadius: 6,
-        background: 'var(--dsh-bg-elevated, #2a2a2a)', border: '1px solid var(--dsh-border, rgba(128,128,128,.25))',
+        background: T.tooltip, color: T.tooltipText, border: `1px solid ${T.border}`,
         fontSize: 11, whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(0,0,0,.25)',
       },
-      chevron: {
-        marginLeft: 2, padding: '0 1px', borderRadius: 4, background: 'rgba(77,141,255,.16)',
-        color: 'var(--dsw-alias-state-business-primary, #6ea8ff)', fontSize: 10,
-      },
-      sep: { width: 1, height: 12, background: 'currentColor', opacity: 0.2 },
+      chevron: { marginLeft: 2, padding: '0 1px', color: T.accent, fontSize: 10 },
       num: { fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
       panel: {
-        // #30 三次定案：从 pill 正上方弹出——左缘对齐 pill 左缘、底边距 pill 顶 8px，允许遮挡输入框
-        position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 'max-content',
-        minWidth: 'min(380px, calc(100vw - 32px))', maxWidth: 'min(600px, calc(100vw - 32px))',
-        boxSizing: 'border-box', maxHeight: '70vh', overflow: 'auto', zIndex: 9999,
-        padding: 12, borderRadius: 12, background: 'var(--dsh-bg-elevated, #1f1f1f)',
-        color: 'var(--dsh-text, #eee)', boxShadow: '0 12px 40px rgba(0,0,0,.35)', fontSize: 12,
-        outline: 'none',
+        position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
+        width: 'min(320px, calc(100vw - 16px))', boxSizing: 'border-box', maxHeight: '70vh',
+        overflow: 'auto', zIndex: 9999, padding: 12, borderRadius: 12,
+        background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))', color: T.text,
+        border: `1px solid ${T.border}`, boxShadow: '0 12px 40px rgba(0,0,0,.35)', fontSize: 12, outline: 'none',
       },
-      card: { border: '1px solid var(--dsh-border, rgba(128,128,128,.25))', borderRadius: 10, padding: 12, marginTop: 10 },
+      header: { display: 'flex', alignItems: 'center', gap: 6, minHeight: 28 },
+      headerTabs: { flex: 1, minWidth: 0 },
+      headerActions: { display: 'flex', alignItems: 'center', gap: 4, flex: '0 0 auto' },
       row: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-      rowStart: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-      muted: { opacity: 0.65, fontSize: 11 },
-      headerTitle: { fontSize: 13, fontWeight: 600 },
-      titleBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 36 },
-      buttonGroup: { display: 'flex', gap: 12 },
-      bar: { height: 6, borderRadius: 3, background: 'rgba(128,128,128,.25)', overflow: 'hidden', margin: '8px 0' },
-      barFill: { height: '100%', background: COLORS.primary },
-      barNeutral: { height: '100%', background: 'rgba(128,128,128,.45)' },
-      cols: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, marginTop: 8 },
-      subGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 8 },
-      scrollList: { maxHeight: 280, overflowY: 'auto', paddingRight: 4 },
-      table: { width: 'max-content', minWidth: '100%', borderCollapse: 'collapse', tableLayout: 'auto', marginTop: 6 },
-      th: { textAlign: 'left', opacity: 0.6, fontWeight: 400, padding: '4px 8px', whiteSpace: 'nowrap' },
-      thRight: { textAlign: 'right', opacity: 0.6, fontWeight: 400, padding: '4px 8px', borderLeft: '1px solid rgba(128,128,128,.15)', whiteSpace: 'nowrap' },
-      td: { padding: '4px 8px', borderTop: '1px solid rgba(128,128,128,.15)', whiteSpace: 'nowrap' },
-      tdRight: { padding: '4px 8px', textAlign: 'right', borderTop: '1px solid rgba(128,128,128,.15)', borderLeft: '1px solid rgba(128,128,128,.15)', whiteSpace: 'nowrap' },
-      modelCell: { padding: '4px 8px', borderTop: '1px solid rgba(128,128,128,.15)', whiteSpace: 'nowrap', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' },
-      link: { color: 'inherit', textDecoration: 'underline', cursor: 'pointer', marginLeft: 10 },
+      rowStart: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+      muted: { color: T.muted, fontSize: 11 },
+      weak: { color: T.weak, fontSize: 10.5 },
+      title: { fontSize: 13, fontWeight: 600 },
       button: {
-        border: '1px solid rgba(77,141,255,.32)', background: 'rgba(77,141,255,.16)',
-        color: 'var(--dsw-alias-state-business-primary, #6ea8ff)', borderRadius: 6,
-        padding: '2px 8px', cursor: 'pointer',
+        border: '1px solid color-mix(in srgb, var(--td-accent) 32%, transparent)',
+        background: 'color-mix(in srgb, var(--td-accent) 16%, transparent)',
+        color: 'var(--td-accent)', borderRadius: 6, minHeight: 22, padding: '0 7px',
+        fontSize: 11, cursor: 'pointer', font: 'inherit',
       },
-      select: { background: 'transparent', color: 'inherit', border: '1px solid rgba(128,128,128,.35)', borderRadius: 5, padding: '2px 4px' },
-      input: { width: 110, height: 28, boxSizing: 'border-box', textAlign: 'right', background: 'transparent', color: 'inherit', border: '1px solid rgba(128,128,128,.35)', borderRadius: 5, padding: '2px 4px' },
-      segButton: {
-        width: 72, height: 28, borderRadius: 6, border: '1px solid rgba(128,128,128,.35)',
-        background: 'transparent', color: 'inherit', cursor: 'pointer', fontSize: 12,
+      iconButton: {
+        width: 20, height: 20, padding: 0, borderRadius: 6, display: 'inline-flex',
+        alignItems: 'center', justifyContent: 'center', flex: '0 0 auto',
       },
-      segActive: { borderColor: 'rgba(77,141,255,.64)', color: 'var(--dsw-alias-state-business-primary, #6ea8ff)', background: 'rgba(77,141,255,.12)' },
-      toggleTrack: {
-        width: 44, height: 24, borderRadius: 999, border: 'none', padding: 2, display: 'flex', alignItems: 'center',
-        background: 'rgba(128,128,128,.35)', cursor: 'pointer', transition: 'background .15s',
+      section: { background: T.section, borderRadius: 10, padding: 10, marginTop: 10, display: 'grid', gap: 6 },
+      sectionHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, minHeight: 20 },
+      budgetRow: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 28px 48px 78px 58px', alignItems: 'center', columnGap: 2, minHeight: 22, fontSize: 10.5 },
+      budgetName: { fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+      quotaRow: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minHeight: 22, fontSize: 11 },
+      quotaName: { fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 88 },
+      rangeCard: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 },
+      tile: { background: T.tile, borderRadius: 8, padding: '8px 9px', minWidth: 0 },
+      tileLabel: { color: T.muted, fontSize: 11 },
+      tileValue: { fontSize: 17, fontWeight: 600, marginTop: 2, fontVariantNumeric: 'tabular-nums' },
+      tileDetail: { color: T.muted, fontSize: 10.5, marginTop: 1, fontVariantNumeric: 'tabular-nums' },
+      group: { marginTop: 9, display: 'grid', gap: 3 },
+      groupName: { fontSize: 13, fontWeight: 600 },
+      modelRow: { display: 'flex', alignItems: 'baseline', gap: 8, minHeight: 18 },
+      modelName: { minWidth: 0, flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+      modelCost: { fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' },
+      usageRow: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto auto', columnGap: 8, alignItems: 'center', fontSize: 10.5 },
+      usageLabel: { color: T.muted, fontSize: 9.5, marginRight: 3 },
+      usageValue: { fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
+      errorStrip: { display: 'flex', alignItems: 'center', gap: 6, color: T.over, fontSize: 11, marginTop: 6 },
+      empty: { color: T.muted, fontSize: 11, padding: '10px 0' },
+      input: {
+        width: 72, height: 22, boxSizing: 'border-box', textAlign: 'right',
+        background: T.input, color: T.text, border: `1px solid ${T.border}`,
+        borderRadius: 6, padding: '0 5px', font: 'inherit', fontVariantNumeric: 'tabular-nums',
       },
-      toggleOn: { background: '#2ea36f' },
-      toggleKnob: { width: 20, height: 20, borderRadius: 999, background: '#fff', transition: 'transform .15s' },
-      toggleKnobOn: { transform: 'translateX(20px)' },
+      card: { background: T.section, borderRadius: 10, padding: 10, marginTop: 10, display: 'grid', gap: 8 },
+      link: { color: T.text, textDecoration: 'underline', cursor: 'pointer' },
+      status: { minHeight: 15, fontSize: 10.5, color: T.muted, textAlign: 'right' },
+      priceLinks: { display: 'flex', gap: 7, alignItems: 'center', overflowX: 'auto', whiteSpace: 'nowrap', paddingBottom: 1 },
+    }
+    styles.button['--td-accent'] = T.accent
+    styles.iconButton = { ...styles.button, ...styles.iconButton }
+
+    function Icon({ name, size = 14, style }) {
+      const props = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true, style }
+      if (name === 'info') return h('svg', props, h('circle', { cx: 12, cy: 12, r: 9 }), h('path', { d: 'M12 11v5' }), h('path', { d: 'M12 8h.01' }))
+      if (name === 'close') return h('svg', props, h('path', { d: 'M6 6l12 12M18 6L6 18' }))
+      if (name === 'download') return h('svg', props, h('path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }), h('path', { d: 'M7 10l5 5 5-5' }), h('path', { d: 'M12 15V3' }))
+      if (name === 'loader') return h('svg', { ...props, style: { ...style, animation: 'td-spin 1s linear infinite' } }, h('path', { d: 'M21 12a9 9 0 1 1-6.2-8.56' }))
+      return h('svg', props, h('path', { d: 'M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8' }), h('path', { d: 'M3 3v5h5' }), h('path', { d: 'M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16' }), h('path', { d: 'M16 16h5v5' }))
     }
 
-    function Toggle({ checked, onChange }) {
+    function IconButton({ label, children, onClick, disabled = false, testid, dot = false }) {
       return h('button', {
-        type: 'button', role: 'switch', 'aria-checked': checked, onClick: () => onChange(!checked),
-        style: { ...styles.toggleTrack, ...(checked ? styles.toggleOn : {}) },
-      }, h('span', { style: { ...styles.toggleKnob, ...(checked ? styles.toggleKnobOn : {}) } }))
+        type: 'button', 'aria-label': label, title: label, disabled, onClick,
+        'data-testid': testid,
+        style: { ...styles.iconButton, position: 'relative', opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer' },
+      }, children, dot ? h('span', {
+        'aria-hidden': true,
+        style: { position: 'absolute', top: 2, right: 2, width: 4, height: 4, borderRadius: 999, background: T.warn },
+      }) : null)
     }
 
-    const REFRESH_OPTIONS = [[30000, '30 秒'], [60000, '1 分钟'], [300000, '5 分钟']]
-
-    function Segmented({ value, onChange }) {
-      return h('div', { role: 'radiogroup', 'aria-label': '刷新间隔', style: { display: 'inline-flex', gap: 4 } },
-        REFRESH_OPTIONS.map(([ms, label]) => h('button', {
-          key: ms, type: 'button', role: 'radio', 'aria-checked': value === ms,
-          onClick: () => onChange(ms),
-          style: { ...styles.segButton, ...(value === ms ? styles.segActive : {}) },
-        }, label)))
+    function InfoTip({ label, text, children, style }) {
+      const [open, setOpen] = useState(false)
+      return h('span', {
+        style: { position: 'relative', display: 'inline-flex', ...style },
+        onMouseEnter: () => setOpen(true), onMouseLeave: () => setOpen(false),
+      }, h('button', {
+        type: 'button', 'aria-label': label, 'aria-expanded': open,
+        onClick: () => setOpen((value) => !value),
+        onFocus: () => setOpen(true), onBlur: () => setOpen(false),
+        style: { ...styles.iconButton, width: 16, height: 16, minHeight: 16, padding: 0, fontSize: 10 },
+      }, children ?? h(Icon, { name: 'info', size: 12 })),
+      open ? h('span', {
+        role: 'tooltip',
+        style: {
+          position: 'absolute', top: 'calc(100% + 5px)', right: 0, zIndex: 20, width: 190,
+          padding: '6px 7px', borderRadius: 6, background: T.tooltip, color: T.tooltipText,
+          fontSize: 10.5, lineHeight: 1.35, boxShadow: '0 6px 20px rgba(0,0,0,.3)', whiteSpace: 'normal',
+        },
+      }, text) : null)
     }
 
-    /** 余额只来自账户余额接口；预算剩余不进入余额位。 */
-    function balanceText(provider, showBalance) {
-      if (showBalance === false) return null
+    function Toggle({ checked, onChange, label }) {
+      return h('button', {
+        type: 'button', role: 'switch', 'aria-checked': checked, 'aria-label': label,
+        onClick: () => onChange(!checked),
+        style: {
+          width: 28, height: 16, borderRadius: 999, border: 'none', padding: 2,
+          display: 'flex', alignItems: 'center', cursor: 'pointer',
+          background: checked ? T.accent : 'color-mix(in srgb, currentColor 25%, transparent)',
+        },
+      }, h('span', { style: {
+        width: 12, height: 12, borderRadius: 999, background: '#fff',
+        transform: `translateX(${checked ? 12 : 0}px)`, transition: 'transform .15s',
+      } }))
+    }
+
+    function Segmented({ value, options, onChange, label, kind = 'tablist' }) {
+      const itemRole = kind === 'radiogroup' ? 'radio' : 'tab'
+      return h('div', {
+        role: kind, 'aria-label': label,
+        style: { display: 'flex', width: '100%', height: 28, padding: 2, boxSizing: 'border-box', gap: 2, borderRadius: 8, background: T.segment },
+      }, options.map((option, index) => {
+        const selected = option.value === value
+        return h('button', {
+          key: option.value, type: 'button', role: itemRole,
+          'aria-selected': itemRole === 'tab' ? selected : undefined,
+          'aria-checked': itemRole === 'radio' ? selected : undefined,
+          tabIndex: selected ? 0 : -1,
+          onClick: () => onChange(option.value),
+          onKeyDown: (event) => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+            event.preventDefault()
+            const direction = event.key === 'ArrowRight' ? 1 : -1
+            onChange(options[(index + direction + options.length) % options.length].value)
+          },
+          style: {
+            flex: 1, minWidth: 0, height: 24, padding: '0 4px', borderRadius: 6, border: 'none',
+            fontSize: 11, fontWeight: 500, cursor: 'pointer', font: 'inherit',
+            background: selected ? T.segmentOn : 'transparent',
+            color: selected ? T.text : T.muted,
+            boxShadow: selected ? 'var(--dsw-shadow-lv1, 0 1px 2px rgba(0,0,0,.08))' : 'none',
+            transition: 'background .15s, color .15s',
+          },
+        }, option.label)
+      }))
+    }
+
+    function MiniBar({ ratio = 0, neutral = false }) {
+      return h('span', {
+        style: { display: 'block', width: 48, height: 4, borderRadius: 999, overflow: 'hidden', background: 'color-mix(in srgb, var(--dsw-alias-label-primary, #eee) 10%, transparent)' },
+      }, h('span', { style: {
+        display: 'block', height: '100%', width: `${Math.max(0, Math.min(100, (Number(ratio) || 0) * 100))}%`,
+        borderRadius: 999, background: neutral ? 'color-mix(in srgb, currentColor 30%, transparent)' : T.accent,
+      } }))
+    }
+
+    function balanceText(provider, show = true) {
+      if (show === false) return null
       const balance = provider.balance
-      if (balance === undefined || balance === null) return '待配置'
+      if (balance === undefined || balance === null) return '—'
       if (balance.status === 'ok') return Number.isFinite(balance.amount) ? fmtMoney(balance.amount, provider.currency) : '查询失败'
-      if (balance.status === 'unconfigured') return '待配置'
-      if (balance.status === 'unsupported') return '不支持'
+      if (balance.status === 'unconfigured' || balance.status === 'unsupported') return '—'
       return '查询失败'
     }
+
+    function windowLabel(key) { return { '5h': '5h', week: '周', month: '月' }[key] ?? key }
 
     function subscriptionText(provider) {
       const windows = Array.isArray(provider.windows) ? provider.windows : []
       if (windows.length === 0) return '套餐查询失败'
-      const text = windows.slice(0, 2).map((plan) => `${windowLabel[plan.key] ?? plan.key} ${fmtUsed(plan.usedPercent)}`).join(' · ')
-      if (windows.length === 1) {
-        const reset = fmtReset(windows[0].resetAt)
-        if (reset !== null) return `${text} · 重置 ${reset}`
-      }
-      return text
+      return windows.slice(0, 2).map((plan) => `${windowLabel(plan.key)} ${fmtPercent(plan.usedPercent)}`).join(' · ')
     }
 
-    /** 订阅窗口节点：百分比按官方原值着色；withReset 时单窗口附重置时间（P1）。 */
     function subscriptionNodes(provider, withReset = false) {
       const windows = Array.isArray(provider.windows) ? provider.windows : []
       if (windows.length === 0) return [h('span', { key: 'fail' }, '套餐查询失败')]
       const nodes = windows.slice(0, 2).map((plan, index) => h(React.Fragment, { key: plan.key },
         index > 0 ? ' · ' : null,
-        `${windowLabel[plan.key] ?? plan.key} `,
-        h('b', { style: { ...styles.num, color: percentColor(plan.usedPercent ?? 0) } }, fmtUsed(plan.usedPercent))))
+        `${windowLabel(plan.key)} `,
+        h('b', { style: { ...styles.num, color: percentColor(plan.usedPercent ?? 0) } }, fmtPercent(plan.usedPercent))))
       if (withReset && windows.length === 1) {
-        const reset = fmtReset(windows[0].resetAt)
+        const reset = fmtTime(windows[0].resetAt)
         if (reset !== null) nodes.push(h('span', { key: 'reset' }, ` · 重置 ${reset}`))
       }
       return nodes
@@ -197,17 +289,15 @@ window.__ModuleLoader__.load({
       const [open, setOpen] = useState(false)
       const [error, setError] = useState(false)
       const [refreshMs, setRefreshMs] = useState(60000)
-      const [view, setView] = useState('dashboard')
       const [refreshing, setRefreshing] = useState(false)
       const [hover, setHover] = useState(false)
       const [hint, setHint] = useState(false)
       const [panelMaxHeight, setPanelMaxHeight] = useState('70vh')
+      const [panelShift, setPanelShift] = useState(0)
       const pillRef = useRef(null)
 
       useEffect(() => {
-        try {
-          if (window.localStorage.getItem('token-dash-hint-seen') !== '1') setHint(true)
-        } catch { /* ignore */ }
+        try { if (window.localStorage.getItem('token-dash-hint-seen') !== '1') setHint(true) } catch { /* ignore */ }
       }, [])
 
       const load = useCallback(async () => {
@@ -235,11 +325,7 @@ window.__ModuleLoader__.load({
       }, [load, refreshMs])
 
       const refreshSubs = useCallback(async () => {
-        try {
-          await fetch(`${API}/providers/refresh`, { method: 'POST', headers: { accept: 'application/json' } })
-        } catch {
-          // fall through: still refresh the summary below
-        }
+        try { await fetch(`${API}/providers/refresh`, { method: 'POST', headers: { accept: 'application/json' } }) } catch { /* fall through */ }
         await load()
       }, [load])
 
@@ -249,44 +335,54 @@ window.__ModuleLoader__.load({
       }
       const closePanel = useCallback(() => {
         setOpen(false)
-        // 等 React 移除浮层后再归还焦点，避免同步 focus 被随后的重渲染吞掉
         setTimeout(() => pillRef.current?.focus(), 0)
       }, [])
+      const measurePanel = useCallback(() => {
+        const rect = pillRef.current?.getBoundingClientRect()
+        if (rect === undefined) return
+        const width = Math.min(320, window.innerWidth - 16)
+        setPanelShift(Math.min(0, window.innerWidth - 8 - rect.left - width))
+        const available = Math.round(rect.top) - 16
+        setPanelMaxHeight(`${Math.max(200, Math.min(window.innerHeight * 0.7, available))}px`)
+      }, [])
+      useEffect(() => {
+        if (!open) return
+        const node = pillRef.current
+        const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => measurePanel()) : null
+        if (node !== null) observer?.observe(node)
+        window.addEventListener('resize', measurePanel)
+        const raf = requestAnimationFrame(measurePanel)
+        const timer = setTimeout(measurePanel, 120)
+        return () => {
+          observer?.disconnect()
+          window.removeEventListener('resize', measurePanel)
+          cancelAnimationFrame(raf)
+          clearTimeout(timer)
+        }
+      }, [open, summary, measurePanel])
       const toggle = () => {
         dismissHint()
-        // #30 三次定案：浮层从 pill 正上方弹出；pill 上方空间不足时收紧 maxHeight（视口顶 8px 间隙 + pill 间距 8px），内容内部滚动
-        const rect = pillRef.current?.getBoundingClientRect()
-        if (rect !== undefined) {
-          const available = Math.round(rect.top) - 16
-          setPanelMaxHeight(`${Math.max(200, Math.min(window.innerHeight * 0.7, available))}px`)
-        }
-        setOpen((value) => {
-          if (!value) setView('dashboard')
-          return !value
-        })
+        if (!open) measurePanel()
+        setOpen((value) => !value)
       }
 
       const providers = summary?.providers ?? []
       const current = providers.find((provider) => provider.id === summary?.currentProviderId) ?? providers[0]
-      // #36/#38 定案：徽标 [API]/[订阅]（词条统一），不显示 provider 名（hover title 与 aria-label 兜底）
       let prefix = '[API]'
       let bodyNodes = [h('span', { key: 'unknown' }, '--')]
       let ariaText = '按量 API'
       if (current?.kind === 'subscription') {
         prefix = '[订阅]'
-        bodyNodes = [
-          h('span', { key: 'windows' }, ...subscriptionNodes(current, true)),
-        ]
+        bodyNodes = [h('span', { key: 'windows' }, ...subscriptionNodes(current, true))]
         ariaText = `${current.name}，订阅，账户套餐，${subscriptionText(current)}`
       } else if (current !== undefined) {
         const budget = current.budget
-        const hasBudget = budget !== undefined && budget.state !== 'unset'
+        const hasBudget = budget !== undefined && budget.state !== 'unset' && budget.amount > 0
         const balance = balanceText(current, summary?.showBalance)
         bodyNodes = [
-          h('span', { key: 'budget' }, '预算 ',
-            hasBudget
-              ? h('b', { style: { ...styles.num, color: budgetColor(budget.state) } }, fmtRatio(budget.percent))
-              : '未设置'),
+          h('span', { key: 'budget' }, '预算 ', hasBudget
+            ? h('b', { style: { ...styles.num, color: budgetColor(budget.state) } }, fmtRatio(budget.percent))
+            : '未设置'),
           h('span', { key: 'today' }, `今日 ${fmtMoney(current.usage?.todayCost, current.currency)}`),
           balance === null ? null : h('span', { key: 'balance' }, `余额 ${balance}`),
         ].filter(Boolean)
@@ -294,148 +390,66 @@ window.__ModuleLoader__.load({
       }
       const hoverTitle = `${current?.name ?? ''} · ${open ? '收起' : '展开'} Token 看板`
 
-      // #30 三次定案 + 根因修复：Panel 必须渲染在 pillWrap 内部，
-      // absolute 才以 pillWrap（position:relative）为锚——此前 Panel 是 pillWrap 的兄弟节点，
-      // absolute 一直挂在宿主槽位容器上，导致 v1 起浮层位置从未真正对齐过 pill。
       return h('div', { style: styles.pillWrap },
+        h('style', null, SPIN_CSS),
         hint && !open ? h('span', { style: styles.hint, role: 'status' }, '点击查看 Token 看板') : null,
         h('span', {
-          ref: pillRef,
-          'data-testid': 'token-dash-pill',
+          ref: pillRef, 'data-testid': 'token-dash-pill',
           style: { ...styles.pill, ...(hover || open ? styles.pillHover : {}) },
-          onClick: toggle,
-          onMouseEnter: () => setHover(true), onMouseLeave: () => setHover(false),
+          onClick: toggle, onMouseEnter: () => setHover(true), onMouseLeave: () => setHover(false),
           onFocus: () => setHover(true), onBlur: () => setHover(false),
           onKeyDown: (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle() } },
           role: 'button', tabIndex: 0, 'aria-expanded': open, 'aria-haspopup': 'dialog',
-          'aria-label': `Token 看板：${ariaText}`,
-          title: hoverTitle,
+          'aria-label': `Token 看板：${ariaText}`, title: hoverTitle,
         }, h('span', { key: 'prefix', style: styles.num }, prefix), ...bodyNodes,
           h('span', { key: 'chevron', style: styles.chevron }, open ? '⌄' : '⌃')),
         open ? h(Panel, {
-          summary, error, view, refreshing, maxHeight: panelMaxHeight, onView: setView, onRefresh: load, onRefreshSubs: refreshSubs, onClose: closePanel,
+          summary, error, refreshing, maxHeight: panelMaxHeight, left: panelShift,
+          onRefresh: load, onRefreshSubs: refreshSubs, onClose: closePanel,
         }) : null)
     }
 
-    function ApiCard({ provider }) {
-      const budget = provider.budget
-      const hasBudget = budget !== undefined && budget.state !== 'unset'
-      const color = budgetColor(budget?.state)
-      // #37：单行紧凑式（框线图）——名称 + 预算段（#33 总额度并入）+ 今日 + 余额，第二行进度条
-      return h('div', { 'data-testid': `token-dash-api-card-${provider.id}`, style: styles.card },
-        h('div', { style: styles.row },
-          h('b', { style: styles.nameEllipsis, title: provider.name }, provider.name),
-          h('span', { style: styles.rowStart },
-            hasBudget
-              ? h('span', { 'data-testid': `token-dash-budget-${provider.id}` },
-                  '预算 ', h('b', { style: { color } }, fmtMoney(budget.used, provider.currency)),
-                  ` / ${fmtMoney(budget.amount, provider.currency)} · `,
-                  h('b', { style: { color } }, fmtRatio(budget.percent)))
-              : h('span', { style: styles.muted }, '预算 未设置'),
-            h('span', null, `今日 ${fmtMoney(provider.usage?.todayCost, provider.currency)}`),
-            h('span', null, `余额 ${balanceText(provider, true) ?? '--'}`))),
-        h('div', { style: { ...styles.bar, marginTop: 6, marginBottom: 0 } },
-          h('div', {
-            'data-testid': `token-dash-budget-bar-${provider.id}`,
-            style: {
-              ...styles.barFill,
-              background: hasBudget ? color : styles.barNeutral.background,
-              width: hasBudget ? `${Math.min(100, (budget.percent ?? 0) * 100)}%` : '100%',
-            },
-          })))
+    function PanelHeader({ tab, onTab, onRefresh, refreshing, onClose, showInfo, stale = false }) {
+      return h('div', { style: styles.header },
+        h('div', { style: styles.headerTabs }, h(Segmented, {
+          value: tab, onChange: onTab, label: '看板页面',
+          options: [{ value: 'usage', label: '用量' }, { value: 'settings', label: '设置' }],
+        })),
+        h('div', { style: styles.headerActions },
+          showInfo ? h(InfoTip, {
+            label: '查看支持的 API Key 范围',
+            text: '目前支持 DeepSeek / Kimi / GLM / OpenRouter / Qwen API Key',
+          }) : null,
+          h(IconButton, {
+            label: '刷新', testid: 'token-dash-refresh', disabled: refreshing, onClick: onRefresh, dot: stale,
+          }, h(Icon, { name: refreshing ? 'loader' : 'refresh', size: 13 })),
+          h(IconButton, { label: '关闭', testid: 'token-dash-close', onClick: onClose }, h(Icon, { name: 'close', size: 13 }))))
     }
 
-    function SubscriptionCard({ provider }) {
-      const windows = Array.isArray(provider.windows) ? provider.windows : []
-      const resets = windows.map((plan) => plan.resetAt).filter((ts) => Number.isFinite(ts) && ts > 0)
-      const nextReset = resets.length > 0 ? Math.min(...resets) : null
-      return h('div', { 'data-testid': `token-dash-sub-card-${provider.id}`, style: { ...styles.card, marginTop: 0 } },
-        h('div', { style: styles.row }, h('b', { style: styles.nameEllipsis, title: provider.name }, provider.name), h('span', { style: styles.muted }, '订阅')),
-        windows.length === 0
-          ? h('div', { style: { ...styles.muted, marginTop: 6 } }, '套餐查询失败')
-          : h(React.Fragment, null,
-              h('div', { style: { ...styles.row, marginTop: 6, flexWrap: 'wrap', justifyContent: 'flex-start' } }, subscriptionNodes(provider)),
-              windows.map((plan) => h('div', { key: plan.key, style: styles.bar },
-                h('div', { style: { ...styles.barFill, width: `${Math.min(100, plan.usedPercent ?? 0)}%` } }))),
-              nextReset !== null ? h('div', { style: { ...styles.muted, marginTop: 2 } }, `重置 ${fmtReset(nextReset)}`) : null))
-    }
-
-    function ApiCostTable({ models }) {
-      const groups = new Map()
-      for (const model of models) {
-        if (model.kind !== 'api') continue
-        const list = groups.get(model.currency) ?? []
-        list.push(model)
-        groups.set(model.currency, list)
-      }
-      if (groups.size === 0) {
-        // #40：空态保留表格结构（对齐 #32 用量表空态口径），不再整体隐藏
-        return h('div', { 'data-testid': 'token-dash-cost-table', style: styles.card },
-          h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, 'API 费用明细 / 本月'), h('span', { style: styles.muted }, 'DSH 本机估算')),
-          h('div', { style: { ...styles.muted, marginTop: 8 } }, `CNY 合计 ${fmtMoney(0, 'CNY')}`),
-          h('div', { style: { overflowX: 'auto' } },
-            h('table', { style: styles.table },
-              h('thead', null, h('tr', null, h('th', { style: styles.th }, '模型'), h('th', { style: { ...styles.thRight, width: 64 } }, '占比'), h('th', { style: { ...styles.thRight, width: 96 } }, '费用'))),
-              h('tbody', null, h('tr', { key: 'empty' },
-                h('td', { style: styles.modelCell }, '—'),
-                h('td', { style: styles.tdRight }, fmtRatio(0)),
-                h('td', { style: styles.tdRight }, fmtMoney(0, 'CNY')))))))
-      }
-      return h('div', { 'data-testid': 'token-dash-cost-table', style: styles.card },
-        h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, 'API 费用明细 / 本月'), h('span', { style: styles.muted }, 'DSH 本机估算')),
-        ...[...groups.entries()].flatMap(([currency, rows]) => [
-          h('div', { key: `${currency}-head`, style: { ...styles.muted, marginTop: 8 } }, `${currency} 合计 ${fmtMoney(rows.reduce((sum, row) => sum + row.cost, 0), currency)}`),
-          h('div', { key: `${currency}-wrap`, style: { overflowX: 'auto' } },
-            h('table', { style: styles.table },
-              h('thead', null, h('tr', null, h('th', { style: styles.th }, '模型'), h('th', { style: { ...styles.thRight, width: 64 } }, '占比'), h('th', { style: { ...styles.thRight, width: 96 } }, '费用'))),
-              h('tbody', null, rows.map((model) => h('tr', { key: `${model.providerId}:${model.modelId}` },
-                h('td', { style: styles.modelCell, title: modelTitle(model) }, modelTitle(model)),
-                h('td', { style: styles.tdRight }, fmtRatio(model.share)),
-                h('td', { style: { ...styles.tdRight, fontWeight: 600 } }, model.priced === false ? '未定价' : fmtMoney(model.cost, currency))))))),
-        ]))
-    }
-
-    function UsageTable({ models }) {
-      // #32：空态保留表格结构，数值显示 0（不再用 colSpan 文案行）
-      const emptyRow = models.length === 0
-        ? h('tr', { key: 'empty' },
-            h('td', { style: styles.modelCell }, '—'),
-            h('td', { style: styles.tdRight }, 0),
-            h('td', { style: styles.tdRight }, fmtM(0)),
-            h('td', { style: styles.tdRight }, fmtM(0)),
-            h('td', { style: styles.tdRight }, fmtM(0)),
-            h('td', { style: styles.tdRight }, '—'))
-        : null
-      return h('div', { 'data-testid': 'token-dash-usage-table', style: styles.card },
-        h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, '模型用量明细 / 本月'), h('span', { style: styles.muted }, `合计 ${fmtM(models.reduce((sum, model) => sum + (model.tokens?.total ?? 0), 0))}`)),
-        h('div', { style: { overflowX: 'auto' } },
-          h('table', { style: styles.table },
-            h('thead', null, h('tr', null,
-              h('th', { key: '模型', style: styles.th }, '模型'),
-              h('th', { key: '请求', style: { ...styles.thRight, width: 44 } }, '请求'),
-              h('th', { key: '输入', style: { ...styles.thRight, width: 56 } }, '输入'),
-              h('th', { key: '命中', style: { ...styles.thRight, width: 56 } }, '命中'),
-              h('th', { key: '输出', style: { ...styles.thRight, width: 56 } }, '输出'),
-              h('th', { key: '命中率', style: { ...styles.thRight, width: 52 } }, '命中率'))),
-            h('tbody', null,
-              models.map((model) => h('tr', { key: `${model.providerId}:${model.modelId}` },
-                h('td', { style: styles.modelCell, title: modelTitle(model) }, modelTitle(model)),
-                h('td', { style: styles.tdRight }, model.requests),
-                h('td', { style: styles.tdRight }, fmtM(model.tokens?.input ?? 0)),
-                h('td', { style: styles.tdRight }, fmtM(model.tokens?.cacheRead ?? 0)),
-                h('td', { style: styles.tdRight }, fmtM(model.tokens?.output ?? 0)),
-                h('td', { style: styles.tdRight }, model.hitRate === null || model.hitRate === undefined ? '—' : fmtRatio(model.hitRate)))),
-              emptyRow))))
-    }
-
-    function Panel({ summary, error, view, refreshing, maxHeight = '70vh', onView, onRefresh, onRefreshSubs, onClose }) {
+    function Panel({ summary, error, refreshing, maxHeight, left = 0, onRefresh, onRefreshSubs, onClose }) {
+      const [tab, setTab] = useState('usage')
+      const [range, setRange] = useState('today')
+      const [usage, setUsage] = useState(null)
+      const [usageLoading, setUsageLoading] = useState(false)
+      const [usageError, setUsageError] = useState(false)
+      const [panelError, setPanelError] = useState(false)
       const panelRef = useRef(null)
 
-      useEffect(() => {
-        panelRef.current?.focus?.()
-      }, [])
+      const loadUsage = useCallback(async () => {
+        setUsageLoading(true)
+        setUsageError(false)
+        try {
+          setUsage(await getJson(`/usage?range=${encodeURIComponent(range)}`))
+        } catch {
+          setUsageError(true)
+        } finally {
+          setUsageLoading(false)
+        }
+      }, [range])
 
-      // #35：点击浮层外部关闭（Esc 按 D-15 修订不做）；命中 pill/hint 时交给 pill 的 toggle，不视为外部
+      useEffect(() => { if (tab === 'usage') loadUsage() }, [tab, loadUsage])
+      useEffect(() => { setPanelError(error === true) }, [error])
+
       useEffect(() => {
         const onDown = (event) => {
           const node = panelRef.current
@@ -448,80 +462,169 @@ window.__ModuleLoader__.load({
         return () => document.removeEventListener('mousedown', onDown)
       }, [onClose])
 
-      const panelProps = {
+      const refreshAll = useCallback(async () => {
+        await onRefresh?.()
+        if (tab === 'usage') await loadUsage()
+      }, [onRefresh, tab, loadUsage])
+
+      const body = tab === 'usage'
+        ? h(UsageContent, {
+          summary, usage, range, loading: usageLoading, usageError, error: panelError,
+          onRange: setRange, onRetry: refreshAll, onRefreshSubs,
+        })
+        : h(SettingsContent, { summary, onRefresh, onRefreshSubs })
+
+      const stale = Number.isFinite(summary?.updatedAt)
+        && Date.now() - summary.updatedAt > (Number(summary?.refreshMs) || 60000) * 2
+      return h('div', {
         ref: panelRef, tabIndex: -1, role: 'dialog', 'aria-label': 'Token 看板',
         'data-testid': 'token-dash-panel',
-        style: { ...styles.panel, maxHeight },
-      }
+        style: { ...styles.panel, maxHeight, left },
+      },
+        h(PanelHeader, {
+          tab, onTab: setTab, onRefresh: refreshAll, refreshing: refreshing || usageLoading,
+          onClose, showInfo: tab === 'usage', stale,
+        }),
+        body)
+    }
 
-      if (view === 'settings') {
-        return h('div', panelProps,
-          h(Settings, { summary, onBack: () => onView('dashboard'), onClose, onRefresh, onRefreshSubs }))
-      }
+    function BudgetRow({ provider }) {
+      const budget = provider.budget
+      const hasBudget = budget !== undefined && budget.state !== 'unset' && budget.amount > 0
+      const color = budgetColor(budget?.state)
+      return h('div', { 'data-testid': `token-dash-api-row-${provider.id}`, style: styles.budgetRow },
+        h('span', { style: styles.budgetName, title: provider.name }, provider.name),
+        h('span', { style: { color, textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums' } },
+          hasBudget ? fmtRatio(budget.percent) : '未设置'),
+        h(MiniBar, { ratio: hasBudget ? budget.percent : 1, neutral: !hasBudget }),
+        h('span', { style: { textAlign: 'right', color: T.muted, fontVariantNumeric: 'tabular-nums' } },
+          hasBudget ? `${fmtMoney(budget.used, provider.currency)}/${fmtMoney(budget.amount, provider.currency)}` : '—'),
+        h('span', { style: { textAlign: 'right', color: T.muted, fontVariantNumeric: 'tabular-nums' } },
+          `余额 ${balanceText(provider, true) ?? '—'}`))
+    }
 
-      const models = summary?.breakdown?.models ?? []
+    function QuotaRow({ provider, reset = false }) {
+      const windows = Array.isArray(provider.windows) ? provider.windows : []
+      const resetText = reset && windows.length > 0 ? fmtTime(windows[windows.length - 1].resetAt) : null
+      return h('div', { 'data-testid': `token-dash-sub-row-${provider.id}`, style: { display: 'grid', gap: 2, padding: '2px 0' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+          h('span', { style: styles.quotaName, title: provider.name }, provider.name),
+          resetText === null ? null : h('span', { style: { marginLeft: 'auto', color: T.weak, fontSize: 10.5 } }, `${resetText} 重置`)),
+        windows.length === 0
+          ? h('span', { style: styles.muted }, '套餐查询失败')
+          : h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+            ...windows.map((plan) => h('span', { key: plan.key, style: { display: 'inline-flex', alignItems: 'center', gap: 4 } },
+              h('span', { style: { color: T.muted } }, windowLabel(plan.key)),
+              h('b', { style: { color: percentColor(plan.usedPercent ?? 0), fontVariantNumeric: 'tabular-nums' } }, fmtPercent(plan.usedPercent)),
+              h(MiniBar, { ratio: (Number(plan.usedPercent) || 0) / 100 })))))
+    }
+
+    function DetailGroup({ rows }) {
+      return h('div', { style: styles.group },
+        h('div', { style: styles.groupName }, rows[0]?.providerName ?? rows[0]?.providerId ?? ''),
+        ...rows.map((model) => h('div', { key: `${model.providerId}:${model.modelId}`, style: { display: 'grid', gap: 1 } },
+          h('div', { style: styles.modelRow },
+            h('span', { style: styles.modelName, title: model.displayName ?? model.modelId }, model.displayName ?? model.modelId),
+            model.kind === 'api'
+              ? h('span', { style: styles.modelCost }, model.priced === false ? '未定价' : fmtMoney(model.cost, model.currency))
+              : null),
+          h('div', { style: styles.usageRow },
+            h('span', { style: { minWidth: 0, whiteSpace: 'nowrap' } },
+              h('span', { style: styles.usageLabel }, 'Tokens '),
+              h('span', { style: styles.usageValue }, fmtTokens(model.tokens?.total ?? 0)),
+              h(InfoTip, {
+                label: `${model.displayName ?? model.modelId} Token 明细`,
+                text: `输入 ${fmtTokens(model.input)} · 缓存 ${fmtTokens(model.cacheRead)} · 输出 ${fmtTokens(model.output)}`,
+                style: { marginLeft: 2, verticalAlign: 'middle' },
+              }, h(Icon, { name: 'info', size: 10 }))),
+            h('span', { style: { whiteSpace: 'nowrap', textAlign: 'right' } },
+              h('span', { style: styles.usageLabel }, '请求 '), h('span', { style: styles.usageValue }, model.requests)),
+            h('span', { style: { whiteSpace: 'nowrap', textAlign: 'right' } },
+              h('span', { style: styles.usageLabel }, '命中 '), h('span', { style: styles.usageValue }, model.hitRate === null || model.hitRate === undefined ? '—' : fmtRatio(model.hitRate)))))))
+    }
+
+    function UsageContent({ summary, usage, range, loading, usageError, error, onRange, onRetry, onRefreshSubs }) {
+      if (summary === null) {
+        return h('div', { style: styles.section },
+          h('div', { style: styles.empty }, error ? 'Token 数据不可用' : 'Token 数据加载中…'),
+          error ? h('button', { type: 'button', style: styles.button, onClick: onRetry }, '重试') : null)
+      }
       const providers = summary?.providers ?? []
       const api = providers.filter((provider) => provider.kind === 'api')
       const subscriptions = providers.filter((provider) => provider.kind === 'subscription')
-      const ago = fmtAgo(summary?.updatedAt)
-      return h('div', panelProps,
-        h('div', { style: styles.titleBar },
-          h('b', { style: styles.headerTitle }, 'Token 看板'),
-          h('span', { style: styles.buttonGroup },
-            h('button', { style: { ...styles.button, opacity: refreshing ? 0.6 : 1 }, disabled: refreshing, onClick: onRefresh }, refreshing ? '刷新中…' : '刷新'),
-            h('button', { style: styles.button, onClick: () => onView('settings') }, '设置'),
-            h('button', { style: styles.button, onClick: onClose }, '关闭'))),
-        error ? h('div', { style: { ...styles.row, color: '#e05a5a', marginTop: 6 } },
-          h('span', null, 'Token 数据不可用'),
-          h('button', { 'data-testid': 'token-dash-retry', style: styles.button, onClick: onRefresh }, '重试')) : null,
-        h('div', { style: { ...styles.muted, marginTop: 6 } }, '自动侦测 API Key 类型：DeepSeek / Kimi / GLM / OpenRouter / Qwen'),
-        providers.length === 0 ? h('div', { style: { ...styles.muted, marginTop: 10 } }, '未检测到已配置供应商') : null,
-        api.length > 0 ? h('div', { 'data-testid': 'token-dash-api-section', style: { marginTop: 8 } },
-          h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, 'API 按量'), h('span', { style: styles.muted }, `已检测 ${api.length} · ${ago}`)),
-          h('div', { style: api.length > 3 ? styles.scrollList : null },
-            api.map((provider) => h(ApiCard, { key: provider.id, provider })))) : null,
-        subscriptions.length > 0 ? h('div', { 'data-testid': 'token-dash-sub-section', style: { marginTop: 8 } },
-          h('div', { style: styles.row },
-            h('b', { style: styles.headerTitle }, '订阅套餐'),
-            h('span', { style: styles.rowStart }, api.length === 0 ? h('span', { style: styles.muted }, ago) : null,
-              h('button', { 'data-testid': 'token-dash-rescan', style: styles.button, onClick: onRefreshSubs }, '重新检测'))),
-          h('div', { style: styles.subGrid }, subscriptions.map((provider) => h(SubscriptionCard, { key: provider.id, provider })))) : null,
-        h(ApiCostTable, { models }),
-        h(UsageTable, { models }))
+      const models = usage?.range === range && Array.isArray(usage.models) ? usage.models : []
+      const groups = new Map()
+      for (const model of models) {
+        const list = groups.get(model.providerId) ?? []
+        list.push(model)
+        groups.set(model.providerId, list)
+      }
+      const totalTokenCount = models.reduce((sum, model) => sum + (model.tokens?.total ?? 0), 0)
+      const costEntries = Object.entries(usage?.totals ?? { CNY: { cost: 0 } })
+      const selected = usage?.range === range
+      const fixed = []
+      if (api.length > 0) {
+        fixed.push(h('div', { key: 'api-head', style: styles.sectionHead }, h('b', { style: styles.title }, `本月预算（已检测 ${api.length}）`)))
+        fixed.push(...api.map((provider) => h(BudgetRow, { key: provider.id, provider })))
+      }
+      if (subscriptions.length > 0) {
+        fixed.push(h('div', { key: 'sub-head', style: { ...styles.sectionHead, marginTop: 4 } },
+          h('b', { style: styles.title }, `订阅套餐（账户级，已检测 ${subscriptions.length}）`),
+          h(IconButton, { label: '重新检测订阅配额', testid: 'token-dash-rescan', onClick: () => { void onRefreshSubs?.() } },
+            h(Icon, { name: 'refresh', size: 12 }))))
+        fixed.push(...subscriptions.map((provider) => h(QuotaRow, { key: provider.id, provider, reset: true })))
+      }
+      if (fixed.length === 0) fixed.push(h('div', { key: 'empty', style: styles.empty }, '未检测到已配置供应商'))
+      return h(React.Fragment, null,
+        h('div', { style: styles.section }, ...fixed),
+        h('div', { style: { marginTop: 10 } }, h(Segmented, {
+          value: range, onChange: onRange, label: '时间范围',
+          options: RANGES.map(([value, label]) => ({ value, label })),
+        })),
+        error || usageError ? h('div', { style: styles.errorStrip, role: 'alert' },
+          h('span', null, error ? '刷新失败，保留上次数据' : '范围数据加载失败'),
+          h('button', { type: 'button', style: styles.button, onClick: onRetry }, '重试')) : null,
+        h('div', { style: styles.section },
+          h('div', { style: styles.rangeCard },
+            h('div', { style: styles.tile },
+              h('div', { style: styles.tileLabel }, '总费用'),
+              ...costEntries.map(([currency, value]) => h('div', { key: currency, style: { ...styles.tileValue, fontSize: 14, color: T.ok } }, fmtMoney(value.cost, currency))),
+              h('div', { style: styles.tileDetail }, '按币种')),
+            h('div', { style: styles.tile },
+              h('div', { style: styles.tileLabel }, '真实 Tokens'),
+              h('div', { style: styles.tileValue }, fmtTokens(totalTokenCount)),
+              h('div', { style: styles.tileDetail }, `入 ${fmtTokens(models.reduce((sum, model) => sum + (model.input ?? 0), 0))} · 出 ${fmtTokens(models.reduce((sum, model) => sum + (model.output ?? 0), 0))}`))),
+          !selected && loading ? h('div', { style: styles.empty }, '范围数据加载中…') : null,
+          selected && models.length === 0 ? h('div', { style: styles.empty }, '范围内暂无消耗') : null,
+          selected && models.length > 0 ? [...groups.entries()].map(([providerId, rows]) => h(DetailGroup, { key: providerId, rows })) : null))
     }
 
-    function modeSelect(provider, prefs, savePrefs) {
-      const value = prefs.billingModes?.[provider.id] ?? (provider.kind === 'subscription' ? 'subscription' : 'api')
-      return h('select', {
-        value,
-        'aria-label': `${provider.name} 计费模式`,
-        onChange: (event) => savePrefs({ billingModes: { ...(prefs.billingModes ?? {}), [provider.id]: event.target.value } }),
-        style: styles.select,
-      },
-        h('option', { value: 'api' }, '按量 API'),
-        provider.canSubscribe === true ? h('option', { value: 'subscription' }, '订阅套餐') : null,
-        h('option', { value: 'hide' }, '不显示'))
-    }
-
-    function Settings({ summary, onBack, onClose, onRefresh, onRefreshSubs }) {
+    function SettingsContent({ summary, onRefresh, onRefreshSubs }) {
       const [prefs, setPrefs] = useState(null)
       const [budgetText, setBudgetText] = useState({})
+      const [fieldErrors, setFieldErrors] = useState({})
       const [status, setStatus] = useState(null)
+      const [subRefreshing, setSubRefreshing] = useState(false)
       const [update, setUpdate] = useState({ phase: 'idle' })
       const [logMeta, setLogMeta] = useState(null)
 
-      useEffect(() => {
-        getJson('/prefs').then((data) => {
+      const loadPrefs = useCallback(async () => {
+        try {
+          const data = await getJson('/prefs')
           setPrefs(data)
           const next = {}
           for (const [id, value] of Object.entries(data.budgets ?? {})) next[id] = String(value.amount ?? '')
           setBudgetText(next)
-        }).catch(() => setStatus({ text: '读取失败', error: true }))
+        } catch {
+          setStatus({ text: '设置加载失败', error: true })
+        }
       }, [])
+
+      useEffect(() => { loadPrefs() }, [loadPrefs])
 
       function flash(text, error = false) {
         setStatus({ text, error })
-        if (error !== true) setTimeout(() => setStatus((current) => (current?.text === text ? null : current)), 1500)
+        if (error !== true) setTimeout(() => setStatus((current) => (current?.text === text ? null : current)), 1600)
       }
 
       async function savePrefs(patch) {
@@ -539,21 +642,35 @@ window.__ModuleLoader__.load({
       }
 
       async function saveBudget(provider, raw) {
-        const text = String(raw).replace(/[\u00a5$,\s]/g, '')
-        const amount = Number(text)
-        if (text === '' || !Number.isFinite(amount) || amount < 0 || amount > 9999999.99) {
-          setStatus({ text: '请输入 0 ~ 9,999,999.99', error: true })
+        const text = String(raw).trim()
+        const budgets = { ...(prefs?.budgets ?? {}) }
+        if (text === '') {
+          delete budgets[provider.id]
+          const saved = await savePrefs({ budgets })
+          if (saved !== null) { setBudgetText((current) => ({ ...current, [provider.id]: '' })); setFieldErrors((current) => ({ ...current, [provider.id]: null })) }
           return
         }
-        const budgets = { ...(prefs?.budgets ?? {}), [provider.id]: { amount: Math.round(amount * 100) / 100, currency: provider.currency } }
+        const amount = Number(text)
+        if (!/^\d+(?:\.\d{1,2})?$/.test(text) || !Number.isFinite(amount) || amount > 9999999.99) {
+          setFieldErrors((current) => ({ ...current, [provider.id]: '请输入 0 或正数' }))
+          return
+        }
+        budgets[provider.id] = { amount, currency: provider.currency }
         const saved = await savePrefs({ budgets })
-        if (saved !== null) setBudgetText((current) => ({ ...current, [provider.id]: String(saved.budgets[provider.id]?.amount ?? '') }))
+        if (saved !== null) {
+          setBudgetText((current) => ({ ...current, [provider.id]: String(saved.budgets[provider.id]?.amount ?? '') }))
+          setFieldErrors((current) => ({ ...current, [provider.id]: null }))
+        }
       }
 
       async function refreshSubscriptions() {
-        flash('检测中…')
-        await onRefreshSubs?.()
-        flash('已重新检测')
+        setSubRefreshing(true)
+        try {
+          await onRefreshSubs?.()
+          flash('已重新检测')
+        } finally {
+          setSubRefreshing(false)
+        }
       }
 
       async function openLogs() {
@@ -562,8 +679,7 @@ window.__ModuleLoader__.load({
           setLogMeta(meta)
           const app = /Mac|iPhone|iPad/.test(navigator.platform) ? 'finder' : /Linux/.test(navigator.platform) ? 'filemanager' : 'explorer'
           const response = await fetch('/open-in-app/open', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
+            method: 'POST', headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ app, path: meta.dir }),
           })
           if (!response.ok) throw new Error('open-failed')
@@ -621,97 +737,80 @@ window.__ModuleLoader__.load({
       }
 
       async function copyCommand() {
-        try {
-          await navigator.clipboard.writeText(update.command ?? '')
-          flash('命令已复制')
-        } catch {
-          setStatus({ text: '复制失败', error: true })
-        }
+        try { await navigator.clipboard.writeText(update.command ?? ''); flash('命令已复制') } catch { setStatus({ text: '复制失败', error: true }) }
       }
 
-      // #34：状态提示放"关闭"左侧，固定宽度占位——出现/消失不改变标题栏布局，弹窗不 resize
-      const statusSlot = h('span', {
-        role: 'status', 'aria-live': 'polite',
-        style: { minWidth: 88, textAlign: 'right', fontSize: 11, opacity: 0.85, color: status?.error === true ? '#e05a5a' : undefined },
-      }, status?.text ?? '')
-
-      const header = h('div', { style: styles.titleBar },
-        h('div', { style: styles.rowStart },
-          h('button', { style: styles.button, onClick: onBack }, '← 返回'),
-          h('b', { style: styles.headerTitle }, 'Token 看板')),
-        h('span', { style: styles.rowStart }, statusSlot, h('button', { style: styles.button, onClick: onClose }, '关闭')))
-
-      if (prefs === null) return h('div', { 'data-testid': 'token-dash-settings', style: { fontSize: 12, display: 'grid', gap: 10 } }, header, '加载中…')
+      if (prefs === null) {
+        return h('div', { 'data-testid': 'token-dash-settings', style: { display: 'grid', gap: 10 } },
+          h('div', { style: styles.empty }, status?.text ?? '设置加载中…'),
+          status?.error === true ? h('button', { type: 'button', style: styles.button, onClick: loadPrefs }, '重试') : null)
+      }
 
       const providers = summary?.providers ?? []
       const api = providers.filter((provider) => provider.kind === 'api')
       const subscriptions = providers.filter((provider) => provider.kind === 'subscription')
       const version = summary?.version ?? ''
-      const cardStyle = { ...styles.card, marginTop: 0, display: 'grid', gap: 10, background: 'rgba(128,128,128,.05)' }
-      const section = (title, body, action = null) => h('section', { style: { display: 'grid', gap: 8 } },
-        h('div', { style: styles.row }, h('b', { style: styles.headerTitle }, title), action),
-        body)
+      const catalog = summary?.catalog
+      const section = (title, body, action = null) => h('section', { style: styles.section },
+        h('div', { style: styles.sectionHead }, h('b', { style: styles.title }, title), action), body)
 
-      // #39：API 卡删除计费模式下拉——单行：provider 名 + 月度预算 + 输入框 + 币种（模式依赖自动侦测）
-      const apiCards = api.map((provider) => h('div', { key: provider.id, style: cardStyle },
-        h('div', { style: styles.row },
-          h('b', { style: styles.nameEllipsis, title: provider.name }, provider.name),
+      const apiRows = api.map((provider) => h('div', { key: provider.id, style: { display: 'grid', gap: 3, padding: '3px 0' } },
+        h('div', { style: styles.row }, h('b', { style: styles.budgetName, title: provider.name }, provider.name), h('span', { style: styles.weak }, '按量 API')),
+        h('div', { style: styles.row }, h('span', { style: styles.muted }, '月度预算'),
           h('span', { style: styles.rowStart },
-            h('span', { style: styles.muted }, '月度预算'),
             h('input', {
-              type: 'text', inputMode: 'decimal', 'aria-label': `${provider.name} 月度预算`,
-              value: budgetText[provider.id] ?? (provider.budget?.amount ? String(provider.budget.amount) : ''),
-              onChange: (event) => setBudgetText({ ...budgetText, [provider.id]: event.target.value }),
+              type: 'text', inputMode: 'decimal', 'data-testid': `token-dash-budget-input-${provider.id}`,
+              'aria-label': `${provider.name} 月度预算`, 'aria-invalid': fieldErrors[provider.id] !== undefined && fieldErrors[provider.id] !== null,
+              value: budgetText[provider.id] ?? '', onChange: (event) => setBudgetText({ ...budgetText, [provider.id]: event.target.value }),
               onBlur: (event) => saveBudget(provider, event.currentTarget.value),
               onKeyDown: (event) => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur() } },
-              style: styles.input,
-            }),
-            h('span', { style: styles.muted }, provider.currency)))))
+              style: { ...styles.input, borderColor: fieldErrors[provider.id] ? T.over : T.border },
+            }), h('span', { style: styles.muted }, provider.currency))),
+        fieldErrors[provider.id] ? h('div', { style: { color: T.over, fontSize: 10.5, textAlign: 'right' }, role: 'alert' }, fieldErrors[provider.id]) : null))
 
-      const subscriptionRows = subscriptions.map((provider) => h('div', { key: provider.id, style: styles.row },
-        h('span', { style: styles.nameEllipsis, title: provider.name }, provider.name),
-        h('span', { style: styles.rowStart },
-          modeSelect(provider, prefs, savePrefs),
-          h('span', { style: styles.muted }, `${subscriptionText(provider)} · 账户套餐`))))
+      const subRows = subscriptions.map((provider) => h('div', { key: provider.id, style: { padding: '3px 0' } },
+        h('div', { style: styles.row }, h('b', { style: styles.budgetName, title: provider.name }, provider.name), h('span', { style: styles.weak }, '账户套餐')),
+        h('div', { style: { marginTop: 3 } }, h(QuotaRow, { provider, reset: true }))))
 
-      let updateControl = h('button', { style: styles.button, onClick: checkUpdate }, '检查更新')
-      if (update.phase === 'checking') updateControl = h('span', { style: styles.muted }, '检查中…')
-      else if (update.phase === 'confirm') updateControl = h('span', { style: styles.rowStart },
-        h('span', null, `发现 ${update.latest}`),
-        h('button', { style: styles.button, onClick: installUpdate }, '更新'),
-        h('button', { style: styles.button, onClick: () => setUpdate({ phase: 'idle' }) }, '取消'))
-      else if (update.phase === 'installing') updateControl = h('span', { style: styles.muted }, '更新中…')
-      else if (update.phase === 'done') updateControl = h('span', { style: styles.muted }, update.text)
-      else if (update.phase === 'error') updateControl = h('span', { style: styles.rowStart },
-        h('span', { style: { color: '#e05a5a' } }, update.text),
-        update.command ? h('button', { style: styles.button, onClick: copyCommand }, '复制命令') : null)
+      let updateControl
+      if (update.phase === 'checking' || update.phase === 'installing') {
+        updateControl = h(IconButton, { label: '检查更新', disabled: true }, h(Icon, { name: 'loader', size: 13 }))
+      } else if (update.phase === 'confirm') {
+        updateControl = h('span', { style: styles.rowStart },
+          h('span', { style: styles.muted }, `发现 ${update.latest}`),
+          h('button', { type: 'button', style: styles.button, onClick: installUpdate }, '更新'),
+          h('button', { type: 'button', style: styles.button, onClick: () => setUpdate({ phase: 'idle' }) }, '取消'))
+      } else if (update.phase === 'error') {
+        updateControl = h('span', { style: { ...styles.rowStart, color: T.over, fontSize: 10.5 } },
+          h('span', null, update.text), update.command ? h('button', { type: 'button', style: styles.button, onClick: copyCommand }, '复制命令') : null)
+      } else if (update.phase === 'done') {
+        updateControl = h('span', { style: styles.muted }, update.text)
+      } else {
+        updateControl = h(IconButton, { label: '检查更新', testid: 'token-dash-update', onClick: checkUpdate }, h(Icon, { name: 'download', size: 13 }))
+      }
 
-      return h('div', { 'data-testid': 'token-dash-settings', style: { fontSize: 12, display: 'grid', gap: 12 } },
-        header,
-        api.length > 0 ? section(`API 计费（已检测 ${api.length}）`, h('div', { style: { display: 'grid', gap: 8 } }, ...apiCards)) : null,
-        subscriptions.length > 0 ? section(`订阅计费（已检测 ${subscriptions.length}）`,
-          h('div', { style: cardStyle }, ...subscriptionRows),
-          h('button', { 'data-testid': 'token-dash-rescan', style: styles.button, onClick: refreshSubscriptions }, '重新检测')) : null,
-        section('显示', h('div', { style: cardStyle },
-          h('div', { style: styles.row }, h('span', null, '刷新间隔'),
-            h(Segmented, { value: prefs.refreshMs, onChange: (ms) => savePrefs({ refreshMs: ms }) })),
-          h('div', { style: styles.row }, h('span', null, '账户余额'),
-            h(Toggle, { checked: prefs.showBalance, onChange: (next) => savePrefs({ showBalance: next }) })))),
-        section('日志', h('div', { style: cardStyle },
-          h('div', { style: styles.row },
-            h('span', null, '查看日志'),
-            h('span', { style: styles.rowStart },
-              h('button', { 'data-testid': 'token-dash-log-open', style: styles.button, onClick: openLogs }, '打开日志文件夹'),
-              h('button', { 'data-testid': 'token-dash-log-export', style: styles.button, onClick: exportLogs }, '导出日志'))))),
-        section('价格与版本', h('div', { style: cardStyle },
-          h('div', { style: styles.row },
-            h('span', null, '查看价格明细'),
-            h('span', { style: { display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8 } },
-              (summary?.pricingLinks ?? []).map((link) => h('a', { key: link.id ?? link.label, href: link.url, target: '_blank', rel: 'noopener', style: { ...styles.link, marginLeft: 0 } }, link.label)))),
-          h('div', { style: styles.row },
-            h('span', { style: styles.muted }, `版本 ${version}`),
-            updateControl))),
-        h('div', { style: styles.muted }, 'API 费用按 catalog/社区价估算；订阅只显示账户配额'))
+      const statusText = update.text ?? (status?.text || `版本 ${version} · 已保存`)
+      return h('div', { 'data-testid': 'token-dash-settings', style: { display: 'grid', gap: 0 } },
+        api.length > 0 ? section(`API 计费（已检测 ${api.length}）`, h('div', null, ...apiRows)) : null,
+        subscriptions.length > 0 ? section(`订阅（已检测 ${subscriptions.length}）`,
+          h('div', null, ...subRows),
+          h(IconButton, { label: '重新检测订阅配额', testid: 'token-dash-settings-rescan', disabled: subRefreshing, onClick: refreshSubscriptions }, h(Icon, { name: subRefreshing ? 'loader' : 'refresh', size: 12 }))) : null,
+        section('显示', h('div', { style: { display: 'grid', gap: 7 } },
+          h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 } },
+            h('span', null, '刷新间隔'),
+            h('div', { style: { width: 224, flex: '0 0 224px' } }, h(Segmented, { value: prefs.refreshMs, onChange: (ms) => savePrefs({ refreshMs: ms }), label: '刷新间隔', kind: 'radiogroup', options: REFRESH_OPTIONS.map(([value, label]) => ({ value, label })) }))),
+          h('div', { style: styles.row }, h('span', null, '账户余额'), h(Toggle, { checked: prefs.showBalance, label: '账户余额', onChange: (next) => savePrefs({ showBalance: next }) })))),
+        section('日志', h('div', { style: styles.row },
+          h('span', null, '查看日志'),
+          h('span', { style: styles.rowStart },
+            h('button', { type: 'button', 'data-testid': 'token-dash-log-open', style: styles.button, onClick: openLogs }, '打开日志文件夹'),
+            h('button', { type: 'button', 'data-testid': 'token-dash-log-export', style: styles.button, onClick: exportLogs }, '导出日志')))),
+        section('价格与版本', h('div', { style: { display: 'grid', gap: 6 } },
+          h('div', { style: styles.priceLinks }, h('span', { style: { ...styles.muted, whiteSpace: 'nowrap' } }, '查看价格明细'),
+            (summary?.pricingLinks ?? []).map((link) => h('a', { key: link.id ?? link.label, href: link.url, target: '_blank', rel: 'noopener', style: styles.link }, linkLabel(link)))),
+          h('div', { style: { ...styles.muted, fontSize: 10 } }, `价格表 ${catalog?.updatedAt ?? '—'} · ${sourceLabel(catalog?.source)} / 内置兜底`),
+          h('div', { style: styles.row }, h('span', { style: { ...styles.status, color: status?.error ? T.over : T.muted }, role: 'status', 'aria-live': 'polite', title: statusText }, statusText), updateControl))),
+        api.length === 0 && subscriptions.length === 0 ? h('div', { style: styles.empty }, '未检测到已配置供应商') : null)
     }
 
     return {
@@ -720,17 +819,13 @@ window.__ModuleLoader__.load({
       apply(ctx) {
         const slots = typeof ctx.get === 'function' ? ctx.get('slots') : ctx.slots
         if (slots === undefined || typeof slots.inject !== 'function') return
-        // #46：slot 挂载上报 host 落盘（§2.5 slot 模块；fire-and-forget，失败静默）
         const reportMount = (slot) => {
           try {
             void fetch(`${API}/log`, {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
+              method: 'POST', headers: { 'content-type': 'application/json' },
               body: JSON.stringify({ module: 'slot', event: 'mount.ok', meta: { slot } }),
             }).catch(() => {})
-          } catch {
-            // ignore
-          }
+          } catch { /* ignore */ }
         }
         slots.inject('conversation.hero.agentPreset', () => {
           reportMount('conversation.hero.agentPreset')

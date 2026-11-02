@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import { existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
-import { buildSummary, emptyState, num, repriceState } from './src/core.js'
+import { buildSummary, buildUsage, emptyState, num, repriceState } from './src/core.js'
 import { ingest, backfill } from './src/collect.js'
 import { createFlusher, dataDir, loadPrefs, loadState, logsDir, recoverState, resolveHome, saveJson, saveMonths } from './src/store.js'
 import { logAdapterEvents, readProviders, readSubscriptions } from './src/adapters.js'
@@ -268,8 +268,24 @@ export function apply(ctx) {
             const summary = buildSummary(state, prefs, Date.now(), providerCache.data)
             summary.version = CURRENT_VERSION
             summary.refreshMs = prefs.refreshMs
+            summary.catalog = catalogInfo()
             logger.info('vm', 'build', { providers: summary.providers.length, api: summary.providers.filter((item) => item.kind === 'api').length, subscription: summary.providers.filter((item) => item.kind === 'subscription').length })
             json(res, 200, { ok: true, data: summary })
+            return
+          }
+          if (url.pathname === `${ROUTE_PREFIX}/usage` && req.method === 'GET') {
+            const range = url.searchParams.get('range') ?? 'today'
+            if (!['today', '7d', '30d', 'all'].includes(range)) {
+              json(res, 400, { ok: false, reason: 'invalid-range' })
+              return
+            }
+            if (Date.now() - providerCache.at > PROVIDER_TTL) {
+              providerCache = { at: Date.now(), data: await readProviders(scoped, prefs) }
+              logAdapterEvents(logger, providerCache.data)
+            }
+            const usage = buildUsage(state, prefs, range, Date.now(), providerCache.data)
+            logger.info('vm', 'usage', { range, models: usage.models.length, currencies: Object.keys(usage.totals).length })
+            json(res, 200, { ok: true, data: usage })
             return
           }
           if (url.pathname === `${ROUTE_PREFIX}/providers/refresh` && req.method === 'POST') {
