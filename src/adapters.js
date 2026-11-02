@@ -144,17 +144,19 @@ async function glm(ctx, prefs) {
   const key = await resolveKey(ctx, ['ZHIPU_API_KEY', 'GLM_API_KEY', 'ZAI_API_KEY'])
   if (key === undefined) return null
   const mode = prefs?.billingModes?.zhipu
-  if (mode === 'api') return { id: 'zhipu', kind: 'api', currency: 'CNY' }
+  if (mode === 'api') return { id: 'zhipu', kind: 'api', mode: 'api', currency: 'CNY' }
   // 手动覆盖为订阅时，quota 失败/无窗口仍保留订阅卡（显示“套餐查询失败”），不回落 api。
-  const subscriptionFallback = mode === 'subscription' ? { id: 'zhipu', name: 'GLM Coding', kind: 'subscription', currency: 'CNY', plans: [] } : null
+  const subscriptionFallback = mode === 'subscription'
+    ? { id: 'zhipu', name: 'GLM Coding', kind: 'subscription', mode: 'subscription', currency: 'CNY', plans: [] }
+    : null
   try {
     const body = await requestJson(GLM_QUOTA, { authorization: key.value })
     const windows = parseGlmQuota(body)
-    if (windows.length > 0) return { id: 'zhipu', name: 'GLM Coding', kind: 'subscription', currency: 'CNY', plans: windows }
+    if (windows.length > 0) return { id: 'zhipu', name: 'GLM Coding', kind: 'subscription', mode: 'subscription', currency: 'CNY', plans: windows }
     // 响应可解析但无窗口：解析问题（quota.parse），非网络错误
-    return { ...(subscriptionFallback ?? { id: 'zhipu', kind: 'api', currency: 'CNY' }), _quotaError: { kind: 'parse' } }
+    return { ...(subscriptionFallback ?? { id: 'zhipu', kind: 'api', mode: 'unknown', currency: 'CNY' }), _quotaError: { kind: 'parse' } }
   } catch (error) {
-    return { ...(subscriptionFallback ?? { id: 'zhipu', kind: 'api', currency: 'CNY' }), _quotaError: errorDetail(error) }
+    return { ...(subscriptionFallback ?? { id: 'zhipu', kind: 'api', mode: 'unknown', currency: 'CNY' }), _quotaError: errorDetail(error) }
   }
 }
 
@@ -171,12 +173,12 @@ async function kimiCodingQuota(ctx, prefs) {
   try {
     const body = await requestJson(KIMI_USAGES, { authorization: `Bearer ${coding.value}` })
     const windows = parseKimiQuota(body)
-    if (windows.length > 0) return { state: 'ok', entry: { id: 'moonshot', name: 'Kimi Coding', kind: 'subscription', currency: 'CNY', plans: windows } }
+    if (windows.length > 0) return { state: 'ok', entry: { id: 'moonshot', name: 'Kimi Coding', kind: 'subscription', mode: 'subscription', currency: 'CNY', plans: windows } }
     quotaError = { kind: 'parse' }
   } catch (error) {
     quotaError = errorDetail(error)
   }
-  if (mode === 'subscription') return { state: 'ok', entry: { id: 'moonshot', name: 'Kimi Coding', kind: 'subscription', currency: 'CNY', plans: [], _quotaError: quotaError } }
+  if (mode === 'subscription') return { state: 'ok', entry: { id: 'moonshot', name: 'Kimi Coding', kind: 'subscription', mode: 'subscription', currency: 'CNY', plans: [], _quotaError: quotaError } }
   return { state: 'fallback', quotaError }
   return { state: 'fallback' }
 }
@@ -186,17 +188,17 @@ async function kimi(ctx, prefs) {
   if (quota.state === 'ok') return quota.entry
   const quotaError = quota.quotaError ?? null
   const normal = await resolveKey(ctx, ['MOONSHOT_API_KEY'])
-  if (normal === undefined) return quota.state === 'no-key' ? null : { id: 'moonshot', kind: 'api', currency: 'CNY', _quotaError: quotaError }
+  if (normal === undefined) return quota.state === 'no-key' ? null : { id: 'moonshot', kind: 'api', mode: 'unknown', currency: 'CNY', _quotaError: quotaError }
   try {
     const body = await requestJson(KIMI_BALANCE, { authorization: `Bearer ${normal.value}` })
     const amount = Number(body?.data?.available_balance)
     const ok = Number.isFinite(amount)
     return {
-      id: 'moonshot', kind: 'api', currency: 'CNY', _quotaError: quotaError,
+      id: 'moonshot', kind: 'api', mode: 'unknown', currency: 'CNY', _quotaError: quotaError,
       balance: { amount: ok ? amount : null, status: ok ? 'ok' : 'error', currency: 'CNY', updatedAt: Date.now(), ...(ok ? {} : { _error: { kind: 'parse' } }) },
     }
   } catch (error) {
-    return { id: 'moonshot', kind: 'api', currency: 'CNY', _quotaError: quotaError, _error: errorDetail(error), balance: { amount: null, status: 'error', currency: 'CNY', updatedAt: Date.now() } }
+    return { id: 'moonshot', kind: 'api', mode: 'unknown', currency: 'CNY', _quotaError: quotaError, _error: errorDetail(error), balance: { amount: null, status: 'error', currency: 'CNY', updatedAt: Date.now() } }
   }
 }
 
@@ -244,6 +246,7 @@ export function toSnapshot(entry) {
     currency: entry.currency,
     status,
     balance,
+    mode: entry.mode === 'subscription' || entry.mode === 'api' ? entry.mode : 'unknown',
     windows: Array.isArray(entry.windows) ? entry.windows : Array.isArray(entry.plans) ? entry.plans : [],
     error,
     quotaError,

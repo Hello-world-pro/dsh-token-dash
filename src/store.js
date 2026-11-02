@@ -8,14 +8,14 @@ export const COST_MODEL_VERSION = 3
 
 export const DEFAULT_PREFS = {
   version: 1,
-  budget: { amount: 3500, currency: 'CNY' },
   budgets: {},
   billingModes: {},
   refreshMs: 60000,
   showBalance: true,
-  showMonthTokens: true,
-  logLevel: 'info',
 }
+
+/** 刷新间隔唯一枚举：loadPrefs 归一与 normalizePrefs 校验共用。 */
+export const REFRESH_OPTIONS = [30000, 60000, 300000]
 
 export function resolveHome(ctx) {
   try {
@@ -79,6 +79,7 @@ export async function loadState(dir, logger) {
   state.watermarks ??= {}
   state.headers ??= {}
   state.currentProvider ??= null
+  state.providerKinds ??= {}
   // 月度账本是独立文件：daily.json 缺失/被重置时从这里恢复本月历史
   const months = await loadMonths(dir, logger)
   let loaded = 0
@@ -223,17 +224,22 @@ function mergeBackup(target, source) {
   target.costVersion = Math.min(target.costVersion ?? COST_MODEL_VERSION, source.costVersion ?? 1)
 }
 
+/** 返回对象即白名单：legacy `budget`、已删字段与未知键都不进入运行时。 */
 export async function loadPrefs(dir, logger) {
   const prefs = await readJson(join(dir, 'prefs.json'), DEFAULT_PREFS, (file, backup) => {
     logger?.warn('boot', 'state.corrupt', { file, backup })
   })
+  const rawRefresh = Number(prefs?.refreshMs)
+  const refreshMs = REFRESH_OPTIONS.includes(rawRefresh) ? rawRefresh : DEFAULT_PREFS.refreshMs
+  if (prefs?.refreshMs !== undefined && refreshMs !== rawRefresh) {
+    logger?.warn('boot', 'prefs.normalize', { field: 'refreshMs', value: prefs.refreshMs, used: refreshMs })
+  }
   return {
-    ...DEFAULT_PREFS,
-    ...prefs,
-    budget: { ...DEFAULT_PREFS.budget, ...(prefs?.budget ?? {}) },
+    version: 1,
     budgets: { ...(prefs?.budgets ?? {}) },
     billingModes: { ...(prefs?.billingModes ?? {}) },
-    logLevel: prefs?.logLevel === 'debug' ? 'debug' : 'info',
+    refreshMs,
+    showBalance: prefs?.showBalance !== false,
   }
 }
 

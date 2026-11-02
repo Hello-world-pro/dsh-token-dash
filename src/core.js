@@ -61,7 +61,15 @@ export function costOf(record) {
 }
 
 export function emptyState() {
-  return { version: 1, costVersion: 3, days: {}, watermarks: {}, headers: {}, currentProvider: null }
+  return {
+    version: 1,
+    costVersion: 3,
+    days: {},
+    watermarks: {},
+    headers: {},
+    currentProvider: null,
+    providerKinds: {},
+  }
 }
 
 function dayStartTs(dayKey) {
@@ -163,22 +171,25 @@ export function addRecord(state, record) {
   state.currentProvider = provider
 }
 
+/** 未填写时的默认预算，按 provider 币种；只在 VM 内生效，不写盘。 */
+export const DEFAULT_BUDGET = 100
+
 function budgetFor(prefs, providerId, currency) {
   const map = prefs?.budgets?.[providerId]
+  const explicitZero = map?.amount === 0
   let amount = num(map?.amount)
   let state = 'unset'
-  if (map?.amount === 0) state = 'unset'
-  if (amount <= 0 && providerId === 'deepseek-official' && num(prefs?.budget?.amount) > 0) {
-    amount = num(prefs.budget.amount)
-  }
-  if (map?.amount === 0) amount = 0
+  // 未填写（新装、新增 provider、老用户无显式配置）统一按 100；显式 0 才是"未设置"
+  if (amount <= 0 && !explicitZero) amount = DEFAULT_BUDGET
+  if (explicitZero) amount = 0
   return {
     amount,
     used: 0,
     remaining: 0,
     percent: 0,
     state,
-    currency: map?.currency === 'USD' ? 'USD' : (currency ?? 'CNY'),
+    // 预算币种只跟 provider 当前币种，落盘的 budgets[id].currency 不参与计算
+    currency: currency === 'USD' ? 'USD' : 'CNY',
   }
 }
 
@@ -199,6 +210,44 @@ function normalizeProviderInfo(input) {
   if (Array.isArray(input)) return input
   if (input === null || typeof input !== 'object') return []
   return Object.entries(input).map(([id, value]) => ({ id, ...(value ?? {}) }))
+}
+
+const BILLING_MODES = new Set(['api', 'subscription'])
+
+function emptyTotals() {
+  return { cost: 0, requests: 0, input: 0, cacheRead: 0, cacheWrite: 0, output: 0, hitRate: null }
+}
+
+/** 行内与 0 桶共用：快照币种优先，缺失回退 registry，不写死 CNY。 */
+function usageCurrency(providerId, meta) {
+  if (meta?.currency === 'USD') return 'USD'
+  if (meta?.currency === 'CNY') return 'CNY'
+  return providerCurrency(providerId)
+}
+
+/** prefs 显式覆盖 > 快照确定的 mode > 历史固化值 > 快照 kind > api。 */
+export function resolveProviderKind(state, prefs, providerId, meta) {
+  const id = normalizeProvider(providerId)
+  const explicit = prefs?.billingModes?.[id]
+  if (BILLING_MODES.has(explicit)) return explicit
+  if (BILLING_MODES.has(meta?.mode)) return meta.mode
+  const stamped = state?.providerKinds?.[id]
+  if (BILLING_MODES.has(stamped)) return stamped
+  return meta?.kind === 'subscription' ? 'subscription' : 'api'
+}
+
+/** 只固化"探测确定"的形态；unknown 不覆盖历史，返回是否有变化。 */
+export function stampProviderKinds(state, snapshots) {
+  state.providerKinds ??= {}
+  let changed = false
+  for (const item of snapshots ?? []) {
+    const id = normalizeProvider(item?.id ?? item?.provider)
+    if (id === 'unknown' || !BILLING_MODES.has(item?.mode)) continue
+    if (state.providerKinds[id] === item.mode) continue
+    state.providerKinds[id] = item.mode
+    changed = true
+  }
+  return changed
 }
 
 /**
@@ -229,10 +278,9 @@ export function buildUsage(state, prefs, range, now, providerInfoInput) {
   const add = (providerId, modelId, row) => {
     if (hidden.has(providerId)) return
     const meta = info.get(providerId)
-    const kind = meta?.kind === 'subscription' || (meta?.kind === undefined && (meta?.windows ?? []).length > 0)
-      ? 'subscription'
-      : 'api'
-    const currency = meta?.currency === 'USD' ? 'USD' : (meta?.currency === 'CNY' ? 'CNY' : providerCurrency(providerId))
+    const kind = resolveProviderKind(state, prefs, providerId, meta)
+    const billable = kind === 'api'
+    const currency = usageCurrency(providerId, meta)
     const key = `${providerId}:${modelId}`
     const entry = models.get(key) ?? {
       providerId,
@@ -241,6 +289,7 @@ export function buildUsage(state, prefs, range, now, providerInfoInput) {
       displayName: modelLabel(modelId),
       kind,
       currency,
+      billable,
       requests: 0,
       input: 0,
       cacheRead: 0,
@@ -254,7 +303,9 @@ export function buildUsage(state, prefs, range, now, providerInfoInput) {
     entry.cacheRead += num(row.cacheRead)
     entry.cacheWrite += num(row.cacheWrite)
     entry.output += num(row.output)
-    entry.cost += num(row.cost)
+    entry.billable = billable
+    // 订阅模型按目录价算出的 cost 不是真实支出，VM 内归零，保证费用框与 Tokens 框同一集合
+    entry.cost += billable ? num(row.cost) : 0
     if (row.priced === false) entry.priced = false
     entry.kind = kind
     entry.currency = currency
@@ -285,16 +336,30 @@ export function buildUsage(state, prefs, range, now, providerInfoInput) {
     const denominator = entry.input + entry.cacheRead + entry.cacheWrite
     return {
       ...entry,
-      tokens: { input: entry.input, cacheRead: entry.cacheRead, cacheWrite: entry.cacheWrite, output: entry.output, total },
+      tokens: {
+        input: entry.input,
+        cacheRead: entry.cacheRead,
+        cacheWrite: entry.cacheWrite,
+        output: entry.output,
+        cache: entry.cacheRead + entry.cacheWrite,
+        total,
+      },
       hitRate: denominator > 0 ? entry.cacheRead / denominator : null,
       cost: round2(entry.cost),
+      approximate: entry.billable && priceFor(entry.providerId, entry.modelId, now)?.approximate === true,
     }
   })
   rows.sort((a, b) => b.cost - a.cost)
 
+  // 已检测 provider 先占位 0 桶：范围无消耗（或只有订阅）时两格卡仍要显示 ¥0.00 而不是空白
+  for (const [providerId, meta] of info) {
+    if (hidden.has(providerId)) continue
+    totals[usageCurrency(providerId, meta)] ??= emptyTotals()
+  }
+  if (Object.keys(totals).length === 0) totals.CNY = emptyTotals()
   for (const row of rows) {
-    if (row.kind !== 'api') continue
-    const bucket = totals[row.currency] ?? { cost: 0, requests: 0, input: 0, cacheRead: 0, cacheWrite: 0, output: 0, hitRate: null }
+    if (row.billable !== true) continue
+    const bucket = totals[row.currency] ?? emptyTotals()
     bucket.cost += row.cost
     bucket.requests += row.requests
     bucket.input += row.input
@@ -309,6 +374,19 @@ export function buildUsage(state, prefs, range, now, providerInfoInput) {
     bucket.hitRate = denominator > 0 ? bucket.cacheRead / denominator : null
   }
 
+  const total = rows.reduce((sum, row) => ({
+    tokens: sum.tokens + row.tokens.total,
+    input: sum.input + row.input,
+    cacheRead: sum.cacheRead + row.cacheRead,
+    cacheWrite: sum.cacheWrite + row.cacheWrite,
+    cache: sum.cache + row.tokens.cache,
+    output: sum.output + row.output,
+    requests: sum.requests + num(row.requests),
+  }), { tokens: 0, input: 0, cacheRead: 0, cacheWrite: 0, cache: 0, output: 0, requests: 0 })
+  total.hitRate = total.input + total.cacheRead + total.cacheWrite > 0
+    ? total.cacheRead / (total.input + total.cacheRead + total.cacheWrite)
+    : null
+
   return {
     range: selected,
     startAt: dayStartTs(startKey) ?? now,
@@ -316,6 +394,7 @@ export function buildUsage(state, prefs, range, now, providerInfoInput) {
     startKey,
     endKey: todayKey,
     totals,
+    total,
     models: rows,
   }
 }
@@ -334,7 +413,8 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
   )
 
   for (const item of providerInfo) {
-    const { plans: legacyPlans, ...info } = item
+    // mode 是快照内部字段，剥离后不进入 VM
+    const { plans: legacyPlans, mode: _mode, ...info } = item
     const id = normalizeProvider(info.id ?? info.provider)
     if (id === 'unknown' || hidden.has(id)) continue
     const base = providerMap.get(id) ?? providerEmpty(id)
@@ -343,9 +423,7 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
       ...info,
       id,
       name: info.name ?? providerLabel(id),
-      kind: info.kind === 'subscription' || (info.kind === undefined && (info.windows ?? legacyPlans ?? []).length > 0)
-        ? 'subscription'
-        : 'api',
+      kind: resolveProviderKind(state, prefs, id, item),
       canSubscribe: canBeSubscription(id),
       currency: info.currency === 'USD' ? 'USD' : (info.currency === 'CNY' ? 'CNY' : providerCurrency(id)),
       usage: { ...base.usage, ...(info.usage ?? {}) },
@@ -549,7 +627,6 @@ export function buildSummary(state, prefs, now, providerInfoInput) {
     breakdown: { models },
     pricingLinks: pricingLinks(),
     showBalance: prefs?.showBalance !== false,
-    showMonthTokens: prefs?.showMonthTokens !== false,
     updatedAt: now,
     stale: false,
   }

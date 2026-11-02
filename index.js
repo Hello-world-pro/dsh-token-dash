@@ -5,9 +5,10 @@ import { readFileSync } from 'node:fs'
 import { existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
-import { buildSummary, buildUsage, emptyState, num, repriceState } from './src/core.js'
+import { buildSummary, buildUsage, emptyState, localMonthKey, num, repriceState, stampProviderKinds } from './src/core.js'
 import { ingest, backfill } from './src/collect.js'
-import { createFlusher, dataDir, loadPrefs, loadState, logsDir, recoverState, resolveHome, saveJson, saveMonths } from './src/store.js'
+import { REFRESH_OPTIONS, createFlusher, dataDir, loadPrefs, loadState, logsDir, recoverState, resolveHome, saveJson, saveMonths } from './src/store.js'
+import { buildExport, mergeImportDays, validateBundle } from './src/backup.js'
 import { logAdapterEvents, readProviders, readSubscriptions } from './src/adapters.js'
 import { catalogInfo, loadCommunityPricing, loadRouterPricing } from './src/pricing.js'
 import { clearLog, createLogger, exportLog } from './src/diagnostics.js'
@@ -123,15 +124,11 @@ function budgetPatch(raw, base) {
 function normalizePrefs(input, base) {
   const prefs = {
     version: 1,
-    budget: { ...base.budget },
     budgets: { ...(base.budgets ?? {}) },
     billingModes: { ...(base.billingModes ?? {}) },
     refreshMs: base.refreshMs,
     showBalance: base.showBalance,
-    showMonthTokens: base.showMonthTokens !== false,
-    logLevel: base.logLevel === 'debug' ? 'debug' : 'info',
   }
-  if (input?.budget !== undefined) prefs.budget = budgetPatch(input.budget, prefs.budget)
   if (input?.budgets !== undefined) {
     if (input.budgets === null || typeof input.budgets !== 'object') throw new Error('invalid-budgets')
     const next = {}
@@ -151,12 +148,10 @@ function normalizePrefs(input, base) {
   }
   if (input?.refreshMs !== undefined) {
     const refresh = Number(input.refreshMs)
-    if (![30000, 60000, 300000].includes(refresh)) throw new Error('invalid-refresh')
+    if (!REFRESH_OPTIONS.includes(refresh)) throw new Error('invalid-refresh')
     prefs.refreshMs = refresh
   }
   if (input?.showBalance !== undefined) prefs.showBalance = input.showBalance === true
-  if (input?.showMonthTokens !== undefined) prefs.showMonthTokens = input.showMonthTokens === true
-  if (input?.logLevel !== undefined) prefs.logLevel = input.logLevel === 'debug' ? 'debug' : 'info'
   return prefs
 }
 
@@ -253,6 +248,15 @@ export function apply(ctx) {
   ctx.inject(['webServer'], (scoped) => {
     const webServer = scoped.webServer
     if (webServer === undefined) return
+    const refreshProviderCache = async () => {
+      const data = await readProviders(scoped, prefs)
+      providerCache = { at: Date.now(), data }
+      logAdapterEvents(logger, data)
+      if (stampProviderKinds(state, data)) {
+        logger.info('provider', 'kind.stamp', { ids: Object.keys(state.providerKinds) })
+        flusher.schedule()
+      }
+    }
     const off = webServer.register({
       kind: 'prefix',
       path: ROUTE_PREFIX,
@@ -261,10 +265,7 @@ export function apply(ctx) {
         try {
           await ready
           if (url.pathname === `${ROUTE_PREFIX}/summary` && req.method === 'GET') {
-            if (Date.now() - providerCache.at > PROVIDER_TTL) {
-              providerCache = { at: Date.now(), data: await readProviders(scoped, prefs) }
-              logAdapterEvents(logger, providerCache.data)
-            }
+            if (Date.now() - providerCache.at > PROVIDER_TTL) await refreshProviderCache()
             const summary = buildSummary(state, prefs, Date.now(), providerCache.data)
             summary.version = CURRENT_VERSION
             summary.refreshMs = prefs.refreshMs
@@ -279,12 +280,15 @@ export function apply(ctx) {
               json(res, 400, { ok: false, reason: 'invalid-range' })
               return
             }
-            if (Date.now() - providerCache.at > PROVIDER_TTL) {
-              providerCache = { at: Date.now(), data: await readProviders(scoped, prefs) }
-              logAdapterEvents(logger, providerCache.data)
-            }
+            if (Date.now() - providerCache.at > PROVIDER_TTL) await refreshProviderCache()
             const usage = buildUsage(state, prefs, range, Date.now(), providerCache.data)
-            logger.info('vm', 'usage', { range, models: usage.models.length, currencies: Object.keys(usage.totals).length })
+            logger.info('vm', 'usage', {
+              range,
+              models: usage.models.length,
+              billable: usage.models.filter((item) => item.billable === true).length,
+              tokens: usage.total.tokens,
+              currencies: Object.keys(usage.totals).length,
+            })
             json(res, 200, { ok: true, data: usage })
             return
           }
@@ -296,9 +300,49 @@ export function apply(ctx) {
             map.delete('moonshot')
             for (const item of subs) map.set(item.id, item)
             providerCache = { at: Date.now(), data: [...map.values()] }
+            if (stampProviderKinds(state, subs)) flusher.schedule()
             logAdapterEvents(logger, subs)
             logger.info('provider', 'subscriptions.refreshed', { ids: subs.map((item) => item.id) })
             json(res, 200, { ok: true, data: { refreshed: subs.map((item) => item.id) } })
+            return
+          }
+          if (url.pathname === `${ROUTE_PREFIX}/export` && req.method === 'GET') {
+            const data = buildExport(state, prefs, Date.now(), providerCache.data)
+            logger.info('data', 'export', { month: data.month, days: Object.keys(data.days).length, models: data.usage.all.models.length })
+            json(res, 200, { ok: true, data })
+            return
+          }
+          if (url.pathname === `${ROUTE_PREFIX}/import` && req.method === 'POST') {
+            const body = JSON.parse((await readBody(req)) || '{}')
+            const checked = validateBundle(body)
+            if (checked.ok !== true) {
+              logger.warn('data', 'import.reject', { reason: checked.reason })
+              json(res, 400, { ok: false, reason: checked.reason })
+              return
+            }
+            const { bundle } = checked
+            const stamp = Date.now()
+            // 覆盖前留一份可回滚的现场
+            await saveJson(dir, `prefs.json.import-backup-${stamp}`, prefs)
+            await saveJson(dir, `daily.json.import-backup-${stamp}`, state)
+            prefs = normalizePrefs(bundle.prefs ?? {}, prefs)
+            state.days = mergeImportDays(state.days, bundle.month, bundle.days)
+            state.providerKinds = { ...(state.providerKinds ?? {}), ...(bundle.providerKinds ?? {}) }
+            providerCache = { at: 0, data: [] }
+            flusher.schedule()
+            logger.info('data', 'import', {
+              month: bundle.month,
+              days: Object.keys(bundle.days).length,
+              backup: `daily.json.import-backup-${stamp}`,
+            })
+            json(res, 200, {
+              ok: true,
+              data: {
+                month: bundle.month,
+                days: Object.keys(bundle.days).length,
+                backup: `daily.json.import-backup-${stamp}`,
+              },
+            })
             return
           }
           if (url.pathname === `${ROUTE_PREFIX}/log` && req.method === 'POST') {

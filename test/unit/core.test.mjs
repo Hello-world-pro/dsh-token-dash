@@ -13,6 +13,8 @@ import {
   providerLabel,
   reattributeUnknown,
   repriceState,
+  resolveProviderKind,
+  stampProviderKinds,
 } from '../../src/core.js'
 
 test('normalizeModel 去掉渠道前缀与后缀', () => {
@@ -74,7 +76,7 @@ test('模型展示名映射到宿主标签', () => {
   assert.equal(summary.breakdown.models[0].providerId, 'deepseek-official')
   assert.equal(summary.breakdown.models[0].providerName, 'DeepSeek')
   assert.equal(summary.showBalance, true)
-  assert.equal(summary.showMonthTokens, true)
+  assert.equal('showMonthTokens' in summary, false)
 })
 
 test('同模型不同 provider 分行，未定价不套官方价', () => {
@@ -193,16 +195,16 @@ test('月汇总：预算、剩余、按模型请求数', () => {
   assert.equal(summary.requests.month, 2)
   assert.equal(summary.breakdown.models.length, 2)
   assert.equal(summary.breakdown.models[0].requests, 1)
-  // REQ-08：无单 budget/balance 字段；legacy prefs.budget 迁移到 deepseek-official 的 provider 级预算
+  // 无单 budget/balance 字段；legacy prefs.budget 不参与计算，未配置时统一按默认 100
   assert.equal(summary.budget, undefined)
   assert.equal(summary.balance, undefined)
   const deepseek = summary.providers.find((item) => item.id === 'deepseek-official')
-  assert.equal(deepseek.budget.amount, 3500)
+  assert.equal(deepseek.budget.amount, 100)
   assert.ok(deepseek.budget.used > 0)
-  assert.ok(deepseek.budget.remaining < 3500)
+  assert.ok(deepseek.budget.remaining < 100)
   const zhipu = summary.providers.find((item) => item.id === 'zhipu')
-  // usage-only 的 zhipu（无订阅 info）按量处理：预算 unset 而非 undefined
-  assert.equal(zhipu.budget.state, 'unset')
+  // usage-only 的 zhipu（无订阅 info）按量处理：未配置预算时落到默认 100
+  assert.equal(zhipu.budget.amount, 100)
   assert.equal(zhipu.canSubscribe, true)
   assert.equal(deepseek.canSubscribe, false)
   assert.equal(summary.tokens.total, 1_268_000)
@@ -257,4 +259,54 @@ test('#41 unknown 行按模型名前缀归因（#42 本月口径：上月不显�
   addRecord(state, { ts: now, provider: 'unknown', model: 'mystery-model', input: 1000, cacheRead: 0, cacheWrite: 0, output: 1 })
   const summary2 = buildSummary(state, { budgets: {} }, now, [])
   assert.equal(summary2.breakdown.models.some((item) => item.modelId === 'mystery-model'), false)
+})
+
+test('预算：未配置默认 100，显式 0 才是未设置', () => {
+  const now = new Date(2026, 10, 2, 12, 0, 0).getTime()
+  const providers = [{ id: 'deepseek-official', kind: 'api', currency: 'CNY' }]
+  const empty = buildSummary(emptyState(), { budgets: {} }, now, providers)
+  assert.equal(empty.providers[0].budget.amount, 100)
+  assert.equal(empty.providers[0].budget.state, 'ok')
+
+  const explicit = buildSummary(emptyState(), { budgets: { 'deepseek-official': { amount: 0, currency: 'CNY' } } }, now, providers)
+  assert.equal(explicit.providers[0].budget.amount, 0)
+  assert.equal(explicit.providers[0].budget.state, 'unset')
+
+  const configured = buildSummary(emptyState(), { budgets: { 'deepseek-official': { amount: 50, currency: 'CNY' } } }, now, providers)
+  assert.equal(configured.providers[0].budget.amount, 50)
+})
+
+test('预算：legacy prefs.budget 不再参与计算', () => {
+  const now = new Date(2026, 10, 2, 12, 0, 0).getTime()
+  const summary = buildSummary(emptyState(), { budget: { amount: 3500, currency: 'CNY' } }, now, [
+    { id: 'deepseek-official', kind: 'api', currency: 'CNY' },
+  ])
+  assert.equal(summary.providers[0].budget.amount, 100)
+})
+
+test('预算：币种以 provider 当前币种为准', () => {
+  const now = new Date(2026, 10, 2, 12, 0, 0).getTime()
+  const summary = buildSummary(emptyState(), { budgets: { openrouter: { amount: 20, currency: 'USD' } } }, now, [
+    { id: 'openrouter', kind: 'api', currency: 'CNY' },
+  ])
+  assert.equal(summary.providers[0].budget.currency, 'CNY')
+})
+
+test('kind 判定优先级：prefs > 快照 mode > providerKinds > 快照 kind', () => {
+  const state = { providerKinds: { zhipu: 'subscription' } }
+  const prefs = { billingModes: {} }
+  assert.equal(resolveProviderKind(state, prefs, 'zhipu', { kind: 'api', mode: 'api' }), 'api')
+  assert.equal(resolveProviderKind(state, { billingModes: { zhipu: 'api' } }, 'zhipu', { kind: 'subscription', mode: 'subscription' }), 'api')
+  assert.equal(resolveProviderKind(state, prefs, 'zhipu', { kind: 'api', mode: 'unknown' }), 'subscription')
+  assert.equal(resolveProviderKind({ providerKinds: {} }, prefs, 'zhipu', { kind: 'subscription', mode: 'unknown' }), 'subscription')
+  assert.equal(resolveProviderKind({ providerKinds: {} }, prefs, 'deepseek-official', { kind: 'api', mode: 'unknown' }), 'api')
+})
+
+test('stampProviderKinds 只固化确定形态，unknown 不覆盖', () => {
+  const state = emptyState()
+  assert.equal(stampProviderKinds(state, [{ id: 'zhipu', mode: 'unknown' }]), false)
+  assert.equal(state.providerKinds.zhipu, undefined)
+  assert.equal(stampProviderKinds(state, [{ id: 'zhipu', mode: 'subscription' }]), true)
+  assert.equal(state.providerKinds.zhipu, 'subscription')
+  assert.equal(stampProviderKinds(state, [{ id: 'zhipu', mode: 'subscription' }]), false)
 })

@@ -45,10 +45,10 @@ window.__ModuleLoader__.load({
       '刷新失败，保留上次数据': 'Refresh failed; keeping previous data',
       '范围数据加载失败': 'Range data failed to load',
       '重试': 'Retry', '总费用': 'Total cost', '按币种': 'By currency',
-      '真实 Tokens': 'Real Tokens', '入 {input} · 出 {output}': 'In {input} · Out {output}',
+      '真实 Tokens': 'Real Tokens', '入 {input} · 缓存 {cache} · 出 {output}': 'In {input} · Cache {cache} · Out {output}',
       '范围数据加载中…': 'Loading range data…', '范围内暂无消耗': 'No usage in this range',
       'Tokens 括号说明': 'Tokens bracket legend',
-      'Tokens 括号顺序：输入 / 缓存 / 输出': 'Tokens bracket order: input / cache / output',
+      'Tokens 括号顺序：输入 / 缓存（读+写）/ 输出': 'Tokens bracket order: input / cache (read+write) / output',
       'Token 数据不可用': 'Token data unavailable', 'Token 数据加载中…': 'Loading Token data…',
       '设置加载失败': 'Failed to load settings', '已保存': 'Saved',
       '保存失败：{reason}': 'Save failed: {reason}', '请输入 0 或正数': 'Enter 0 or a positive number',
@@ -59,6 +59,9 @@ window.__ModuleLoader__.load({
       '已重新检测': 'Rechecked', '已打开日志文件夹': 'Log folder opened',
       '无法打开，已复制路径': 'Could not open; path copied', '打开日志失败': 'Failed to open logs',
       '日志已导出': 'Logs exported', '日志导出失败': 'Log export failed',
+      '数据': 'Data', '备份与恢复': 'Backup and restore', '导出数据': 'Export data', '导入数据': 'Import data',
+      '导入中…': 'Importing…', '数据已导出': 'Data exported', '数据导出失败': 'Data export failed',
+      '已导入 {month} 数据': 'Imported {month} data', '导入失败：{reason}': 'Import failed: {reason}',
       '检查失败': 'Check failed', '未发布': 'Not published', '已是最新': 'Up to date',
       '发现 {version}': 'Found {version}', '更新': 'Update', '取消': 'Cancel',
       '复制命令': 'Copy command', '命令已复制': 'Command copied', '复制失败': 'Copy failed',
@@ -156,6 +159,17 @@ window.__ModuleLoader__.load({
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(prefs),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok || body?.ok !== true) throw new Error(body?.reason ?? `http-${res.status}`)
+      return body.data
+    }
+
+    async function postJson(path, payload) {
+      const res = await fetch(`${API}${path}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok || body?.ok !== true) throw new Error(body?.reason ?? `http-${res.status}`)
@@ -682,15 +696,20 @@ window.__ModuleLoader__.load({
       const [panelError, setPanelError] = useState(false)
       const panelRef = useRef(null)
 
+      const usageSeq = useRef(0)
       const loadUsage = useCallback(async () => {
+        const seq = ++usageSeq.current
         setUsageLoading(true)
         setUsageError(false)
         try {
-          setUsage(await getJson(`/usage?range=${encodeURIComponent(range)}`))
+          const data = await getJson(`/usage?range=${encodeURIComponent(range)}`)
+          if (seq !== usageSeq.current) return
+          setUsage(data)
         } catch {
+          if (seq !== usageSeq.current) return
           setUsageError(true)
         } finally {
-          setUsageLoading(false)
+          if (seq === usageSeq.current) setUsageLoading(false)
         }
       }, [range])
 
@@ -773,14 +792,16 @@ window.__ModuleLoader__.load({
           h('div', { style: styles.modelRow },
             h('span', { style: styles.modelName, title: model.displayName ?? model.modelId }, model.displayName ?? model.modelId),
             model.kind === 'api'
-              ? h('span', { style: styles.modelCost }, model.priced === false ? tr('未定价') : fmtMoney(model.cost, model.currency))
+              ? h('span', { style: styles.modelCost }, model.priced === false
+                ? tr('未定价')
+                : `${model.approximate === true ? '≈' : ''}${fmtMoney(model.cost, model.currency)}`)
               : null),
           h('div', { 'data-testid': 'token-dash-usage-line', style: styles.usageLine },
             h('span', { style: styles.usagePrimary },
               h('span', { style: styles.usageLabel }, 'Tokens '),
               h('span', { style: styles.usageValue }, fmtTokens(model.tokens?.total ?? 0)),
               h('span', { style: { ...styles.usageValue, color: T.muted } },
-                ` [${fmtTokens(model.input)}/${fmtTokens(model.cacheRead)}/${fmtTokens(model.output)}]`)),
+                ` [${fmtTokens(model.tokens?.input ?? 0)}/${fmtTokens(model.tokens?.cache ?? 0)}/${fmtTokens(model.tokens?.output ?? 0)}]`)),
             h('span', { style: { ...styles.usageMeta, marginLeft: 'auto' } },
               h('span', { style: styles.usageLabel }, `${tr('请求')} `), h('span', { style: styles.usageValue }, model.requests)),
             h('span', { style: styles.usageMeta },
@@ -803,8 +824,9 @@ window.__ModuleLoader__.load({
         list.push(model)
         groups.set(model.providerId, list)
       }
-      const totalTokenCount = models.reduce((sum, model) => sum + (model.tokens?.total ?? 0), 0)
-      const costEntries = Object.entries(usage?.totals ?? { CNY: { cost: 0 } })
+      const pending = usage === null
+      const total = usage?.total ?? null
+      const costEntries = Object.entries(usage?.totals ?? {})
       const hasUsage = usage !== null
       const fixed = []
       if (api.length > 0) {
@@ -833,17 +855,24 @@ window.__ModuleLoader__.load({
             h('div', { style: styles.tile },
               h('div', { style: styles.tileLabel }, tr('总费用')),
               ...costEntries.map(([currency, value]) => h('div', { key: currency, style: { ...styles.tileValue, fontSize: 14, color: T.ok } }, fmtMoney(value.cost, currency))),
+              pending ? h('div', { key: 'pending', style: { ...styles.tileValue, fontSize: 14, color: T.ok } }, '—') : null,
               h('div', { style: styles.tileDetail }, tr('按币种'))),
             h('div', { style: styles.tile },
               h('div', { style: styles.tileLabel },
                 `${tr('真实 Tokens')} `,
                 h(InfoTip, {
                   label: tr('Tokens 括号说明'),
-                  text: tr('Tokens 括号顺序：输入 / 缓存 / 输出'),
+                  text: tr('Tokens 括号顺序：输入 / 缓存（读+写）/ 输出'),
                   variant: 'inline',
                 }, h(Icon, { name: 'info', size: 11 }))),
-              h('div', { style: styles.tileValue }, fmtTokens(totalTokenCount)),
-              h('div', { style: styles.tileDetail }, tr('入 {input} · 出 {output}', { input: fmtTokens(models.reduce((sum, model) => sum + (model.input ?? 0), 0)), output: fmtTokens(models.reduce((sum, model) => sum + (model.output ?? 0), 0)) })))),
+              h('div', { style: styles.tileValue }, pending ? '—' : fmtTokens(total?.tokens ?? 0)),
+              h('div', { style: styles.tileDetail }, pending
+                ? '—'
+                : tr('入 {input} · 缓存 {cache} · 出 {output}', {
+                  input: fmtTokens(total?.input ?? 0),
+                  cache: fmtTokens(total?.cache ?? 0),
+                  output: fmtTokens(total?.output ?? 0),
+                })))),
           !hasUsage && loading ? h('div', { style: styles.empty }, tr('范围数据加载中…')) : null,
           hasUsage && models.length === 0 ? h('div', { style: styles.empty }, tr('范围内暂无消耗')) : null,
           hasUsage && models.length > 0 ? [...groups.entries()].map(([providerId, rows]) => h(DetailGroup, { key: providerId, rows })) : null))
@@ -857,13 +886,15 @@ window.__ModuleLoader__.load({
       const [subRefreshing, setSubRefreshing] = useState(false)
       const update = useUpdateSnapshot()
       const [logMeta, setLogMeta] = useState(null)
+      const [importing, setImporting] = useState(false)
+      const fileRef = useRef(null)
 
       const loadPrefs = useCallback(async () => {
         try {
           const data = await getJson('/prefs')
           setPrefs(data)
           const next = {}
-          for (const [id, value] of Object.entries(data.budgets ?? {})) next[id] = String(value.amount ?? '')
+          for (const [id, value] of Object.entries(data.budgets ?? {})) next[id] = value.amount > 0 ? String(value.amount) : ''
           setBudgetText(next)
         } catch {
           setStatus({ text: tr('设置加载失败'), error: true })
@@ -895,7 +926,8 @@ window.__ModuleLoader__.load({
         const text = String(raw).trim()
         const budgets = { ...(prefs?.budgets ?? {}) }
         if (text === '') {
-          delete budgets[provider.id]
+          // 显式 0：清空后不再被 DEFAULT_BUDGET 覆盖
+          budgets[provider.id] = { amount: 0, currency: provider.currency }
           const saved = await savePrefs({ budgets })
           if (saved !== null) { setBudgetText((current) => ({ ...current, [provider.id]: '' })); setFieldErrors((current) => ({ ...current, [provider.id]: null })) }
           return
@@ -961,6 +993,39 @@ window.__ModuleLoader__.load({
         }
       }
 
+      async function exportData() {
+        try {
+          const data = await getJson('/export')
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = `dsh-token-dash-${data.month}.json`
+          link.click()
+          URL.revokeObjectURL(url)
+          flash(tr('数据已导出'))
+        } catch {
+          setStatus({ text: tr('数据导出失败'), error: true })
+        }
+      }
+
+      async function importData(file) {
+        if (file === null || file === undefined) return
+        setImporting(true)
+        try {
+          const bundle = JSON.parse(await file.text())
+          const result = await postJson('/import', bundle)
+          await loadPrefs()
+          await onRefresh?.()
+          flash(tr('已导入 {month} 数据', { month: result.month }))
+        } catch (error) {
+          setStatus({ text: tr('导入失败：{reason}', { reason: error.message }), error: true })
+        } finally {
+          setImporting(false)
+          if (fileRef.current !== null) fileRef.current.value = ''
+        }
+      }
+
       const checkUpdate = () => { void checkForUpdate({ manual: true }) }
       const installUpdate = () => { void installUpdateRequest() }
 
@@ -989,7 +1054,7 @@ window.__ModuleLoader__.load({
             h('input', {
               type: 'text', inputMode: 'decimal', 'data-testid': `token-dash-budget-input-${provider.id}`,
               'aria-label': tr('{name} 月度预算', { name: provider.name }), 'aria-invalid': fieldErrors[provider.id] !== undefined && fieldErrors[provider.id] !== null,
-              value: budgetText[provider.id] ?? '', onChange: (event) => setBudgetText({ ...budgetText, [provider.id]: event.target.value }),
+              value: budgetText[provider.id] ?? String(provider.budget?.amount ?? ''), onChange: (event) => setBudgetText({ ...budgetText, [provider.id]: event.target.value }),
               onBlur: (event) => saveBudget(provider, event.currentTarget.value),
               onKeyDown: (event) => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur() } },
               style: { ...styles.input, borderColor: fieldErrors[provider.id] ? T.over : T.border },
@@ -1044,6 +1109,12 @@ window.__ModuleLoader__.load({
           h('span', { style: styles.rowStart },
             h('button', { type: 'button', 'data-testid': 'token-dash-log-open', style: styles.button, onClick: openLogs }, tr('打开日志文件夹')),
             h('button', { type: 'button', 'data-testid': 'token-dash-log-export', style: styles.button, onClick: exportLogs }, tr('导出日志')))), null, 'token-dash-log-section'),
+        section(tr('数据'), h('div', { style: styles.row },
+          h('span', null, tr('备份与恢复')),
+          h('span', { style: styles.rowStart },
+            h('button', { type: 'button', 'data-testid': 'token-dash-data-export', style: styles.button, onClick: () => { void exportData() } }, tr('导出数据')),
+            h('button', { type: 'button', 'data-testid': 'token-dash-data-import', disabled: importing, style: styles.button, onClick: () => fileRef.current?.click() }, importing ? tr('导入中…') : tr('导入数据')),
+            h('input', { ref: fileRef, type: 'file', accept: 'application/json', style: { display: 'none' }, onChange: (event) => { void importData(event.target.files?.[0]) } }))), null, 'token-dash-data-section'),
         section(tr('价格与版本'), h('div', { style: { display: 'grid', gap: 6 } },
           h('div', { 'data-testid': 'token-dash-price-links', style: styles.priceLinks },
             (summary?.pricingLinks ?? []).map((link) => h('a', { key: link.id ?? link.label, href: link.url, target: '_blank', rel: 'noopener', style: styles.link }, linkLabel(link)))),

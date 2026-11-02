@@ -63,10 +63,12 @@ test('buildUsage: subscription cost is excluded from totals but row remains', ()
   assert.equal(usage.totals.CNY.cost, 3)
 })
 
-test('buildUsage: hidden providers are excluded', () => {
+test('buildUsage: hidden providers are excluded but keep a zero bucket', () => {
   const usage = buildUsage(state, { billingModes: { 'deepseek-official': 'hide' } }, 'all', now, providers)
   assert.equal(usage.models.some((item) => item.providerId === 'deepseek-official'), false)
-  assert.equal(usage.totals.CNY, undefined)
+  // 0 桶是两格卡渲染前提：没有它总费用 tile 会空白
+  assert.equal(usage.totals.CNY.cost, 0)
+  assert.equal(usage.totals.CNY.requests, 0)
 })
 
 test('buildUsage: invalid range falls back to today', () => {

@@ -45,3 +45,15 @@ test('旧 plans 输入只作为兼容读取，VM 输出不保留 plans', () => {
   assert.deepEqual(provider.windows, [{ key: '5h', usedPercent: 10 }])
   assert.equal('plans' in provider, false)
 })
+
+test('快照 mode 不进入 VM；unknown 时沿用 providerKinds', () => {
+  const state = emptyState()
+  state.providerKinds = { zhipu: 'subscription' }
+  const summary = buildSummary(state, {}, now, [
+    { id: 'zhipu', kind: 'api', mode: 'unknown', currency: 'CNY' },
+    { id: 'deepseek-official', kind: 'api', mode: 'api', currency: 'CNY' },
+  ])
+  const zhipu = summary.providers.find((item) => item.id === 'zhipu')
+  assert.equal(zhipu.kind, 'subscription')
+  assert.equal('mode' in zhipu, false)
+})

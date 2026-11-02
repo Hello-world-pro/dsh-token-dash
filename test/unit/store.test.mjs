@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { COST_MODEL_VERSION, loadState, recoverState, saveJson, saveMonths } from '../../src/store.js'
+import { COST_MODEL_VERSION, loadPrefs, loadState, recoverState, saveJson, saveMonths } from '../../src/store.js'
 
 function row(input, output, requests) {
   return { input, cacheRead: 0, cacheWrite: 0, output, requests, cost: 0, priced: true }
@@ -75,6 +75,67 @@ test('月度账本可在 daily.json 缺失时恢复本月数据', async () => {
     const payload = JSON.parse(await readFile(join(dir, 'months', '2026-11.json'), 'utf8'))
     assert.equal(payload.month, '2026-11')
     assert.equal(payload.days['2026-11-01'] !== undefined, true)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('loadPrefs 白名单：丢弃 legacy budget / 已删字段 / 未知键', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'td-store-'))
+  try {
+    await saveJson(dir, 'prefs.json', {
+      version: 1,
+      budget: { amount: 3500, currency: 'CNY' },
+      budgets: { 'deepseek-official': { amount: 20, currency: 'CNY' } },
+      billingModes: { zhipu: 'subscription' },
+      refreshMs: 60000,
+      showBalance: false,
+      showMonthTokens: true,
+      logLevel: 'debug',
+      unknownKey: 1,
+    })
+    const prefs = await loadPrefs(dir)
+    assert.equal('budget' in prefs, false)
+    assert.equal('showMonthTokens' in prefs, false)
+    assert.equal('logLevel' in prefs, false)
+    assert.equal('unknownKey' in prefs, false)
+    assert.equal(prefs.budgets['deepseek-official'].amount, 20)
+    assert.equal(prefs.billingModes.zhipu, 'subscription')
+    assert.equal(prefs.showBalance, false)
+    assert.equal(prefs.version, 1)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('loadPrefs 归一非法 refreshMs 并记 warn', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'td-store-'))
+  try {
+    await saveJson(dir, 'prefs.json', { version: 1, budgets: {}, billingModes: {}, refreshMs: 120000, showBalance: true })
+    const warns = []
+    const logger = { warn: (module, event, fields) => warns.push({ module, event, fields }), info: () => {} }
+    const prefs = await loadPrefs(dir, logger)
+    assert.equal(prefs.refreshMs, 60000)
+    assert.equal(warns[0].event, 'prefs.normalize')
+    assert.equal(warns[0].fields.field, 'refreshMs')
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('loadState 为旧 daily.json 补齐 providerKinds', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'td-store-'))
+  try {
+    await saveJson(dir, 'daily.json', {
+      version: 1,
+      costVersion: COST_MODEL_VERSION,
+      days: {},
+      watermarks: {},
+      headers: {},
+      currentProvider: null,
+    })
+    const state = await loadState(dir)
+    assert.deepEqual(state.providerKinds, {})
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

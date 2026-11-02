@@ -1,6 +1,6 @@
 # dsh-token-dash 设计文档
 
-> 面向贡献者的一页式架构说明。需求背景见 [token-dash 计划（已归档）](plan/archived/feature_token_dash.md)，进行中的 UI 迭代见 [UI 迭代计划](plan/active/feature_ui_refresh.md)；Provider/VM/UI 边界收口见 [边界计划](plan/archived/feature_provider_boundary.md)；UI 视觉以 [UI 设计](ui-design.md) 为唯一真源。
+> 面向贡献者的一页式架构说明。需求背景见 [token-dash 计划（已归档）](plan/archived/feature_token_dash.md)，已归档的 UI 迭代见 [UI 迭代计划](plan/archived/feature_ui_refresh.md)；Provider/VM/UI 边界收口见 [边界计划](plan/archived/feature_provider_boundary.md)；UI 视觉以 [UI 设计](ui-design.md) 为唯一真源。
 
 ## 总体架构
 
@@ -50,6 +50,25 @@
 
 `readSubscriptions`（P3「重新检测」）走同一个 snapshot 出口，不请求余额接口。
 
+## 数据备份（P3 导出 / 导入）
+
+```text
+GET /export
+  → buildExport(state, prefs, now, snapshots)（src/backup.js）
+      = { schema, exportedAt, month, prefs, providerKinds, days(当月), usage(四范围派生) }
+  → 浏览器下载 dsh-token-dash-YYYY-MM.json
+
+POST /import
+  → validateBundle（schema / month / days 形状，整包校验）
+  → 备份 prefs.json / daily.json 为 *.import-backup-<ts>
+  → prefs 覆盖（经 normalizePrefs）、当月 days 覆盖、providerKinds 合并
+  → providerCache 失效，下次请求重新侦测
+```
+
+导出只带设置与当月使用数据；订阅窗口 / 余额 / 日志 / 社区价目不进包（可由 API 或启动流程复得）。派生 `usage` 与 P2 时间选择同口径，仅用于阅读，导入时忽略。
+
+包形态固定为单个 JSON 文件，不打包 zip、不拆多个文件：当月体量不足 500KB，压缩收益低于 zip 写入/解压的实现与失败成本，单文件还能靠 `schema` / `month` 做整包校验。
+
 ## Provider / VM / UI 边界
 
 ```text
@@ -84,6 +103,7 @@ dsh-token-dash/
 │   ├── providers.js       provider registry：别名/展示名/币种/默认模型/前缀/展示名/价格页
 │   ├── pricing.js         价格：内置 catalog + 社区价格表 + OpenRouter 路由价
 │   ├── catalog.json       内置模型价格目录（官方价，随包发布，pricing.js 消费）
+│   ├── backup.js          导出包构建与导入校验（纯函数，无 IO）
 │   ├── store.js           持久化：DSH_HOME 解析、daily/prefs 读写（原子写）、flusher
 │   └── diagnostics.js     日志器（JSONL、脱敏、轮转）与日志导出
 ├── locale/                预留 i18n 词条（zh.json，暂未接线）
@@ -108,13 +128,14 @@ dsh-token-dash/
 | collect | 事件提取与归属、水位去重、历史回填 | 不落盘（交 store） |
 | adapters | 外部接口请求与解析、错误分类、`toSnapshot` | 不做 UI、不做价格匹配、不定义 provider 元数据 |
 | providers | descriptor registry、别名/币种/默认模型/前缀/价格页 | 不做 IO、不请求接口 |
+| backup | 导出包构建（设置 + 当月使用）、导入包校验与覆盖策略 | 不做 IO、不写盘、不渲染 |
 | store | 文件读写与原子性 | 不做业务逻辑 |
 | client | 渲染与交互 | 不做业务计算（数字全部来自 VM）、不硬编码 provider |
 
 ## 日志体系
 
 - 文件：`$DSH_HOME/logs/dsh-token-dash/`，JSONL 格式；`[TD:<module>]` 前缀为导出格式
-- 模块：`boot / slot / adapter.* / pricing / collect / vm / provider / update / diag / route`
+- 模块：`boot / slot / adapter.* / pricing / collect / vm / provider / update / diag / route / data`
 - 错误带分类：`errorKind`（http/timeout/network/parse）+ `httpStatus`，报障可直接定位
 - 脱敏：不记 API Key、不记对话内容、不记响应体
 
@@ -127,4 +148,6 @@ dsh-token-dash/
 5. **只读本地数据**（REQ-14）：不统计标题生成、不发起计费请求、凭据经宿主解析不落盘
 6. **Provider 边界收口**：五家固定 provider；adapter 输出 `ProviderSnapshot`，VM 输出 `SummaryVM`，UI 只消费 VM；provider 差异留在 descriptor/adapter，不扩散到 VM/UI
 7. **不做 provider 插件系统**：不拆 per-provider 文件、不引入 DI；五家规模用单文件 registry，避免过度抽象
+8. **配置面收口**：`prefs` 只保留 `budgets` / `billingModes` / `refreshMs` / `showBalance`（+ `version`）；legacy `budget`、`showMonthTokens`、`logLevel` 只做读取兼容，不参与计算，保存时自然消失；预算未配置时默认 100（provider 币种，不写盘）
+9. **升级不迁移数据**：账本与设置在 `$DSH_HOME/dsh-token-dash/`，与 profile 的 `node_modules` 分离，`dsh plugin add` 不触碰；跨机迁移走 P3「导出 / 导入」，导出只含设置与当月使用，不含配额、余额与日志
 

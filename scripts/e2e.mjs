@@ -82,7 +82,7 @@ const pricingLinks = [
 const model = (providerId, providerName, modelId, displayName, kind, currency, cost) => ({
   providerId, providerName, modelId, displayName, kind, currency, cost, priced: true,
   requests: 12, input: 100_000, cacheRead: 200_000, cacheWrite: 0, output: 20_000,
-  tokens: { input: 100_000, cacheRead: 200_000, cacheWrite: 0, output: 20_000, total: 320_000 },
+  tokens: { input: 100_000, cacheRead: 200_000, cacheWrite: 0, cache: 200_000, output: 20_000, total: 320_000 },
   hitRate: 200 / 300,
 })
 const models = [
@@ -97,7 +97,7 @@ let currentSummary = {
   pricingLinks,
   catalog: { version: 1, updatedAt: '1793591115', source: 'community-gitee', url: 'https://gitee.com/oyw125/model-price-table' },
   showBalance: true,
-  version: '1.0.7',
+  version: '1.1.0-local.6',
   refreshMs: 60000,
   currentProviderId: 'deepseek-official',
   updatedAt: now,
@@ -110,6 +110,16 @@ const usageFor = (range) => ({
   totals: {
     CNY: { cost: 12.34, requests: 12, input: 100_000, cacheRead: 200_000, cacheWrite: 0, output: 20_000, hitRate: 200 / 300 },
     USD: { cost: 4.68, requests: 12, input: 100_000, cacheRead: 200_000, cacheWrite: 0, output: 20_000, hitRate: 200 / 300 },
+  },
+  total: {
+    tokens: 1_280_000,
+    input: 400_000,
+    cacheRead: 800_000,
+    cacheWrite: 0,
+    cache: 800_000,
+    output: 80_000,
+    requests: 48,
+    hitRate: 2 / 3,
   },
   models,
 })
@@ -137,7 +147,22 @@ try {
   assert.equal(usageData.range, '7d')
   assert.ok(usageData.totals !== undefined)
   assert.ok(Array.isArray(usageData.models))
+  assert.ok(usageData.total !== undefined)
   assert.equal((await fetch(`${base}/token-dash/api/usage?range=bad`)).status, 400)
+
+  // L2: export / import round-trip on the real host API.
+  const exportData = (await (await fetch(`${base}/token-dash/api/export`)).json()).data
+  assert.equal(exportData.schema, 1)
+  assert.match(exportData.month, /^\d{4}-\d{2}$/)
+  assert.ok(exportData.usage.all.total !== undefined)
+  const importOk = await fetch(`${base}/token-dash/api/import`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(exportData),
+  })
+  assert.equal(importOk.status, 200)
+  const importBad = await fetch(`${base}/token-dash/api/import`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ schema: 99 }),
+  })
+  assert.equal(importBad.status, 400)
 
   // Seed prefs used by P3.
   const prefsResponse = await fetch(`${base}/token-dash/api/prefs`, {
@@ -161,7 +186,7 @@ try {
   })
   await page.route('**/token-dash/api/update', (route) => {
     updateRequests += 1
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '1.0.8', current: '1.0.7' } }) })
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '1.1.0-local.7', current: '1.1.0-local.6' } }) })
   })
   await page.route('**/open-in-app/open', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }))
   await page.route('**/token-dash/api/logs/export*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { content: '{"type":"header"}\n' } }) }))
@@ -242,12 +267,13 @@ try {
   const modelTip = page.getByRole('tooltip')
   await modelTip.waitFor({ timeout: 5000 })
   assert.equal(await modelTip.evaluate((node) => getComputedStyle(node).position), 'fixed')
-  assert.match(await modelTip.innerText(), /Tokens 括号顺序：输入 \/ 缓存 \/ 输出/)
+  assert.match(await modelTip.innerText(), /Tokens 括号顺序：输入 \/ 缓存（读\+写）\/ 输出/)
   const inlineBox = await tokenInfo.boundingBox()
   const modelTipBox = await modelTip.boundingBox()
   assert.ok(modelTipBox !== null && inlineBox !== null, 'legend tooltip and trigger should have boxes')
   assert.ok(modelTipBox.y + modelTipBox.height <= inlineBox.y + 1, 'legend tooltip should default above trigger')
-  assert.ok(modelTipBox.width < 220, `legend tooltip width ${modelTipBox.width} should fit content`)
+  // maxWidth 220 作用在内容盒，padding 7×2 额外计入；总宽上限 234
+  assert.ok(modelTipBox.width < 236, `legend tooltip width ${modelTipBox.width} should clamp to 220 content`)
   assert.ok(Math.abs((modelTipBox.x + modelTipBox.width / 2) - (inlineBox.x + inlineBox.width / 2)) < 1.5, 'legend tooltip should be centered on trigger')
   await page.screenshot({ path: join(tmpRoot, 'e2e', 'tooltip.png'), fullPage: true })
   await jsClick(tokenInfo)
@@ -314,7 +340,7 @@ try {
   const community = settings.getByRole('link', { name: '社区' })
   assert.equal(await community.count(), 1)
   assert.equal(await community.getAttribute('href'), 'https://gitee.com/oyw125/model-price-table')
-  assert.match(await settings.innerText(), /版本 1\.0\.7/)
+  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.6/)
   assert.ok(!(await settings.innerText()).includes('· 已保存'))
 
   // Price links share a row.
@@ -329,19 +355,20 @@ try {
   assert.match(await settings.innerText(), /已是最新/)
   assert.equal(await updateButton.isEnabled(), true)
   await page.waitForTimeout(1800)
-  assert.match(await settings.innerText(), /版本 1\.0\.7/)
+  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.6/)
   assert.equal(await updateButton.isVisible(), true)
 
   // Available state opens an explicit confirm, not an auto install.
   updateAvailable = true
   await jsClick(updateButton)
   await page.waitForTimeout(250)
-  assert.match(await settings.innerText(), /发现 1\.0\.8/)
+  assert.match(await settings.innerText(), /发现 1\.1\.0-local\.7/)
   await jsClick(settings.getByRole('button', { name: '取消' }))
   updateAvailable = false
 
   // Budget valid/invalid.
   const budgetInput = settings.getByTestId('token-dash-budget-input-deepseek-official')
+  assert.equal(await budgetInput.inputValue(), '100')
   const setBudget = (value) => budgetInput.evaluate((node, next) => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
     setter.call(node, next)
@@ -351,9 +378,9 @@ try {
   await setBudget('200.50')
   await page.waitForTimeout(500)
   assert.match(await settings.innerText(), /已保存/)
-  assert.ok(!(await settings.innerText()).includes('版本 1.0.7 · 已保存'))
+  assert.ok(!(await settings.innerText()).includes('版本 1.1.0-local.6 · 已保存'))
   await page.waitForTimeout(1800)
-  assert.match(await settings.innerText(), /版本 1\.0\.7/)
+  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.6/)
   assert.ok(!(await settings.innerText()).includes('· 已保存'))
   const savedPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
   assert.equal(savedPrefs.budgets['deepseek-official'].amount, 200.5)
@@ -362,6 +389,11 @@ try {
   assert.match(await settings.innerText(), /请输入 0 或正数/)
   const invalidPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
   assert.equal(invalidPrefs.budgets['deepseek-official'].amount, 200.5)
+  // 清空写 0（未设置），不会被默认 100 覆盖
+  await setBudget('')
+  await page.waitForTimeout(400)
+  const clearedPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
+  assert.equal(clearedPrefs.budgets['deepseek-official'].amount, 0)
 
   // Logs and update icon.
   await jsClick(settings.getByTestId('token-dash-log-open'))
@@ -370,6 +402,13 @@ try {
   await jsClick(settings.getByTestId('token-dash-log-export'))
   await page.waitForTimeout(200)
   assert.equal(await settings.getByTestId('token-dash-update').count(), 1)
+
+  // Data section: export / import entries exist between logs and prices.
+  const dataSection = settings.getByTestId('token-dash-data-section')
+  assert.equal(await dataSection.count(), 1)
+  assert.equal(await dataSection.getByTestId('token-dash-data-export').count(), 1)
+  assert.equal(await dataSection.getByTestId('token-dash-data-import').count(), 1)
+  assert.match(await dataSection.innerText(), /备份与恢复/)
 
   // Back to usage, range is retained.
   await jsClick(panel.getByRole('tab', { name: '用量' }))
