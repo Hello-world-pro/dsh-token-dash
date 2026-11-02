@@ -97,7 +97,7 @@ let currentSummary = {
   pricingLinks,
   catalog: { version: 1, updatedAt: '1793591115', source: 'community-gitee', url: 'https://gitee.com/oyw125/model-price-table' },
   showBalance: true,
-  version: '1.1.0-local.7',
+  version: '1.1.0-local.8',
   refreshMs: 60000,
   currentProviderId: 'deepseek-official',
   updatedAt: now,
@@ -186,7 +186,7 @@ try {
   })
   await page.route('**/token-dash/api/update', (route) => {
     updateRequests += 1
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '1.1.0-local.8', current: '1.1.0-local.7' } }) })
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '1.1.0-local.9', current: '1.1.0-local.8' } }) })
   })
   await page.route('**/open-in-app/open', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }))
   await page.route('**/token-dash/api/logs/export*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { content: '{"type":"header"}\n' } }) }))
@@ -319,8 +319,8 @@ try {
   const refreshLabel = settings.getByText('刷新间隔', { exact: true })
   assert.equal(await refreshLabel.evaluate((node) => node.getClientRects().length), 1)
 
-  // Logs and prices are separate single-column sections in the restored order.
-  const logSection = settings.getByTestId('token-dash-log-section')
+  // Logs and data share one section; price stays a separate single-column section.
+  const logSection = settings.getByTestId('token-dash-data-log-section')
   const priceSection = settings.getByTestId('token-dash-price-section')
   assert.equal(await logSection.count(), 1)
   assert.equal(await priceSection.count(), 1)
@@ -340,7 +340,7 @@ try {
   const community = settings.getByRole('link', { name: '社区' })
   assert.equal(await community.count(), 1)
   assert.equal(await community.getAttribute('href'), 'https://gitee.com/oyw125/model-price-table')
-  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.7/)
+  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.8/)
   assert.ok(!(await settings.innerText()).includes('· 已保存'))
 
   // Price links share a row.
@@ -355,14 +355,14 @@ try {
   assert.match(await settings.innerText(), /已是最新/)
   assert.equal(await updateButton.isEnabled(), true)
   await page.waitForTimeout(1800)
-  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.7/)
+  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.8/)
   assert.equal(await updateButton.isVisible(), true)
 
   // Available state opens an explicit confirm, not an auto install.
   updateAvailable = true
   await jsClick(updateButton)
   await page.waitForTimeout(250)
-  assert.match(await settings.innerText(), /发现 1\.1\.0-local\.8/)
+  assert.match(await settings.innerText(), /发现 1\.1\.0-local\.9/)
   await jsClick(settings.getByRole('button', { name: '取消' }))
   updateAvailable = false
 
@@ -378,9 +378,9 @@ try {
   await setBudget('200.50')
   await page.waitForTimeout(500)
   assert.match(await settings.innerText(), /已保存/)
-  assert.ok(!(await settings.innerText()).includes('版本 1.1.0-local.7 · 已保存'))
+  assert.ok(!(await settings.innerText()).includes('版本 1.1.0-local.8 · 已保存'))
   await page.waitForTimeout(1800)
-  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.7/)
+  assert.match(await settings.innerText(), /版本 1\.1\.0-local\.8/)
   assert.ok(!(await settings.innerText()).includes('· 已保存'))
   const savedPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
   assert.equal(savedPrefs.budgets['deepseek-official'].amount, 200.5)
@@ -404,11 +404,13 @@ try {
   assert.equal(await settings.getByTestId('token-dash-update').count(), 1)
 
   // Data section: export / import entries exist between logs and prices.
-  const dataSection = settings.getByTestId('token-dash-data-section')
+  const dataSection = settings.getByTestId('token-dash-data-log-section')
   assert.equal(await dataSection.count(), 1)
   assert.equal(await dataSection.getByTestId('token-dash-data-export').count(), 1)
   assert.equal(await dataSection.getByTestId('token-dash-data-import').count(), 1)
+  assert.equal(await dataSection.getByTestId('token-dash-log-open').count(), 1)
   assert.match(await dataSection.innerText(), /备份与恢复/)
+  assert.match(await dataSection.innerText(), /日志/)
 
   // Back to usage, range is retained.
   await jsClick(panel.getByRole('tab', { name: '用量' }))

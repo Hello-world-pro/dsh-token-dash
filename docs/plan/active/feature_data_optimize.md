@@ -1123,3 +1123,27 @@ const importData = async (file) => {
 
 - 环境与方式：L1 断言 `misses` 内容；桌面空档后用 `[TD:provider] probe.miss` 确认原因。
 - 结果：`npm test` 通过（2026-11-02）：无 Key 时 `misses` 为五项 `:none`；被 hide 的 provider 记 `:hidden`。
+
+### Issue #4 [待用户验证] 2026-11-02 P3 日志与数据各占一个分区，设置页偏长
+
+#### 9.1 复现
+
+- 当前：P3 有六个 section（API 计费 / 订阅 / 显示 / 日志 / 数据 / 价格与版本），「日志」与「备份与恢复」各占一块，只放一行按钮，纵向浪费约 40–50px。
+- 期望：合并为一个「数据与日志」分区，两行；不新增控件、不改样式取值。
+
+#### 9.3 结论
+
+- 根因：v2.29 新增「数据」时按独立分区实现，与「日志」结构同构却各占一个标题 + padding + 间距。
+- 修复：`SettingsContent` 把两个 `section()` 合并为一个，行内容原样搬入；testid 收敛为 `token-dash-data-log-section`。
+- 不变路径：四个按钮的 testid、行为、状态提示不变；「显示」与「价格与版本」顺序不变。
+
+#### 9.4 修复实施
+
+- `client.js` · `SettingsContent`：两个 section 合并为「数据与日志」，子节点直接给两行（section 自身是 grid + gap 6），不新增任何 style。
+- `scripts/e2e.mjs` · 分区断言：`token-dash-log-section` / `token-dash-data-section` → `token-dash-data-log-section`。
+
+#### 9.6 验收
+
+- 环境与方式：`npm run e2e`（分区数、上下顺序、两行按钮可点）；桌面走查。
+- 结果：`npm run e2e` 通过（2026-11-02）：`token-dash-data-log-section` 唯一，内含日志/导出数据/导入数据按钮，且位于价格分区之上；实际高度收益待桌面走查确认。
+
