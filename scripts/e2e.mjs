@@ -97,7 +97,7 @@ let currentSummary = {
   pricingLinks,
   catalog: { version: 1, updatedAt: '1793591115', source: 'community-gitee', url: 'https://gitee.com/oyw125/model-price-table' },
   showBalance: true,
-  version: '1.1.0',
+  version: '1.1.1',
   refreshMs: 60000,
   currentProviderId: 'deepseek-official',
   updatedAt: now,
@@ -186,7 +186,7 @@ try {
   })
   await page.route('**/token-dash/api/update', (route) => {
     updateRequests += 1
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '1.1.1', current: '1.1.0' } }) })
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '1.1.2', current: '1.1.1' } }) })
   })
   await page.route('**/open-in-app/open', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }))
   await page.route('**/token-dash/api/logs/export*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { content: '{"type":"header"}\n' } }) }))
@@ -223,8 +223,8 @@ try {
   const panel = page.locator('[data-testid=token-dash-panel]')
   await openPanel()
   await page.screenshot({ path: join(tmpRoot, 'e2e', 'p2-fresh.png'), fullPage: true })
-  assert.match(await panel.innerText(), /本月预算（已检测 2）/)
-  assert.match(await panel.innerText(), /订阅套餐（账户级，已检测 2）/)
+  assert.match(await panel.innerText(), /本月预算/)
+  assert.match(await panel.innerText(), /订阅套餐（账户级）/)
   assert.match(await panel.innerText(), /¥12\.34\/¥100\.00/)
   assert.match(await panel.innerText(), /余额 ¥49\.86/)
   assert.match(await panel.innerText(), /DeepSeek-V4\.1-Flash/)
@@ -293,17 +293,47 @@ try {
   await jsClick(panel.getByRole('tab', { name: '近7天' }))
   await page.waitForTimeout(200)
   assert.match(await panel.innerText(), /真实 Tokens/)
+  // 两格卡精简：去掉「按币种」与「入/缓存/出」标签，副行只留数字
+  assert.equal((await panel.innerText()).includes('按币种'), false)
+  assert.equal((await panel.innerText()).includes('缓存'), false)
   assert.match(await panel.innerText(), /近7天/)
   assert.equal(await page.locator('[data-testid=token-dash-api-row-deepseek-official]').count(), 1)
   assert.equal(await page.locator('[data-testid=token-dash-sub-row-zhipu]').count(), 1)
+  // 预算行数字列左对齐：两行的费用列起点一致
+  const costBoxA = await page.getByTestId('token-dash-budget-cost-deepseek-official').boundingBox()
+  const costBoxB = await page.getByTestId('token-dash-budget-cost-openrouter').boundingBox()
+  assert.ok(costBoxA !== null && costBoxB !== null, 'budget cost cells should have boxes')
+  assert.ok(Math.abs(costBoxA.x - costBoxB.x) <= 1, `budget cost column should be left aligned (${costBoxA.x} vs ${costBoxB.x})`)
+  // 余额列同样左对齐（首行右端固定宽度 + 左对齐）
+  const balBoxA = await page.getByTestId('token-dash-budget-balance-deepseek-official').boundingBox()
+  const balBoxB = await page.getByTestId('token-dash-budget-balance-openrouter').boundingBox()
+  assert.ok(balBoxA !== null && balBoxB !== null, 'budget balance cells should have boxes')
+  assert.ok(Math.abs(balBoxA.x - balBoxB.x) <= 1, `budget balance column should be left aligned (${balBoxA.x} vs ${balBoxB.x})`)
+  // 预算条满宽（≥200px），不再是 48px 小条
+  const barBox = await page.getByTestId('token-dash-budget-bar-deepseek-official').boundingBox()
+  assert.ok(barBox !== null && barBox.width >= 200, `budget bar should stretch (${barBox?.width})`)
+  // 重置文案带相对时间：`x 小时/天后 · MM-DD HH:mm 重置`
+  assert.match(await panel.innerText(), /(分钟后|小时后|天后) · \d{2}-\d{2} \d{2}:\d{2} 重置/)
+  // 订阅窗口组左右分开：右侧「周」组的迷你条右端贴分区内容右边界
+  const windowsRow = panel.getByTestId('token-dash-quota-windows-zhipu')
+  const windowsBox = await windowsRow.boundingBox()
+  const lastWindowBox = await windowsRow.locator(':scope > span').last().boundingBox()
+  assert.ok(windowsBox !== null && lastWindowBox !== null, 'quota windows should have boxes')
+  const rightGap = (windowsBox.x + windowsBox.width) - (lastWindowBox.x + lastWindowBox.width)
+  assert.ok(rightGap <= 2, `quota windows right edge should align (gap ${rightGap})`)
 
   // P3 structure and no legacy controls.
   await jsClick(panel.getByRole('tab', { name: '设置' }))
   await page.waitForTimeout(300)
   const settings = page.locator('[data-testid=token-dash-settings]')
   await settings.waitFor({ timeout: 8000 })
-  assert.match(await settings.innerText(), /API 计费（已检测 2）/)
-  assert.match(await settings.innerText(), /订阅（已检测 2）/)
+  assert.match(await settings.innerText(), /API 计费/)
+  assert.match(await settings.innerText(), /订阅/)
+  // 订阅行只保留供应商名与重置时间，不再显示「账户套餐」与窗口百分比
+  assert.equal((await settings.innerText()).includes('账户套餐'), false)
+  assert.equal((await settings.innerText()).includes('5h'), false)
+  assert.equal((await settings.innerText()).includes('周'), false)
+  assert.match(await settings.innerText(), /(分钟后|小时后|天后) · \d{2}-\d{2} \d{2}:\d{2} 重置/)
   assert.match(await settings.innerText(), /显示/)
   assert.match(await settings.innerText(), /日志/)
   assert.match(await settings.innerText(), /价格与版本/)
@@ -340,7 +370,7 @@ try {
   const community = settings.getByRole('link', { name: '社区' })
   assert.equal(await community.count(), 1)
   assert.equal(await community.getAttribute('href'), 'https://gitee.com/oyw125/model-price-table')
-  assert.match(await settings.innerText(), /版本 1\.1\.0/)
+  assert.match(await settings.innerText(), /版本 1\.1\.1/)
   assert.ok(!(await settings.innerText()).includes('· 已保存'))
 
   // Price links share a row.
@@ -355,14 +385,14 @@ try {
   assert.match(await settings.innerText(), /已是最新/)
   assert.equal(await updateButton.isEnabled(), true)
   await page.waitForTimeout(1800)
-  assert.match(await settings.innerText(), /版本 1\.1\.0/)
+  assert.match(await settings.innerText(), /版本 1\.1\.1/)
   assert.equal(await updateButton.isVisible(), true)
 
   // Available state opens an explicit confirm, not an auto install.
   updateAvailable = true
   await jsClick(updateButton)
   await page.waitForTimeout(250)
-  assert.match(await settings.innerText(), /发现 1\.1\.1/)
+  assert.match(await settings.innerText(), /发现 1\.1\.2/)
   await jsClick(settings.getByRole('button', { name: '取消' }))
   updateAvailable = false
 
@@ -378,9 +408,9 @@ try {
   await setBudget('200.50')
   await page.waitForTimeout(500)
   assert.match(await settings.innerText(), /已保存/)
-  assert.ok(!(await settings.innerText()).includes('版本 1.1.0 · 已保存'))
+  assert.ok(!(await settings.innerText()).includes('版本 1.1.1 · 已保存'))
   await page.waitForTimeout(1800)
-  assert.match(await settings.innerText(), /版本 1\.1\.0/)
+  assert.match(await settings.innerText(), /版本 1\.1\.1/)
   assert.ok(!(await settings.innerText()).includes('· 已保存'))
   const savedPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
   assert.equal(savedPrefs.budgets['deepseek-official'].amount, 200.5)

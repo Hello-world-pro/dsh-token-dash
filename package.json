@@ -1,6 +1,6 @@
 {
   "name": "dsh-token-dash",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "DSH Token 看板：API/订阅动态 provider、预算、配额、模型费用/用量与诊断日志。",
   "type": "module",
   "main": "./index.js",
