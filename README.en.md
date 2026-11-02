@@ -6,7 +6,8 @@
 
 <p align="center">
   Track daily/monthly model spend and budget headroom right next to the DSH input box:<br />
-  paste an API Key and the plan is auto-detected (subscription or pay-as-you-go), set a monthly budget, and consumption is estimated locally in real time.
+  paste an API Key and the plan is auto-detected (subscription or pay-as-you-go), set a monthly budget, and consumption is estimated locally in real time;<br />
+  export the current month as a backup and import it back after switching machines or reinstalling.
 </p>
 
 <p align="center">
@@ -24,10 +25,10 @@
 </p>
 
 - **Providers**: DeepSeek (DS account / API key), GLM Coding (subscription), Kimi Coding (subscription), Kimi / OpenRouter / Qwen (pay-as-you-go; OpenRouter in USD, Qwen CNY domestic / USD international) — paste a key and the billing mode is detected automatically
-- **Pages**: bottom bar Pill → floating dashboard → settings; click the pill to expand, click outside to collapse
-- **Dashboard data**: per-provider monthly budget progress (used / total / percent), today's spend, account balance, subscription 5h/weekly windows with reset times, model costs grouped by currency, token usage with cache hit rate
-- **Settings**: per-provider monthly budget (with currency), three refresh intervals, balance toggle, log viewing / export, check for updates
-- **Data**: daily / monthly usage estimated locally (built-in price catalog + community price table), three-layer model attribution, read-only local sessions
+- **Pages**: bottom bar Pill → floating dashboard (usage / settings tabs); click the pill to expand, click outside to collapse
+- **Dashboard data**: time range (today / last 7 days / last 30 days / all), per-provider monthly budget progress (used / total / percent), today's spend, account balance, subscription 5h / weekly windows with reset times; two tiles for **total cost by currency** and **real Tokens (including cache read/write)**; per provider/model cost, requests and hit rate below
+- **Settings**: per-provider monthly budget (with currency, defaults to 100 when empty), three refresh intervals, balance toggle, logs, data export / import, check for updates
+- **Data**: daily / monthly usage estimated locally (built-in price catalog + community price table), three-layer model attribution, read-only local sessions; subscription models count toward Tokens but not cost, and the billing mode is pinned per key instead of following quota flakiness
 
 ---
 
@@ -43,84 +44,18 @@ dsh plugin --profile desktop add dsh-token-dash
 dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash
 
 # Option 3: download dsh-token-dash-x.y.z.tgz from Releases and install locally (offline)
-dsh plugin --profile desktop add /path/to/dsh-token-dash-1.0.6.tgz
+dsh plugin --profile desktop add /path/to/dsh-token-dash-1.1.0.tgz
 ```
 
-Update: run `update` with the same name, or use the in-app updater (settings → check for updates). Remove: run `remove` with the same name; data stays in `$DSH_HOME/dsh-token-dash/`.
+Update: run `update` with the same name, or use the `⤓` button on the right of “Pricing & version” in settings. Remove: run `remove` with the same name; data stays in `$DSH_HOME/dsh-token-dash/`.
 
 ---
 
 ## Interface
 
-```text
-P1 · Bottom bar pill (click to open the dashboard)
-┌──────────────────────────────────────────────────────────┐
-│ [API] Budget 91.9% · Today ¥0.04 · Balance ¥87.66⌃       │
-└──────────────────────────────────────────────────────────┘
-┌──────────────────────────────────────────────────────────┐
-│ [Sub] 5h 42% · Week 18%⌃                                 │
-└──────────────────────────────────────────────────────────┘
+Screenshots below use mock data so the full layout is visible at once:
 
-P2 · Floating dashboard (opens right above the pill; cards appear as API keys are detected)
-┌──────────────────────────────────────────────────────────┐
-│ Token Dashboard                       Refresh Settings × │
-│ Pay-as-you-go (3 detected)                   just now   │
-│ ┌──────────────────────────────────────────────────────┐ │
-│ │ DeepSeek  Budget ¥91.90/¥100.00 · 91.9%  Today Bal.  │ │
-│ │ [=========================================-------]   │ │
-│ └──────────────────────────────────────────────────────┘ │
-│ ┌──────────────────────────────────────────────────────┐ │
-│ │ OpenRouter  Budget $22.80/$60.00 · 38.0%  Today Bal.  │ │
-│ │ [==================--------------------------------] │ │
-│ └──────────────────────────────────────────────────────┘ │
-│ ┌──────────────────────────────────────────────────────┐ │
-│ │ Qwen        Budget ¥0.40/¥5.00 · 8.0%     Today Bal. │ │
-│ │ [====----------------------------------------------] │ │
-│ └──────────────────────────────────────────────────────┘ │
-│ Subscriptions (2 detected)                                │
-│ ┌────────────────────────────┐ ┌────────────────────────┐ │
-│ │ GLM Coding                 │ │ Kimi Coding            │ │
-│ │ 5h 42%     Week 18%        │ │ 5h 30%    Week 12%     │ │
-│ │ Resets 14:05               │ │ Resets 15:20           │ │
-│ └────────────────────────────┘ └────────────────────────┘ │
-│ API cost breakdown / this month        local estimates   │
-│ Model usage / this month                    total 1.31M  │
-└──────────────────────────────────────────────────────────┘
-
-P3 · Settings
-┌──────────────────────────────────────────────────────────┐
-│ ← Back   Token Dashboard                          [Close] │
-│ API billing (3 detected)                                  │
-│   DeepSeek        Monthly budget [ 100.00 ]  CNY         │
-│   OpenRouter      Monthly budget [ 60.00 ]   USD         │
-│   Qwen            Monthly budget [ 5.00 ]    CNY         │
-│ Subscriptions (2 detected)                  [Rescan]      │
-│   GLM Coding                     5h 42% / Week 18%        │
-│   Kimi Coding                    5h 30% / Week 12%        │
-│ Display                                                   │
-│   Refresh interval   [30s] [1 min] [5 min]                │
-│   Account balance                                    [On] │
-│ Logs                                                      │
-│   View logs   [Open log folder]   [Export logs]           │
-│ Pricing & version                                         │
-│   View pricing       DeepSeek GLM Kimi OpenRouter Qwen    │
-│   Version 1.0.6                             [Check update]│
-└──────────────────────────────────────────────────────────┘
-
-UI transitions
-                click pill / Enter
-  ┌──────────┐ ──────────────────→ ┌────────────┐
-  │ P1 idle  │                     │ P2 dashboard│
-  └──────────┘ ←────────────────── └────────────┘
-        ↑       click pill / click outside / [×]
-        │                              │[Settings]
-        │                              ▼
-        │    [← Back] / click outside ┌────────────┐
-        └──────────────────────────── │ P3 settings │
-                                       └────────────┘
-```
-
-**P1 · Bottom bar pill** (home workspace row / activity row under the chat input)
+**P1 · Bottom bar pill** (home workspace row / activity row under the chat input; click to open the panel, click outside or `×` to close)
 
 <p align="center">
   <img src="./docs/pic/pill-home.png" alt="Home pill" />
@@ -130,13 +65,13 @@ UI transitions
   <img src="./docs/pic/pill-session.png" alt="Session pill" />
 </p>
 
-**P2 · Floating dashboard**
+**P2 · Floating dashboard (usage tab)**: monthly budgets and subscriptions, time range, two summary tiles, per-model breakdown
 
 <p align="center">
   <img src="./docs/pic/panel-dashboard.png" alt="Dashboard" />
 </p>
 
-**P3 · Settings**
+**P3 · Settings tab**: API billing, subscriptions, display, data & logs, pricing & version
 
 <p align="center">
   <img src="./docs/pic/settings.png" alt="Settings" />
@@ -155,11 +90,16 @@ npm run logs -- --module slot,adapter.*  # filter by module
 
 Reads only local session `usage` (title-generation overhead excluded); balances come from official endpoints only, with credentials resolved by the host and never written to disk; costs are local estimates — no billing requests are ever made.
 
+Backups happen entirely on disk: `Export data` writes one JSON file (settings + current-month usage, without subscription quotas or balances), `Import data` only parses that file, and the existing files are backed up before the current month is overwritten. No network involved.
+
+---
+
 ## Development
 
 ```bash
 npm test      # unit tests
 npm run e2e   # end-to-end (temp DSH_HOME + web profile + Playwright)
+npm run shots # regenerate the P2/P3 screenshots in docs/pic from mock data (tools/mock)
 npm run pack  # build the release tarball into build/
 ```
 
