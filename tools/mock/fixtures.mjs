@@ -3,6 +3,9 @@
  * 结构与 SummaryVM / usage VM 保持一致，由 scripts 里的截屏脚本注入到 /summary、/usage。
  */
 
+import { readFileSync } from 'node:fs'
+
+const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
 const now = Date.now()
 
 const budget = (amount, currency, used) => ({
@@ -63,12 +66,19 @@ export const summary = {
   ],
   catalog: { version: 1, updatedAt: '1793591115', source: 'community-gitee', url: 'https://gitee.com/oyw125/model-price-table' },
   showBalance: true,
-  version: '1.1.0',
+  version: pkg.version,
   refreshMs: 60000,
   providersDegraded: false,
   currentProviderId: 'deepseek-official',
   updatedAt: now,
   stale: false,
+}
+
+/** 只有订阅 provider 的视图：用于截「[订阅]」形态的 Pill。 */
+export const summarySubOnly = {
+  ...summary,
+  providers: summary.providers.filter((item) => item.kind === 'subscription'),
+  currentProviderId: null,
 }
 
 const row = (providerId, providerName, modelId, displayName, kind, currency, cost, buckets, requests, approximate = false) => {

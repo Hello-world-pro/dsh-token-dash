@@ -55,14 +55,14 @@ Update: run `update` with the same name, or use the `⤓` button on the right of
 
 Screenshots below use mock data so the full layout is visible at once:
 
-**P1 · Bottom bar pill** (home workspace row / activity row under the chat input; click to open the panel, click outside or `×` to close)
+**P1 · Bottom bar pill** (pay-as-you-go and subscription variants; click to open the panel, click outside or `×` to close)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-home.png" alt="Home pill" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-api.png" alt="Pay-as-you-go pill" />
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-session.png" alt="Session pill" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-sub.png" alt="Subscription pill" />
 </p>
 
 **P2 · Floating dashboard (usage tab)**: monthly budgets and subscriptions, time range, two summary tiles, per-model breakdown
@@ -99,7 +99,7 @@ Backups happen entirely on disk: `Export data` writes one JSON file (settings + 
 ```bash
 npm test      # unit tests
 npm run e2e   # end-to-end (temp DSH_HOME + web profile + Playwright)
-npm run shots # regenerate the P2/P3 screenshots in docs/pic from mock data (tools/mock)
+npm run shots # regenerate the P1/P2/P3 screenshots in docs/pic from mock data (tools/mock)
 npm run pack  # build the release tarball into build/
 ```
 

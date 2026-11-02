@@ -55,14 +55,14 @@ dsh plugin --profile desktop add /path/to/dsh-token-dash-1.1.0.tgz
 
 以下截图使用假数据演示，便于一次看到完整效果：
 
-**P1 · 底栏 Pill**（首页工作区行 / 会话输入框下方活动行；点击展开看板，点击浮层外或 `×` 收起）
+**P1 · 底栏 Pill**（按量 / 订阅两种形态；点击展开看板，点击浮层外或 `×` 收起）
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-home.png" alt="首页 Pill" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-api.png" alt="按量 Pill" />
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-session.png" alt="会话 Pill" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-sub.png" alt="订阅 Pill" />
 </p>
 
 **P2 · 浮层看板（用量 tab）**：本月预算与订阅、时间范围、两格统计卡、按模型明细
@@ -99,7 +99,7 @@ npm run logs -- --module slot,adapter.*  # 按模块过滤
 ```bash
 npm test      # 单元测试
 npm run e2e   # 端到端（临时 DSH_HOME + web profile + Playwright）
-npm run shots # 用假数据重新生成 docs/pic 的 P2/P3 截图（tools/mock）
+npm run shots # 用假数据重新生成 docs/pic 的 P1/P2/P3 截图（tools/mock）
 npm run pack  # 发布 tarball 生成到 build/
 ```
 

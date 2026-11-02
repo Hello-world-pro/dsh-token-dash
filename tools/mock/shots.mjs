@@ -8,7 +8,7 @@ import { execFileSync, spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
-import { prefs, summary, usageFor } from './fixtures.mjs'
+import { prefs, summary, summarySubOnly, usageFor } from './fixtures.mjs'
 
 const root = resolve('.')
 const keep = process.argv.includes('--keep')
@@ -81,8 +81,9 @@ try {
   browser = await chromium.launch({ headless: true, ...(executablePath === undefined ? {} : { executablePath }) })
   const page = await browser.newPage({ viewport: { width: 900, height: 1100 }, deviceScaleFactor: 2 })
 
+  let activeSummary = summary
   await page.route('**/token-dash/api/summary*', (route) => route.fulfill({
-    status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: summary }),
+    status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: activeSummary }),
   }))
   await page.route('**/token-dash/api/usage*', (route) => {
     const range = new URL(route.request().url()).searchParams.get('range') ?? 'today'
@@ -106,6 +107,9 @@ try {
   await page.evaluate(() => {
     for (const node of document.querySelectorAll('[role=presentation]')) node.remove()
   })
+  // 与 P1 截图一致：深色主题
+  await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', '1'))
+  await page.waitForTimeout(300)
 
   const pill = page.locator('[data-testid=token-dash-pill]')
   await pill.waitFor({ timeout: 20000 })
@@ -114,6 +118,14 @@ try {
 
   const panel = page.locator('[data-testid=token-dash-panel]')
   await panel.waitFor({ timeout: 8000 })
+  // 宿主可能弹出登录/引导浮层，截图前清掉非看板自身的弹层
+  await page.evaluate(() => {
+    for (const node of document.querySelectorAll('[role=dialog],[role=presentation]')) {
+      if (node.matches('[data-testid=token-dash-panel]')) continue
+      if (node.querySelector('[data-testid=token-dash-panel]') !== null) continue
+      node.remove()
+    }
+  })
   // 截图需要完整内容：解除 70vh 限高并临时固定到左上角，否则面板会超出视口导致空白
   await page.addStyleTag({
     content: '[data-testid=token-dash-panel]{position:fixed !important;top:8px !important;left:8px !important;bottom:auto !important;max-height:none !important;overflow:visible !important}',
@@ -132,6 +144,47 @@ try {
   await page.waitForTimeout(400)
   await panel.screenshot({ path: join(outDir, 'settings.png') })
   console.log('[shots] settings.png')
+
+  // P1 Pill（按量形态）：面板固定在左上角，pill 仍在底栏可见
+  const shotPill = async (file) => {
+    // 面板固定在左上角且高于底栏，截图 pill 前先藏起来；同时清掉宿主弹层并强制深色
+    await page.evaluate(() => {
+      document.body.setAttribute('data-ds-dark-theme', '1')
+      const panel = document.querySelector('[data-testid=token-dash-panel]')
+      if (panel !== null) panel.style.display = 'none'
+      for (const node of document.querySelectorAll('[role=dialog],[role=presentation],[aria-modal=true]')) {
+        if (node.matches('[data-testid=token-dash-panel]')) continue
+        if (node.querySelector('[data-testid=token-dash-panel]') !== null) continue
+        node.remove()
+      }
+    })
+    const target = page.locator('[data-testid=token-dash-pill]')
+    await target.waitFor({ timeout: 10000 })
+    await target.scrollIntoViewIfNeeded()
+    const box = await target.boundingBox()
+    if (box === null) throw new Error(`pill box missing for ${file}`)
+    // 按 pill 实际宽度加 20px 内边距裁切，避免裁到相邻的宿主控件
+    await page.screenshot({
+      path: join(outDir, file),
+      clip: { x: Math.max(0, box.x - 20), y: Math.max(0, box.y - 20), width: box.width + 40, height: box.height + 40 },
+    })
+    console.log(`[shots] ${file}`)
+  }
+  await shotPill('pill-api.png')
+
+  // P1 Pill（订阅形态）：切换到只含订阅 provider 的假数据
+  activeSummary = summarySubOnly
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  for (let round = 0; round < 4; round += 1) {
+    await page.evaluate(() => {
+      const buttons = [...document.querySelectorAll('[role=presentation] button,[role=dialog] button')]
+      const next = buttons.find((button) => /继续|跳过|稍后|关闭/.test(button.textContent ?? ''))
+      if (next !== undefined) next.click()
+    })
+    await page.waitForTimeout(200)
+  }
+  await page.waitForTimeout(700)
+  await shotPill('pill-sub.png')
 } finally {
   await browser?.close().catch(() => {})
   stopTree(server?.child)
