@@ -70,7 +70,7 @@
 | # | 能力 | 设计 | 优先级 |
 |---|---|---|---|
 | B14 | `active` 参数 | `GET /summary?active=<raw>`；`normalizeProvider(raw)` 命中五家则覆盖 `currentProviderId`，未命中保持账本值 | P1 |
-| B15 | 仓库元信息 | `GET /token-dash/api/repo` → `{ ok, stars, fetchedAt }`；固定仓库、6h 缓存 + ETag、403/429 视作失败并缓存 10 分钟 | P3 |
+| B15 | 仓库元信息 | `GET /token-dash/api/repo` → `{ ok, stars, fetchedAt }`；固定仓库、6h 缓存 + ETag、403/429 视作失败并缓存 10 分钟。**暂不需要**：前端已改为纯跳转，不请求该路由 | P3 |
 
 | # | 契约 | 定义 |
 |---|---|---|

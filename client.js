@@ -1501,7 +1501,6 @@ window.__ModuleLoader__.load({
       const [refreshing, setRefreshing] = useState(false)
       const [error, setError] = useState(false)
       const [usageError, setUsageError] = useState(false)
-      const [repoStars, setRepoStars] = useState(null)
       const prefsRef = useRef(null)
       prefsRef.current = prefs
 
@@ -1559,14 +1558,6 @@ window.__ModuleLoader__.load({
         await refresh()
       }, [refresh])
 
-      useEffect(() => {
-        let alive = true
-        getJson('/repo')
-          .then((data) => { if (alive) setRepoStars(Number.isFinite(data?.stars) ? data.stars : null) })
-          .catch(() => { if (alive) setRepoStars(null) })
-        return () => { alive = false }
-      }, [])
-
       const providers = summary?.providers ?? []
       const api = providers.filter((provider) => provider.kind === 'api')
       const subscriptions = providers.filter((provider) => provider.kind === 'subscription')
@@ -1585,7 +1576,7 @@ window.__ModuleLoader__.load({
           h('a', {
             href: REPO_URL, target: '_blank', rel: 'noopener',
             'data-testid': 'token-dash-repo', title: tr('查看仓库'), style: styles.repoChip,
-          }, repoStars === null ? '★' : `★ ${fmtTokens(repoStars)}`)),
+          }, '★')),
         error ? h('div', { style: styles.errorStrip, role: 'alert' },
           h('span', null, tr('刷新失败，保留上次数据')),
           h('button', { type: 'button', style: styles.button, onClick: () => { void refresh() } }, tr('重试'))) : null,

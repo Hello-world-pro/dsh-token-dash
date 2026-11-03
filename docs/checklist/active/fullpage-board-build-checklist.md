@@ -3,7 +3,7 @@
 > 状态：施工完成（S0–S6 全部落地，测试通过；用户 2026-11-04 指令「按 feature 文档严格执行修改」）<br>
 > 上游方案：[`feature_fullpage_board.md`](../../plan/active/dsh/feature_fullpage_board.md)（第 2 版）<br>
 > 关联契约：[`ui-design.md`](../../ui-design.md) v3.1、[`ui-reference-checklist.md`](ui-reference-checklist.md)、[`backend-capability-checklist.md`](backend-capability-checklist.md)<br>
-> 目标版本：`1.2.0-local.1`（本地构建，不 tag、不发布）
+> 目标版本：`1.2.0-local.2`（本地构建，不 tag、不发布）
 
 ## 一、阶段与改动映射
 
@@ -24,7 +24,7 @@
 | L1 | `npm test` | host 侧聚合、备份、locale 词典 | 76 项：75 通过 / 1 跳过（local 跳过 Release notes） |
 | L2+L3 | `npm run e2e` | 真实宿主 + Playwright：P1/P2/P3、编辑、空态、窄屏、暗色 | 全绿 |
 | 脚本 | `npm run shots` | README 三张截图可重新生成 | 已重生成 `panel-dashboard` / `settings` / `pill-*` |
-| 打包 | `npm run pack` | `build/dsh-token-dash-1.2.0-local.1.tgz` | 待执行 |
+| 打包 | `npm run pack` | `build/dsh-token-dash-1.2.0-local.2.tgz` | 待执行 |
 
 ## 三、执行日志
 
@@ -36,13 +36,14 @@
 | 2026-11-04 | 调试 | 预算编辑保存改为以输入框当前值为准（受控 state 时序问题）；E2E 改为原生 setter + 事件派发（headless 无系统焦点） |
 | 2026-11-04 | 测试 | `npm test` 75 pass / 1 skip；`npm run e2e` 通过；`npm run shots` 通过 |
 | 2026-11-04 | S6 | README / README.en / design.md / ui-design §5.1 同步；截图重生成 |
+| 2026-11-04 | 收口 | star chip 改为纯 GitHub 跳转（不再请求 `/repo`，原 B15 依赖作废）；E2E 断言同步；方案稿按 plan skill 精简到 227 行 |
 
 ## 四、偏差与遗留
 
 | 项 | 说明 |
 |---|---|
 | 投影取值 | 宿主 `useProjection('modelSelection')` / `agentDefaultModel` 在测试环境不可用，代码走防御式降级到账本值；B14 上线后自动生效 |
-| `/repo` | 后端 B15 未实施，chip 常态显示 `★`；E2E 用 404 mock 验证降级，成功后计数另有断言 |
+| star chip | 按最终要求改为纯跳转：恒显示 `★`，不请求 `/repo`、不显示计数；后端 B15 可不再实施 |
 | 页面隐藏态 | `visibilitychange` 已实现；E2E 无法模拟 `document.hidden`，仅验证恢复可见立即刷新 |
 | E2E 输入 | headless 窗口拿不到系统焦点，预算输入改用原生 setter + `KeyboardEvent` 派发 |
 | 截图 | 整页看板以 `zoom: .72` + 胶囊静态化截图，避免滚动容器裁剪 |

@@ -137,7 +137,6 @@ let failUsage = false
 let updateAvailable = false
 let updateRequests = 0
 let usageDelay = 0
-let repoMode = '404'
 const env = { ...process.env, DSH_HOME: home }
 let server
 let browser
@@ -194,12 +193,7 @@ try {
     if (failUsage) return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ ok: false, reason: 'mock-usage' }) })
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: usageFor(range) }) })
   })
-  await page.route('**/token-dash/api/repo*', (route) => {
-    if (repoMode === 'ok') {
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { ok: true, stars: 1200, fetchedAt: now } }) })
-    }
-    return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ ok: false }) })
-  })
+  // /repo 不再请求：按钮只做跳转，不拦截该路由也能通过。
   await page.route('**/token-dash/api/update', (route) => {
     updateRequests += 1
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '9.9.9', current: PKG_VERSION } }) })
@@ -391,10 +385,11 @@ try {
   assert.ok(!(await board.innerText()).includes('清空日志'))
   assert.ok(!(await board.innerText()).includes('本月 Token'))
 
-  // Star chip degrades to a bare star when /repo fails.
+  // Star chip is a plain link to the repository (no star count, no /repo request).
   const repoChip = board.getByTestId('token-dash-repo')
   assert.equal((await repoChip.innerText()).trim(), '★')
   assert.ok((await repoChip.getAttribute('href'))?.includes('github.com'))
+  assert.equal(await repoChip.getAttribute('target'), '_blank')
 
   // Budget inline edit: save updates used% and plan balance immediately.
   await jsClick(board.getByTestId('token-dash-budget-edit-deepseek-official'))
@@ -464,8 +459,7 @@ try {
   assert.equal(await board.getByTestId('token-dash-data-export').count(), 1)
   assert.equal(await board.getByTestId('token-dash-data-import').count(), 1)
 
-  // Star count renders once /repo succeeds.
-  repoMode = 'ok'
+  // Reload keeps the board entry and the plain link.
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1200)
   const reloadedEntry = page.locator('[data-testid=token-dash-sidebar-entry]')
@@ -474,7 +468,7 @@ try {
   const reloadedBoard = page.locator('[data-testid=token-dash-board]')
   await reloadedBoard.waitFor({ timeout: 8000 })
   await page.waitForTimeout(400)
-  assert.match(await reloadedBoard.getByTestId('token-dash-repo').innerText(), /★ 1\.2k/)
+  assert.equal((await reloadedBoard.getByTestId('token-dash-repo').innerText()).trim(), '★')
 
   // Dark theme: chrome follows host tokens, no hard-coded white panel.
   await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', '1'))
