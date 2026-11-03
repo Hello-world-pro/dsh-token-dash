@@ -97,7 +97,7 @@ let currentSummary = {
   pricingLinks,
   catalog: { version: 1, updatedAt: '1793591115', source: 'community-gitee', url: 'https://gitee.com/oyw125/model-price-table' },
   showBalance: true,
-  version: '1.1.1',
+  version: '1.1.2',
   refreshMs: 60000,
   currentProviderId: 'deepseek-official',
   updatedAt: now,
@@ -186,7 +186,7 @@ try {
   })
   await page.route('**/token-dash/api/update', (route) => {
     updateRequests += 1
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '1.1.2', current: '1.1.1' } }) })
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '1.1.3', current: '1.1.2' } }) })
   })
   await page.route('**/open-in-app/open', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }))
   await page.route('**/token-dash/api/logs/export*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { content: '{"type":"header"}\n' } }) }))
@@ -223,6 +223,8 @@ try {
   const panel = page.locator('[data-testid=token-dash-panel]')
   await openPanel()
   await page.screenshot({ path: join(tmpRoot, 'e2e', 'p2-fresh.png'), fullPage: true })
+  const panelBox = await panel.boundingBox()
+  assert.ok(panelBox !== null && Math.abs(panelBox.width - 360) < 1, `panel width ${panelBox?.width} should be 360`)
   assert.match(await panel.innerText(), /本月预算/)
   assert.match(await panel.innerText(), /订阅套餐（账户级）/)
   assert.match(await panel.innerText(), /¥12\.34\/¥100\.00/)
@@ -370,7 +372,7 @@ try {
   const community = settings.getByRole('link', { name: '社区' })
   assert.equal(await community.count(), 1)
   assert.equal(await community.getAttribute('href'), 'https://gitee.com/oyw125/model-price-table')
-  assert.match(await settings.innerText(), /版本 1\.1\.1/)
+  assert.match(await settings.innerText(), /版本 1\.1\.2/)
   assert.ok(!(await settings.innerText()).includes('· 已保存'))
 
   // Price links share a row.
@@ -385,14 +387,14 @@ try {
   assert.match(await settings.innerText(), /已是最新/)
   assert.equal(await updateButton.isEnabled(), true)
   await page.waitForTimeout(1800)
-  assert.match(await settings.innerText(), /版本 1\.1\.1/)
+  assert.match(await settings.innerText(), /版本 1\.1\.2/)
   assert.equal(await updateButton.isVisible(), true)
 
   // Available state opens an explicit confirm, not an auto install.
   updateAvailable = true
   await jsClick(updateButton)
   await page.waitForTimeout(250)
-  assert.match(await settings.innerText(), /发现 1\.1\.2/)
+  assert.match(await settings.innerText(), /发现 1\.1\.3/)
   await jsClick(settings.getByRole('button', { name: '取消' }))
   updateAvailable = false
 
@@ -408,9 +410,9 @@ try {
   await setBudget('200.50')
   await page.waitForTimeout(500)
   assert.match(await settings.innerText(), /已保存/)
-  assert.ok(!(await settings.innerText()).includes('版本 1.1.1 · 已保存'))
+  assert.ok(!(await settings.innerText()).includes('版本 1.1.2 · 已保存'))
   await page.waitForTimeout(1800)
-  assert.match(await settings.innerText(), /版本 1\.1\.1/)
+  assert.match(await settings.innerText(), /版本 1\.1\.2/)
   assert.ok(!(await settings.innerText()).includes('· 已保存'))
   const savedPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
   assert.equal(savedPrefs.budgets['deepseek-official'].amount, 200.5)

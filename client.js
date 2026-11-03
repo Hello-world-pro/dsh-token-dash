@@ -283,7 +283,7 @@ window.__ModuleLoader__.load({
       num: { fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
       panel: {
         position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
-        width: 'min(320px, calc(100vw - 16px))', boxSizing: 'border-box', maxHeight: '70vh',
+        width: 'min(360px, calc(100vw - 16px))', boxSizing: 'border-box', maxHeight: '70vh',
         overflow: 'auto', zIndex: 9999, padding: 12, borderRadius: 12,
         background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))', color: T.text,
         border: `1px solid ${T.border}`, boxShadow: '0 12px 40px rgba(0,0,0,.35)', fontSize: 12, outline: 'none',
@@ -610,7 +610,7 @@ window.__ModuleLoader__.load({
       const measurePanel = useCallback(() => {
         const rect = pillRef.current?.getBoundingClientRect()
         if (rect === undefined) return
-        const width = Math.min(320, window.innerWidth - 16)
+        const width = Math.min(360, window.innerWidth - 16)
         setPanelShift(Math.min(0, window.innerWidth - 8 - rect.left - width))
         const available = Math.round(rect.top) - 16
         setPanelMaxHeight(`${Math.max(200, Math.min(window.innerHeight * 0.7, available))}px`)
