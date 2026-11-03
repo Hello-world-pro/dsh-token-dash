@@ -1,6 +1,6 @@
 # Provider 边界收口施工 checklist
 
-> 依据 plan：`../../../plan/archived/feature_provider_boundary.md`<br>
+> 依据 plan：`../../plan/archived/feature_provider_boundary.md`<br>
 > 状态：已归档（2026-11-02）——registry/snapshot/VM/UI 收口；L1 53/53 + E2E pass；v1.0.6 发布；桌面 1.0.6 走查未执行<br>
 > 工程根：`dsh-token-dash`（包名 `dsh-token-dash`）
 

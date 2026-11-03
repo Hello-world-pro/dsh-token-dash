@@ -35,7 +35,7 @@
 | 原 | 新 |
 |---|---|
 | `plan/active/token-dash/plan.md` | `docs/plan/active/dsh/feature_token_dash.md` |
-| `doc/checklist/archived/*.md` | `docs/checklist/archived/dsh/*.md` |
+| `doc/checklist/archived/*.md` | `docs/checklist/archived/*.md` |
 | `doc/design.md` / `doc/release.md` / `doc/pic/*.png` | `docs/design.md` / `docs/release.md` / `docs/pic/*.png` |
 | 全局简化版 skills | `~/.agents/skills/{plan-workflow,checklist}` junction → CE |
 

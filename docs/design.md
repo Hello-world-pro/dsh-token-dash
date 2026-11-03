@@ -39,7 +39,7 @@
   → core.addRecord 按 天/provider/model 入账
   → store 持久化 daily.json（2s 防抖 flush，原子写 tmp+rename）
 
-浏览器请求 /summary
+浏览器请求 /summary（可选 ?active=<raw>）
   → readProviders（30s TTL 缓存；五家余额/配额）
   → toSnapshot（统一 windows/error/quotaError/status/fetchedAt）
   → core.buildSummary(state, prefs, now, snapshots)
@@ -49,6 +49,14 @@
 ```
 
 `readSubscriptions`（P3「重新检测」）走同一个 snapshot 出口，不请求余额接口。
+
+```text
+浏览器请求 /repo（P3 头部 star chip）
+  → 固定仓库常量 spartawhy117/dsh-token-dash
+  → GitHub REST /repos/{owner}/{repo}（未认证）
+  → 6h 缓存 + ETag；403 / 429 视作失败并缓存 10 分钟
+  → { ok, stars, fetchedAt } / { ok: false }（不回传原始响应体）
+```
 
 ## 数据备份（P3 导出 / 导入）
 
@@ -88,6 +96,7 @@ SummaryVM（core.js → client 的唯一 DTO）
 - **Adapters**：只负责外部请求、解析、错误分类；出口用 `toSnapshot` 归一化，不把 `plans` / `_error` 等内部字段带进 VM。
 - **VM**：纯聚合，不做 IO；通过 `providerRegistry` 查元数据，不直接 import provider 数据表；输出 `windows` 和 `pricingLinks`。
 - **UI**：只读 `SummaryVM`；按 `kind` / `status` / `currency` 渲染，不出现 provider id、价格页 URL、默认模型等 provider 知识。
+- **页面入口**：P3 走宿主「全局面板」机制——`slots.inject('main')` 注册整页（`key = token-dash`），`sidebar.panellist` 注册同 `id` 的左侧常驻行；`ctx.get('layout').selectPanel('token-dash')` 可从浮层直达（已实测）。
 - **兼容**：VM 可读取旧 `plans` 输入，但输出只保留 `windows`；`DEFAULT_MODELS` 保留为派生导出，供旧调用方过渡。
 
 ## 文件目录组织
@@ -149,5 +158,7 @@ dsh-token-dash/
 6. **Provider 边界收口**：五家固定 provider；adapter 输出 `ProviderSnapshot`，VM 输出 `SummaryVM`，UI 只消费 VM；provider 差异留在 descriptor/adapter，不扩散到 VM/UI
 7. **不做 provider 插件系统**：不拆 per-provider 文件、不引入 DI；五家规模用单文件 registry，避免过度抽象
 8. **配置面收口**：`prefs` 只保留 `budgets` / `billingModes` / `refreshMs` / `showBalance`（+ `version`）；legacy `budget`、`showMonthTokens`、`logLevel` 只做读取兼容，不参与计算，保存时自然消失；预算未配置时默认 100（provider 币种，不写盘）
-9. **升级不迁移数据**：账本与设置在 `$DSH_HOME/dsh-token-dash/`，与 profile 的 `node_modules` 分离，`dsh plugin add` 不触碰；跨机迁移走 P3「导出 / 导入」，导出只含设置与当月使用，不含配额、余额与日志
+9. **整页入口走宿主全局面板**：P3 不再塞进浮层，改用 `main` + `sidebar.panellist` 同 key 注册；浮层只保留当前模型，避免同一套表格两处维护（v3.0）
+10. **仓库元信息单独出口**：star 计数走 `/repo`（6h 缓存 + ETag，失败静默），不进 `SummaryVM`——它是展示性元数据，与用量/预算无关
+11. **升级不迁移数据**：账本与设置在 `$DSH_HOME/dsh-token-dash/`，与 profile 的 `node_modules` 分离，`dsh plugin add` 不触碰；跨机迁移走 P3「导出 / 导入」，导出只含设置与当月使用，不含配额、余额与日志
 

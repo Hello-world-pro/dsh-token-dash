@@ -19,6 +19,8 @@ test-results/
 
 # third-party reference sources (local research only)
 reference/third-party/
+# 上游 README 截图的本地副本（便于查看，不入库）
+docs/reference/images/
 
 # secrets
 .env

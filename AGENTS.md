@@ -12,7 +12,7 @@
 |---|---|---|
 | 改代码 / 架构 | `docs/design.md` | `src/`、`client.js`、`test/unit/`、对应 active plan |
 | 需求 / 规划 | `docs/plan/AGENTS.md` | `docs/plan/active/`（先看文件头状态）、`docs/plan/archived/`（历史） |
-| 施工 / 走查 | `docs/checklist/AGENTS.md` | `docs/checklist/active/dsh/`、`docs/checklist/archived/dsh/` |
+| 施工 / 走查 | `docs/checklist/AGENTS.md` | `docs/checklist/active/`、`docs/checklist/archived/` |
 | 发布 / 版本 | `docs/release.md` | `.agents/skills/dsh-token-dash-release/SKILL.md`、版本记录 `.agents/skills/dsh-token-dash-release/references/official-release-version.md` |
 | 用户说明 / 变更历史 | `README.md` / `README.en.md` | `CHANGELOG.md`、`docs/pic/` |
 | Skill 维护 | `.agents/skills/`（项目 skill） | `D:\Projects\Context-Engineer\skills\`（全局 skill 真源） |
