@@ -2,13 +2,14 @@
  * 生成 README 截图：临时 DSH_HOME + web profile + 假数据注入，不读真实账本。
  *
  * 用法：npm run shots [-- --keep]
- * 产物：docs/pic/panel-api.png / panel-sub.png（P2 两种形态）、settings.png（P3 整页）、pill-*.png
+ * 产物：docs/pic/panel-api.png、panel-sub-2.png、panel-sub-3.png（P2 三种形态）、
+ *       settings.png（P3 整页）、pill-api.png / pill-sub.png
  */
 import { execFileSync, spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
-import { prefs, summary, summarySubOnly, usageFor } from './fixtures.mjs'
+import { prefs, summary, summarySubThreeWindows, summarySubTwoWindows, usageFor } from './fixtures.mjs'
 
 const root = resolve('.')
 const keep = process.argv.includes('--keep')
@@ -167,40 +168,39 @@ try {
   }
   await shotPill('pill-api.png')
 
-  // P1 Pill（订阅形态）：切换到只含订阅 provider 的假数据
-  activeSummary = summarySubOnly
-  await page.reload({ waitUntil: 'domcontentloaded' })
-  for (let round = 0; round < 4; round += 1) {
-    await page.evaluate(() => {
-      const buttons = [...document.querySelectorAll('[role=presentation] button,[role=dialog] button')]
-      const next = buttons.find((button) => /继续|跳过|稍后|关闭/.test(button.textContent ?? ''))
-      if (next !== undefined) next.click()
-    })
-    await page.waitForTimeout(200)
-  }
-  await page.waitForTimeout(700)
-
-  // 订阅形态：打开浮层截 P2（当前 provider 为订阅，展示窗口行）
-  const subPill = page.locator('[data-testid=token-dash-pill]')
-  await subPill.waitFor({ timeout: 10000 })
-  await jsClick(subPill)
-  const subPanel = page.locator('[data-testid=token-dash-panel]')
-  await subPanel.waitFor({ timeout: 8000 })
-  await page.evaluate(() => {
-    for (const node of document.querySelectorAll('[role=dialog],[role=presentation]')) {
-      if (node.matches('[data-testid=token-dash-panel]')) continue
-      if (node.querySelector('[data-testid=token-dash-panel]') !== null) continue
-      node.remove()
+  // 订阅形态（两窗 / 三窗）：换 fixture → 重载 → 打开浮层 → 截图
+  const captureSubPanel = async (data, file) => {
+    activeSummary = data
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    for (let round = 0; round < 4; round += 1) {
+      await page.evaluate(() => {
+        const buttons = [...document.querySelectorAll('[role=presentation] button,[role=dialog] button')]
+        const next = buttons.find((button) => /继续|跳过|稍后|关闭/.test(button.textContent ?? ''))
+        if (next !== undefined) next.click()
+      })
+      await page.waitForTimeout(200)
     }
-  })
-  await page.addStyleTag({
-    content: '[data-testid=token-dash-panel]{position:fixed !important;top:8px !important;left:8px !important;bottom:auto !important;max-height:none !important;overflow:visible !important}',
-  })
-  await page.waitForTimeout(600)
-  await subPanel.screenshot({ path: join(outDir, 'panel-sub.png') })
-  console.log('[shots] panel-sub.png')
+    await page.waitForTimeout(700)
+    await page.evaluate(() => {
+      document.body.setAttribute('data-ds-dark-theme', '1')
+      for (const node of document.querySelectorAll('[role=dialog],[role=presentation]')) node.remove()
+    })
+    const target = page.locator('[data-testid=token-dash-pill]')
+    await target.waitFor({ timeout: 15000 })
+    await jsClick(target)
+    const node = page.locator('[data-testid=token-dash-panel]')
+    await node.waitFor({ timeout: 8000 })
+    await page.addStyleTag({
+      content: '[data-testid=token-dash-panel]{position:fixed !important;top:8px !important;left:8px !important;bottom:auto !important;max-height:none !important;overflow:visible !important}',
+    })
+    await page.waitForTimeout(600)
+    await node.screenshot({ path: join(outDir, file) })
+    console.log(`[shots] ${file}`)
+  }
 
+  await captureSubPanel(summarySubTwoWindows, 'panel-sub-2.png')
   await shotPill('pill-sub.png')
+  await captureSubPanel(summarySubThreeWindows, 'panel-sub-3.png')
 
   // 整页看板：先切回全量数据（七家），再从侧栏入口进中栏整页
   activeSummary = summary

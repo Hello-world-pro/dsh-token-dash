@@ -159,7 +159,7 @@ flowchart TD
 | `client.js` · `EN` 词典 | 补新文案；停用双 tab 与旧标题词条 |
 | `scripts/e2e.mjs` | 全量重写：P1/P2/P3、编辑、空态、窄屏、暗色；输入走原生 setter |
 | `tools/mock/fixtures.mjs` | 七家（OpenCode Go 三窗 / Command Code 两窗 + credits） |
-| `tools/mock/shots.mjs` | 设置截图改整页；胶囊静态化 + 缩放 |
+| `tools/mock/shots.mjs` | 截图：P2 按量 / 订阅两窗 / 订阅三窗、P3 整页；胶囊静态化 + 缩放 |
 | `README.md` / `README.en.md` / `docs/design.md` / `docs/ui-design.md` | 页面形态与截图说明同步 |
 
 ### 3.2 实现决策（非显而易见项）

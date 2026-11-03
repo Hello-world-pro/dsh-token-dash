@@ -95,11 +95,18 @@ export const summary = {
   stale: false,
 }
 
-/** 只有订阅 provider 的视图：用于截「[订阅]」形态的 Pill。 */
-export const summarySubOnly = {
+/** 订阅两窗（GLM Coding）：P2 两个环 + P1「[订阅]」形态。 */
+export const summarySubTwoWindows = {
   ...summary,
-  providers: summary.providers.filter((item) => item.kind === 'subscription'),
+  providers: summary.providers.filter((item) => item.id === 'zhipu'),
   currentProviderId: 'zhipu',
+}
+
+/** 订阅三窗（OpenCode Go）：P2 三个环。 */
+export const summarySubThreeWindows = {
+  ...summary,
+  providers: summary.providers.filter((item) => item.id === 'opencode-go'),
+  currentProviderId: 'opencode-go',
 }
 
 const row = (providerId, providerName, modelId, displayName, kind, currency, cost, buckets, requests, approximate = false) => {
@@ -139,6 +146,7 @@ const todayModels = [
   row('deepseek-official', 'DeepSeek', 'deepseek-v4.1-flash', 'DeepSeek-V4.1-Flash', 'api', 'CNY', 0.04, { input: 8_000, cacheRead: 12_000, cacheWrite: 0, output: 1_200 }, 4),
   row('openrouter', 'OpenRouter', 'deepseek-v4.1-flash', 'DeepSeek-V4.1-Flash', 'api', 'USD', 0.12, { input: 3_000, cacheRead: 2_000, cacheWrite: 0, output: 800 }, 2, true),
   row('zhipu', 'GLM Coding', 'glm-5.3', 'GLM-5.3', 'subscription', 'CNY', 0, { input: 20_000, cacheRead: 30_000, cacheWrite: 0, output: 2_000 }, 6),
+  row('opencode-go', 'OpenCode Go', 'claude-sonnet', 'Claude Sonnet', 'subscription', 'USD', 0, { input: 10_000, cacheRead: 18_000, cacheWrite: 0, output: 1_500 }, 4),
 ]
 
 function aggregate(models) {
