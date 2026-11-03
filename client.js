@@ -1,6 +1,6 @@
 /**
- * dsh-token-dash — client half. P1 constraint pill, P2 usage tab, P3 settings tab.
- * The visual contract lives in docs/ui-design.md v2.21.
+ * dsh-token-dash — client half. P1 pill, P2 current-model popover, P3 full-page board.
+ * The visual contract lives in docs/ui-design.md v3.1.
  */
 window.__ModuleLoader__.load({
   id: 'dsh-token-dash',
@@ -11,6 +11,12 @@ window.__ModuleLoader__.load({
 
     const API = '/token-dash/api'
     const PKG = 'dsh-token-dash'
+    const PAGE_ID = 'token-dash'
+    const REPO_URL = 'https://github.com/spartawhy117/dsh-token-dash'
+    const SUB_CRITICAL = 90
+    const API_CRITICAL = 100
+    const STALE_MS = 5000
+    const PAGE_PADDING_BOTTOM = 96
     const RANGES = [
       ['today', '当天'],
       ['7d', '近7天'],
@@ -20,6 +26,16 @@ window.__ModuleLoader__.load({
     const REFRESH_OPTIONS = [[30000, '30秒'], [60000, '1分钟'], [300000, '5分钟']]
     const PRICE_LABELS = { zhipu: 'GLM', qwen: 'Qwen' }
     const SPIN_CSS = '@keyframes td-spin{to{transform:rotate(360deg)}}'
+    const TD_CSS = [
+      SPIN_CSS,
+      '@media (max-width:520px){[data-td-label]{display:none}}',
+      '[data-td-pill]:hover{background:color-mix(in srgb,currentColor 8%,transparent)}',
+      '[data-td-btn]:hover{background:color-mix(in srgb,var(--td-accent) 24%,transparent);border-color:color-mix(in srgb,var(--td-accent) 48%,transparent)}',
+      '[data-td-btn]:active{background:color-mix(in srgb,var(--td-accent) 28%,transparent)}',
+      '@media (max-width:760px){[data-td-cards]{grid-template-columns:minmax(0,1fr)}}',
+      '[data-td-scroll]{overflow-x:auto}',
+      '[data-td-scroll] > *{min-width:560px}',
+    ].join('')
     const EN = {
       '当天': 'Today', '近7天': 'Last 7 days', '近30天': 'Last 30 days', '全部': 'All',
       '30秒': '30s', '1分钟': '1m', '5分钟': '5m',
@@ -31,14 +47,19 @@ window.__ModuleLoader__.load({
       '余额 {value}': 'Balance {value}', '预算已用 {value}': 'Budget used {value}',
       '预算未设置': 'Budget not set', '收起': 'Collapse', '展开': 'Expand',
       'Token 看板': 'Token dashboard', '点击查看 Token 看板': 'Click to view Token dashboard',
-      'Token 看板：{text}': 'Token dashboard: {text}', '看板页面': 'Dashboard page',
-      '用量': 'Usage', '设置': 'Settings',
+      'Token 看板：{text}': 'Token dashboard: {text}',
+      '当前模型': 'Current model', '全量看板': 'Full dashboard', '查看仓库': 'View repository',
       '查看支持的 API Key 范围': 'View supported API Key scope',
       '目前支持 DeepSeek / Kimi / GLM / OpenRouter / Qwen API Key': 'Supports DeepSeek / Kimi / GLM / OpenRouter / Qwen API Keys',
       '刷新': 'Refresh', '关闭': 'Close',
       '未定价': 'Unpriced', '请求': 'Req', '命中': 'Hit',
-      '本月预算': 'Monthly budget',
-      '订阅套餐（账户级）': 'Subscription plan (account-wide)',
+      '按量计价（按供应商）': 'Pay-as-you-go (by provider)',
+      '订阅套餐（按供应商）': 'Subscription plans (by provider)',
+      '名称': 'Name', '已用': 'Used', '计划余额': 'Planned left', '真实余额': 'Real balance',
+      '剩余 {value}': '{value} left', '本月已花': 'Spent this month',
+      '今日': 'Today', '总费用': 'Total cost', '重试': 'Retry',
+      '模型': 'Model', '输入': 'In', '缓存': 'Cache', '输出': 'Out', '费用': 'Cost',
+      '费用（API 计价估算）': 'Cost (API estimate)',
       '重新检测订阅配额': 'Recheck subscription quota',
       '未检测到已配置供应商': 'No configured provider detected',
       '供应商探测失败': 'Provider probe failed',
@@ -53,7 +74,7 @@ window.__ModuleLoader__.load({
       '设置加载失败': 'Failed to load settings', '已保存': 'Saved',
       '保存失败：{reason}': 'Save failed: {reason}', '请输入 0 或正数': 'Enter 0 or a positive number',
       '月度预算': 'Monthly budget', '账户余额': 'Account balance',
-      '刷新间隔': 'Refresh interval', '显示': 'Display', '日志': 'Logs',
+      '刷新间隔': 'Refresh interval', '立即刷新': 'Refresh now', '日志': 'Logs',
       '查看日志': 'View logs', '打开日志文件夹': 'Open log folder', '导出日志': 'Export logs',
       '价格与版本': 'Prices and version', '价格表': 'Price table',
       '已重新检测': 'Rechecked', '已打开日志文件夹': 'Log folder opened',
@@ -70,17 +91,25 @@ window.__ModuleLoader__.load({
       '更新失败（{reason}）': 'Update failed ({reason})',
       '已更新到 {version}，重启 DSH 后生效': 'Updated to {version}; restart DSH to apply',
       '已更新，重启 DSH 后生效': 'Updated; restart DSH to apply',
-      'API 计费': 'API billing',
       '发现 {version}，点击更新': 'Found {version}; click to update',
       '版本 {version}': 'Version {version}',
       '{name} · {action} Token 看板': '{name} · {action} Token dashboard',
       '{name} 月度预算': '{name} monthly budget',
       '{name}，按量 API，{budget}，今日 {today}{balance}': '{name}, pay-as-you-go, {budget}, today {today}{balance}',
       '{name}，订阅，账户套餐，{value}': '{name}, subscription, account plan, {value}',
+      '更新于 {time}': 'Updated {time}', '数据来自本机会话记录': 'From local session records',
+      '未配置凭据': 'No credentials', '刷新中': 'Refreshing',
+      '编辑预算': 'Edit budget', '退出编辑': 'Exit editing',
+      '设置与数据管理': 'Settings and data',
+      '账户真实余额，不受预算影响': 'Account balance; not affected by budget',
+      '本月累计消耗，等于已用/预算 的分子': 'Month-to-date spend; numerator of used/budget',
+      '提示': 'Note',
     }
     const ZH = Object.fromEntries(Object.keys(EN).map((key) => [key, key]))
     const MESSAGES = { zh: ZH, en: EN }
     let localeService = null
+    let ctxRef = null
+    let layoutRef = null
     let activeTranslate = (key, params) => {
       const template = ZH[key] ?? key
       if (!params) return template
@@ -127,22 +156,35 @@ window.__ModuleLoader__.load({
       const hm = `${pad(date.getHours())}:${pad(date.getMinutes())}`
       return date.toDateString() === now.toDateString() ? hm : `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${hm}`
     }
-    /** 重置时间带相对量：`3 小时后 · 11-03 20:15`；<1h 用分钟（最小 1），<24h 用小时，其余用天。 */
-    const fmtReset = (ts) => {
-      if (!Number.isFinite(ts) || ts <= 0) return null
+    /** 重置时间拆两段：相对量 <1h 分钟（最小 1）、<24h 小时、其余天；绝对时间 `MM-DD HH:mm`。 */
+    function resetParts(ts, now = Date.now()) {
+      if (!Number.isFinite(ts) || ts <= 0) return { relative: null, absolute: null }
       const date = new Date(ts)
       const pad = (value) => String(value).padStart(2, '0')
-      const time = `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
-      const minutes = Math.max(1, Math.round((Number(ts) - Date.now()) / 60000))
-      const label = minutes < 60
+      const absolute = `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+      const minutes = Math.max(1, Math.round((Number(ts) - now) / 60000))
+      const relative = minutes < 60
         ? tr('{n} 分钟后', { n: minutes })
         : minutes < 1440
           ? tr('{n} 小时后', { n: Math.round(minutes / 60) })
           : tr('{n} 天后', { n: Math.round(minutes / 1440) })
-      return `${label} · ${time}`
+      return { relative, absolute }
+    }
+    const fmtReset = (ts) => {
+      const { relative, absolute } = resetParts(ts)
+      return relative === null ? null : `${relative} · ${absolute}`
+    }
+    const fmtClock = (ts) => {
+      if (!Number.isFinite(ts) || ts <= 0) return null
+      const date = new Date(ts)
+      const pad = (value) => String(value).padStart(2, '0')
+      return `${pad(date.getHours())}:${pad(date.getMinutes())}`
     }
     const budgetColor = (state) => (state === 'over' ? T.over : state === 'warn' ? T.warn : T.accent)
-    const percentColor = (value) => (value >= 100 ? T.over : value >= 80 ? T.warn : T.accent)
+    /** 环状态：无数据显示空环；达到临界值转红。 */
+    const ringState = (percent, critical) => (percent === null || percent === undefined ? 'empty' : percent >= critical ? 'critical' : 'normal')
+    /** 数字色：80–临界只染数字（warn），≥临界转红。 */
+    const percentColor = (value, critical = 100) => (value === null || value === undefined ? T.weak : value >= critical ? T.over : value >= 80 ? T.warn : T.accent)
     const sourceLabel = (source) => String(source ?? '').includes('community') ? tr('社区') : tr('内置兜底')
     const linkLabel = (link) => PRICE_LABELS[link.id] ?? link.label
     const formatCatalogTime = (value) => {
@@ -283,10 +325,11 @@ window.__ModuleLoader__.load({
       num: { fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
       panel: {
         position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
-        width: 'min(360px, calc(100vw - 16px))', boxSizing: 'border-box', maxHeight: '70vh',
+        width: 'fit-content', minWidth: 280, maxWidth: 'min(480px, calc(100vw - 16px))',
+        boxSizing: 'border-box', maxHeight: '70vh', transition: 'width 120ms ease-out',
         overflow: 'auto', zIndex: 9999, padding: 12, borderRadius: 12,
         background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))', color: T.text,
-        border: `1px solid ${T.border}`, boxShadow: '0 12px 40px rgba(0,0,0,.35)', fontSize: 12, outline: 'none',
+        border: `1px solid ${T.border}`, boxShadow: '0 12px 40px rgba(0,0,0,.35)', fontSize: 13, outline: 'none',
       },
       header: { display: 'flex', alignItems: 'center', gap: 6, minHeight: 28 },
       headerTabs: { flex: 1, minWidth: 0 },
@@ -344,7 +387,42 @@ window.__ModuleLoader__.load({
       card: { background: T.section, borderRadius: 10, padding: 10, marginTop: 10, display: 'grid', gap: 8 },
       link: { color: T.text, textDecoration: 'underline', cursor: 'pointer' },
       status: { minHeight: 15, fontSize: 10.5, color: T.muted, textAlign: 'right' },
-      priceLinks: { display: 'flex', gap: 7, alignItems: 'center', overflowX: 'auto', whiteSpace: 'nowrap', paddingBottom: 1 },
+      summaryRow: { display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', columnGap: 8, alignItems: 'center', minHeight: 24, fontSize: 13 },
+      summaryCell: { display: 'inline-flex', alignItems: 'baseline', gap: 4, minWidth: 0, whiteSpace: 'nowrap' },
+      summaryLabel: { color: T.weak, fontSize: 12 },
+      providerLine: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0, minHeight: 24 },
+      providerChip: { color: T.muted, fontSize: 12, whiteSpace: 'nowrap' },
+      windowRow: { display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', columnGap: 8, alignItems: 'center', minHeight: 24, fontSize: 13 },
+      windowKey: { display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' },
+      table: { display: 'grid', rowGap: 6, minWidth: 0 },
+      tableHead: { display: 'grid', columnGap: 8, alignItems: 'center', color: T.weak, fontSize: 12, paddingBottom: 2 },
+      tableRow: { display: 'grid', columnGap: 8, alignItems: 'baseline', minHeight: 24, fontSize: 13 },
+      cellNum: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+      cellName: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+      footer: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 10, minHeight: 22 },
+      board: { padding: 24, display: 'grid', gap: 24, paddingBottom: PAGE_PADDING_BOTTOM, color: T.text, fontSize: 13, minWidth: 0 },
+      boardHead: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
+      boardTitle: { fontSize: 18, fontWeight: 600 },
+      boardMeta: { color: T.muted, fontSize: 12, marginTop: 4 },
+      boardSection: { display: 'grid', gap: 10, minWidth: 0 },
+      boardSectionHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 24 },
+      sectionTitle: { fontSize: 13, fontWeight: 600 },
+      cardBox: {
+        border: `1px solid ${T.border}`, borderRadius: 8, padding: 12, background: T.section,
+        display: 'grid', gap: 4, minWidth: 0,
+      },
+      cards: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 },
+      capsule: {
+        position: 'sticky', bottom: 12, zIndex: 20, padding: 12, borderRadius: 12, display: 'grid', gap: 10,
+        background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))',
+        border: `1px solid ${T.border}`, boxShadow: '0 8px 24px rgba(0,0,0,.18)',
+      },
+      settingsRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', minHeight: 22 },
+      repoChip: {
+        display: 'inline-flex', alignItems: 'center', gap: 4, height: 24, padding: '0 8px', borderRadius: 999,
+        border: `1px solid ${T.border}`, color: T.text, textDecoration: 'none', fontSize: 12, whiteSpace: 'nowrap',
+      },
+      inlineWrap: { display: 'inline-flex', alignItems: 'center', gap: 4 },
     }
     styles.button['--td-accent'] = T.accent
     styles.iconButton = { ...styles.button, ...styles.iconButton, minHeight: 22, boxSizing: 'border-box' }
@@ -503,6 +581,136 @@ window.__ModuleLoader__.load({
       }))
     }
 
+    /** 统一轮询：页面不可见暂停，恢复可见立即刷新并重排计时器。 */
+    function usePolling(task, { refreshMs, enabled = true }) {
+      const taskRef = useRef(task)
+      taskRef.current = task
+      useEffect(() => {
+        if (!enabled || !Number.isFinite(refreshMs) || refreshMs <= 0) return undefined
+        let timer = null
+        const stop = () => { if (timer !== null) { clearInterval(timer); timer = null } }
+        const start = () => {
+          stop()
+          timer = setInterval(() => { if (!document.hidden) taskRef.current?.() }, refreshMs)
+        }
+        const onVisibility = () => {
+          if (document.hidden) { stop(); return }
+          taskRef.current?.()
+          start()
+        }
+        start()
+        document.addEventListener('visibilitychange', onVisibility)
+        return () => { stop(); document.removeEventListener('visibilitychange', onVisibility) }
+      }, [refreshMs, enabled])
+    }
+
+    /** 进度环：空环 / 正常 / 临界三态，弧色只取宿主 token。 */
+    function ProgressRing({ percent, state = 'normal', size = 14, stroke = 2 }) {
+      const r = (size - stroke) / 2
+      const c = 2 * Math.PI * r
+      const ratio = Math.max(0, Math.min(100, Number(percent) || 0))
+      const arc = state === 'critical' ? T.over : 'var(--dsw-alias-label-primary, currentColor)'
+      return h('svg', {
+        viewBox: `0 0 ${size} ${size}`, width: size, height: size, 'aria-hidden': true,
+        style: { flex: '0 0 auto', display: 'inline-block', verticalAlign: '-2px' },
+      },
+        h('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', stroke: T.border, strokeWidth: stroke }),
+        state === 'empty' ? null : h('circle', {
+          cx: size / 2, cy: size / 2, r, fill: 'none', stroke: arc, strokeWidth: stroke, strokeLinecap: 'round',
+          transform: `rotate(-90 ${size / 2} ${size / 2})`,
+          strokeDasharray: `${(c * ratio) / 100} ${c}`,
+        }))
+    }
+
+    const TOKEN_COLS = 'minmax(0,1fr) auto auto auto'
+
+    /** P2 用量表：四列全自适应，Tokens 按「单位 / `[` 交界」两段对齐。 */
+    function TokenTable({ rows, maxRows = 5, empty = tr('范围内暂无消耗') }) {
+      if (rows.length === 0) return h('div', { style: styles.empty }, empty)
+      return h('div', {
+        'data-testid': 'token-dash-usage-table',
+        style: { ...styles.table, gridTemplateColumns: TOKEN_COLS, columnGap: 8, maxHeight: maxRows * 30, overflowY: 'auto' },
+      },
+        h('div', { style: { display: 'contents' } },
+          h('span', null, tr('模型')),
+          h('span', { style: { textAlign: 'right' } }, 'Tokens'),
+          h('span', { style: { textAlign: 'right' } }, tr('请求')),
+          h('span', { style: { textAlign: 'right' } }, tr('命中'))),
+        ...rows.map((row) => h('div', {
+          key: `${row.providerId}:${row.modelId}`,
+          'data-testid': `token-dash-usage-row-${row.providerId}-${row.modelId}`,
+          style: { display: 'contents' },
+        },
+          h('span', { style: styles.cellName, title: row.displayName ?? row.modelId }, row.displayName ?? row.modelId),
+          h('span', {
+            'data-testid': 'token-dash-usage-line',
+            style: { display: 'inline-flex', alignItems: 'baseline', gap: 4, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', justifySelf: 'end' },
+          },
+            h('span', { style: { minWidth: '5ch', textAlign: 'right', fontWeight: 600 } }, fmtTokens(row.tokens?.total ?? 0)),
+            h('span', { style: { color: T.muted } }, `[${fmtTokens(row.tokens?.input ?? 0)}/${fmtTokens(row.tokens?.cache ?? 0)}/${fmtTokens(row.tokens?.output ?? 0)}]`)),
+          h('span', { style: { ...styles.cellNum, textAlign: 'right' } }, row.requests),
+          h('span', { style: { ...styles.cellNum, textAlign: 'right' } },
+            row.hitRate === null || row.hitRate === undefined ? '—' : fmtRatio(row.hitRate)))))
+    }
+
+    const DETAIL_COLS = 'minmax(0,1fr) auto auto auto auto auto auto auto'
+
+    /** P3 明细表：八列，费用只对 API 计价行展示。 */
+    function DetailTable({ rows }) {
+      if (rows.length === 0) return h('div', { style: styles.empty }, tr('范围内暂无消耗'))
+      const headCell = (text) => h('span', { style: { textAlign: 'right' } }, text)
+      return h('div', { 'data-td-scroll': true },
+        h('div', { 'data-testid': 'token-dash-detail-table', style: { ...styles.table, gridTemplateColumns: DETAIL_COLS, columnGap: 8, minWidth: 620 } },
+        h('div', { style: { display: 'contents' } },
+          h('span', null, tr('模型')),
+          headCell('Tokens'), headCell(tr('输入')), headCell(tr('缓存')), headCell(tr('输出')),
+          headCell(tr('请求')), headCell(tr('命中')), headCell(tr('费用（API 计价估算）'))),
+        ...rows.map((row) => h('div', {
+          key: `${row.providerId}:${row.modelId}`,
+          'data-testid': `token-dash-detail-row-${row.providerId}-${row.modelId}`,
+          style: { display: 'contents' },
+        },
+          h('span', { style: styles.cellName, title: row.displayName ?? row.modelId }, row.displayName ?? row.modelId),
+          h('span', { style: { ...styles.cellNum, textAlign: 'right', fontWeight: 600 } }, fmtTokens(row.tokens?.total ?? 0)),
+          h('span', { style: { ...styles.cellNum, textAlign: 'right' } }, fmtTokens(row.tokens?.input ?? 0)),
+          h('span', { style: { ...styles.cellNum, textAlign: 'right' } }, fmtTokens(row.tokens?.cache ?? 0)),
+          h('span', { style: { ...styles.cellNum, textAlign: 'right' } }, fmtTokens(row.tokens?.output ?? 0)),
+          h('span', { style: { ...styles.cellNum, textAlign: 'right' } }, row.requests),
+          h('span', { style: { ...styles.cellNum, textAlign: 'right' } },
+            row.hitRate === null || row.hitRate === undefined ? '—' : fmtRatio(row.hitRate)),
+          h('span', { style: { ...styles.cellNum, textAlign: 'right' } },
+            row.kind !== 'api' ? '—' : row.priced === false
+              ? tr('未定价')
+              : `${row.approximate === true ? '≈' : ''}${fmtMoney(row.cost, row.currency)}`)))))
+    }
+
+    /** P3 两格卡：总费用（多币种同行）与真实 Tokens。 */
+    function RangeCards({ usage }) {
+      const pending = usage === null
+      const costEntries = Object.entries(usage?.totals ?? {})
+      const total = usage?.total ?? null
+      const costText = costEntries.map(([currency, value]) => fmtMoney(value.cost, currency)).join('  ')
+      return h('div', { 'data-testid': 'token-dash-range-cards', 'data-td-cards': true, style: styles.cards },
+        h('div', { 'data-testid': 'token-dash-card-cost', style: styles.cardBox },
+          h('div', { style: styles.tileLabel }, tr('总费用')),
+          h('div', {
+            'data-testid': 'token-dash-cost-values',
+            style: { fontSize: 17, fontWeight: 600, marginTop: 2, color: T.accent, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+          }, pending ? '—' : (costText === '' ? '—' : costText))),
+        h('div', { 'data-testid': 'token-dash-card-tokens', style: styles.cardBox },
+          h('div', { style: styles.tileLabel },
+            `${tr('真实 Tokens')} `,
+            h(InfoTip, {
+              label: tr('Tokens 括号说明'),
+              text: tr('Tokens 括号顺序：输入 / 缓存（读+写）/ 输出'),
+              variant: 'inline',
+            }, h(Icon, { name: 'info', size: 11 }))),
+          h('div', { style: { fontSize: 17, fontWeight: 600, marginTop: 2, fontVariantNumeric: 'tabular-nums' } },
+            pending ? '—' : fmtTokens(total?.tokens ?? 0)),
+          h('div', { style: styles.tileDetail },
+            pending ? '—' : `${fmtTokens(total?.input ?? 0)} · ${fmtTokens(total?.cache ?? 0)} · ${fmtTokens(total?.output ?? 0)}`)))
+    }
+
     function MiniBar({ ratio = 0, neutral = false, stretch = false }) {
       return h('span', {
         style: { display: 'block', width: stretch ? '100%' : 48, height: 4, borderRadius: 999, overflow: 'hidden', background: 'color-mix(in srgb, var(--dsw-alias-label-primary, #eee) 10%, transparent)' },
@@ -526,35 +734,60 @@ window.__ModuleLoader__.load({
     function subscriptionText(provider) {
       const windows = Array.isArray(provider.windows) ? provider.windows : []
       if (windows.length === 0) return tr('套餐查询失败')
-      return windows.slice(0, 2).map((plan) => `${windowLabel(plan.key)} ${fmtPercent(plan.usedPercent)}`).join(' · ')
+      return windows.slice(0, 3).map((plan) => `${windowLabel(plan.key)} ${fmtPercent(plan.usedPercent)}`).join(' · ')
     }
 
-    function subscriptionNodes(provider, withReset = false) {
+    /** P1 订阅窗口：短标签 + 环 + 百分比，最多三窗，不显示重置。 */
+    function subscriptionNodes(provider) {
       const windows = Array.isArray(provider.windows) ? provider.windows : []
-      if (windows.length === 0) return [h('span', { key: 'fail' }, tr('套餐查询失败'))]
-      const nodes = windows.slice(0, 2).map((plan, index) => h(React.Fragment, { key: plan.key },
-        index > 0 ? ' · ' : null,
-        `${windowLabel(plan.key)} `,
-        h('b', { style: { ...styles.num, color: percentColor(plan.usedPercent ?? 0) } }, fmtPercent(plan.usedPercent))))
-      if (withReset && windows.length === 1) {
-        const reset = fmtTime(windows[0].resetAt)
-        if (reset !== null) nodes.push(h('span', { key: 'reset' }, ` · ${tr('重置')} ${reset}`))
+      if (windows.length === 0) return [h('span', { key: 'fail', style: styles.muted }, tr('套餐查询失败'))]
+      const nodes = []
+      for (const [index, plan] of windows.slice(0, 3).entries()) {
+        if (index > 0) nodes.push(h('span', { key: `sep-${plan.key}`, style: { color: T.weak } }, ' · '))
+        const percent = Number(plan.usedPercent)
+        nodes.push(h('span', { key: plan.key, style: styles.inlineWrap },
+          h('span', { 'data-td-label': true, style: styles.summaryLabel }, windowLabel(plan.key)),
+          h('span', { 'data-testid': `token-dash-pill-ring-${plan.key}`, style: { display: 'inline-flex' } },
+            h(ProgressRing, { percent, state: ringState(percent, SUB_CRITICAL), size: 14, stroke: 2 })),
+          h('b', { style: { ...styles.num, color: percentColor(percent, SUB_CRITICAL) } }, fmtPercent(percent))))
       }
       return nodes
     }
 
-    function LocaleRoot() {
+    function LocaleRoot(props) {
       const [, setTick] = useState(0)
       useEffect(() => {
         if (localeService?.subscribe === undefined) return undefined
         return localeService.subscribe(() => setTick((value) => value + 1))
       }, [])
-      return h(Pill)
+      return h(Pill, props)
     }
 
-    function Pill() {
+    const summaryPath = (active) => (typeof active === 'string' && active !== ''
+      ? `/summary?active=${encodeURIComponent(active)}`
+      : '/summary')
+
+    /** 三级取值：投影 next / lastUsed → 宿主默认模型 → 账本（null 交给 currentProviderId）。 */
+    function rawActiveProvider(props) {
+      try {
+        const projection = typeof props?.useProjection === 'function' ? props.useProjection('modelSelection') : null
+        const picked = projection?.next ?? projection?.lastUsed
+        const raw = typeof picked === 'string' ? picked : (picked?.provider ?? picked?.providerId ?? null)
+        if (typeof raw === 'string' && raw !== '') return raw
+      } catch { /* fall through */ }
+      try {
+        const service = typeof ctxRef?.get === 'function' ? ctxRef.get('agentDefaultModel') : null
+        const picked = service?.currentSelection?.()
+        const raw = typeof picked === 'string' ? picked : (picked?.provider ?? picked?.providerId ?? null)
+        if (typeof raw === 'string' && raw !== '') return raw
+      } catch { /* fall through */ }
+      return null
+    }
+
+    function Pill(props) {
       const updateState = useUpdateSnapshot()
       const hasUpdate = updateState.phase === 'available' || updateState.phase === 'confirm'
+      const active = rawActiveProvider(props)
       const [summary, setSummary] = useState(null)
       const [open, setOpen] = useState(false)
       const [error, setError] = useState(false)
@@ -565,6 +798,7 @@ window.__ModuleLoader__.load({
       const [panelMaxHeight, setPanelMaxHeight] = useState('70vh')
       const [panelShift, setPanelShift] = useState(0)
       const pillRef = useRef(null)
+      const panelRef = useRef(null)
 
       useEffect(() => {
         try { if (window.localStorage.getItem('token-dash-hint-seen') !== '1') setHint(true) } catch { /* ignore */ }
@@ -573,7 +807,7 @@ window.__ModuleLoader__.load({
       const load = useCallback(async () => {
         setRefreshing(true)
         try {
-          const data = await getJson('/summary')
+          const data = await getJson(summaryPath(active))
           setSummary(data)
           setError(false)
           if (Number.isFinite(data?.refreshMs) && data.refreshMs !== refreshMs) setRefreshMs(data.refreshMs)
@@ -582,17 +816,14 @@ window.__ModuleLoader__.load({
         } finally {
           setRefreshing(false)
         }
-      }, [refreshMs])
+      }, [refreshMs, active])
 
       useEffect(() => {
         getJson('/prefs').then((prefs) => setRefreshMs(prefs.refreshMs ?? 60000)).catch(() => {})
       }, [])
 
-      useEffect(() => {
-        load()
-        const timer = setInterval(load, refreshMs)
-        return () => clearInterval(timer)
-      }, [load, refreshMs])
+      useEffect(() => { load() }, [load])
+      usePolling(load, { refreshMs })
 
       const refreshSubs = useCallback(async () => {
         try { await fetch(`${API}/providers/refresh`, { method: 'POST', headers: { accept: 'application/json' } }) } catch { /* fall through */ }
@@ -610,16 +841,19 @@ window.__ModuleLoader__.load({
       const measurePanel = useCallback(() => {
         const rect = pillRef.current?.getBoundingClientRect()
         if (rect === undefined) return
-        const width = Math.min(360, window.innerWidth - 16)
+        const measured = panelRef.current?.getBoundingClientRect().width
+        const width = Math.round(Number.isFinite(measured) && measured > 0
+          ? measured
+          : Math.min(480, window.innerWidth - 16))
         setPanelShift(Math.min(0, window.innerWidth - 8 - rect.left - width))
         const available = Math.round(rect.top) - 16
         setPanelMaxHeight(`${Math.max(200, Math.min(window.innerHeight * 0.7, available))}px`)
       }, [])
       useEffect(() => {
-        if (!open) return
-        const node = pillRef.current
+        if (!open) return undefined
         const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => measurePanel()) : null
-        if (node !== null) observer?.observe(node)
+        if (pillRef.current !== null) observer?.observe(pillRef.current)
+        if (panelRef.current !== null) observer?.observe(panelRef.current)
         window.addEventListener('resize', measurePanel)
         const raf = requestAnimationFrame(measurePanel)
         const timer = setTimeout(measurePanel, 120)
@@ -632,7 +866,11 @@ window.__ModuleLoader__.load({
       }, [open, summary, measurePanel])
       const toggle = () => {
         dismissHint()
-        if (!open) measurePanel()
+        if (!open) {
+          const updatedAt = Number(summary?.updatedAt)
+          if (!Number.isFinite(updatedAt) || Date.now() - updatedAt > STALE_MS) void load()
+          requestAnimationFrame(measurePanel)
+        }
         setOpen((value) => !value)
       }
 
@@ -643,28 +881,37 @@ window.__ModuleLoader__.load({
       let ariaText = tr('按量 API')
       if (current?.kind === 'subscription') {
         prefix = `[${tr('订阅')}]`
-        bodyNodes = [h('span', { key: 'windows' }, ...subscriptionNodes(current, true))]
+        bodyNodes = subscriptionNodes(current)
         ariaText = tr('{name}，订阅，账户套餐，{value}', { name: current.name, value: subscriptionText(current) })
       } else if (current !== undefined) {
         const budget = current.budget
         const hasBudget = budget !== undefined && budget.state !== 'unset' && budget.amount > 0
+        const percent = hasBudget ? Number(budget.percent) * 100 : null
         const balance = balanceText(current, summary?.showBalance)
         bodyNodes = [
-          h('span', { key: 'budget' }, `${tr('预算')} `, hasBudget
-            ? h('b', { style: { ...styles.num, color: budgetColor(budget.state) } }, fmtRatio(budget.percent))
-            : tr('未设置')),
-          h('span', { key: 'today' }, tr('今日 {value}', { value: fmtMoney(current.usage?.todayCost, current.currency) })),
-          balance === null ? null : h('span', { key: 'balance' }, tr('余额 {value}', { value: balance })),
+          h('span', { key: 'budget', style: styles.inlineWrap },
+            h('span', { 'data-td-label': true, style: styles.summaryLabel }, tr('预算')),
+            h('span', { 'data-testid': 'token-dash-pill-ring-budget', style: { display: 'inline-flex' } },
+              h(ProgressRing, { percent, state: hasBudget ? ringState(percent, API_CRITICAL) : 'empty', size: 14, stroke: 2 })),
+            hasBudget
+              ? h('b', { style: { ...styles.num, color: percentColor(percent, API_CRITICAL) } }, fmtRatio(budget.percent))
+              : h('span', { style: styles.muted }, tr('未设置'))),
+          h('span', { key: 'today', style: styles.inlineWrap },
+            h('span', { 'data-td-label': true, style: styles.summaryLabel }, tr('今日')),
+            h('span', { style: styles.num }, fmtMoney(current.usage?.todayCost, current.currency))),
+          balance === null ? null : h('span', { key: 'balance', style: styles.inlineWrap },
+            h('span', { 'data-td-label': true, style: styles.summaryLabel }, tr('余额')),
+            h('span', { style: styles.num }, balance)),
         ].filter(Boolean)
         ariaText = tr('{name}，按量 API，{budget}，今日 {today}{balance}', { name: current.name, budget: hasBudget ? tr('预算已用 {value}', { value: fmtRatio(budget.percent) }) : tr('预算未设置'), today: fmtMoney(current.usage?.todayCost, current.currency), balance: balance === null ? '' : `，${tr('余额 {value}', { value: balance })}` })
       }
       const hoverTitle = tr('{name} · {action} Token 看板', { name: current?.name ?? '', action: open ? tr('收起') : tr('展开') })
 
       return h('div', { style: styles.pillWrap },
-        h('style', null, SPIN_CSS),
+        h('style', null, TD_CSS),
         hint && !open ? h('span', { style: styles.hint, role: 'status' }, tr('点击查看 Token 看板')) : null,
         h('span', {
-          ref: pillRef, 'data-testid': 'token-dash-pill',
+          ref: pillRef, 'data-testid': 'token-dash-pill', 'data-td-pill': true,
           style: { ...styles.pill, ...(hover || open ? styles.pillHover : {}) },
           onClick: toggle, onMouseEnter: () => setHover(true), onMouseLeave: () => setHover(false),
           onFocus: () => setHover(true), onBlur: () => setHover(false),
@@ -674,42 +921,31 @@ window.__ModuleLoader__.load({
         }, h('span', { key: 'prefix', style: styles.num }, prefix), ...bodyNodes,
           h('span', { key: 'chevron', style: styles.chevron }, open ? '⌄' : '⌃')),
         open ? h(Panel, {
-          summary, error, refreshing, maxHeight: panelMaxHeight, left: panelShift, hasUpdate,
-          onRefresh: load, onRefreshSubs: refreshSubs, onClose: closePanel,
+          summary, error, refreshing, maxHeight: panelMaxHeight, left: panelShift, active,
+          panelRef, onRefresh: load, onRefreshSubs: refreshSubs, onClose: closePanel,
         }) : null)
     }
 
-    function PanelHeader({ tab, onTab, onRefresh, refreshing, onClose, showInfo, stale = false, hasUpdate = false }) {
-      const settingsLabel = h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 4 } },
-        tr('设置'),
-        hasUpdate ? h('span', {
-          'aria-hidden': true,
-          style: { width: 4, height: 4, borderRadius: 999, background: T.accent },
-        }) : null)
+    function PanelHeader({ onRefresh, refreshing, onClose, stale = false }) {
       return h('div', { style: styles.header },
-        h('div', { style: styles.headerTabs }, h(Segmented, {
-          value: tab, onChange: onTab, label: tr('看板页面'),
-          options: [{ value: 'usage', label: tr('用量') }, { value: 'settings', label: settingsLabel }],
-        })),
-        h('div', { style: styles.headerActions },
-          showInfo ? h(InfoTip, {
+        h('b', { style: styles.title }, tr('当前模型')),
+        h('div', { style: { ...styles.headerActions, marginInlineEnd: -5 } },
+          h(InfoTip, {
             label: tr('查看支持的 API Key 范围'),
             text: tr('目前支持 DeepSeek / Kimi / GLM / OpenRouter / Qwen API Key'),
-          }) : null,
+          }),
           h(IconButton, {
             label: tr('刷新'), testid: 'token-dash-refresh', disabled: refreshing, onClick: onRefresh, dot: stale,
           }, h(Icon, { name: refreshing ? 'loader' : 'refresh', size: 13 })),
           h(IconButton, { label: tr('关闭'), testid: 'token-dash-close', onClick: onClose }, h(Icon, { name: 'close', size: 13 }))))
     }
 
-    function Panel({ summary, error, refreshing, maxHeight, left = 0, hasUpdate = false, onRefresh, onRefreshSubs, onClose }) {
-      const [tab, setTab] = useState('usage')
+    function Panel({ summary, error, refreshing, maxHeight, left = 0, panelRef, onRefresh, onClose }) {
       const [range, setRange] = useState('today')
       const [usage, setUsage] = useState(null)
       const [usageLoading, setUsageLoading] = useState(false)
       const [usageError, setUsageError] = useState(false)
       const [panelError, setPanelError] = useState(false)
-      const panelRef = useRef(null)
 
       const usageSeq = useRef(0)
       const loadUsage = useCallback(async () => {
@@ -728,189 +964,166 @@ window.__ModuleLoader__.load({
         }
       }, [range])
 
-      useEffect(() => { if (tab === 'usage') loadUsage() }, [tab, loadUsage])
+      useEffect(() => { loadUsage() }, [loadUsage])
       useEffect(() => { setPanelError(error === true) }, [error])
 
       useEffect(() => {
         const onDown = (event) => {
-          const node = panelRef.current
-          if (node === null || node.contains(event.target)) return
+          const node = panelRef?.current
+          if (node === null || node === undefined || node.contains(event.target)) return
           const wrap = node.parentElement
           if (wrap !== null && wrap.contains(event.target)) return
           onClose()
         }
         document.addEventListener('mousedown', onDown)
         return () => document.removeEventListener('mousedown', onDown)
+      }, [onClose, panelRef])
+
+      useEffect(() => {
+        const onKey = (event) => { if (event.key === 'Escape') onClose() }
+        document.addEventListener('keydown', onKey)
+        return () => document.removeEventListener('keydown', onKey)
       }, [onClose])
 
       const refreshAll = useCallback(async () => {
         await onRefresh?.()
-        if (tab === 'usage') await loadUsage()
-      }, [onRefresh, tab, loadUsage])
+        await loadUsage()
+      }, [onRefresh, loadUsage])
 
-      const body = tab === 'usage'
-        ? h(UsageContent, {
-          summary, usage, range, loading: usageLoading, usageError, error: panelError,
-          onRange: setRange, onRetry: refreshAll, onRefreshSubs,
-        })
-        : h(SettingsContent, { summary, onRefresh, onRefreshSubs })
-
+      const providers = summary?.providers ?? []
+      const current = providers.find((provider) => provider.id === summary?.currentProviderId) ?? providers[0]
+      const models = Array.isArray(usage?.models) ? usage.models : []
+      const scoped = models.filter((model) => model.providerId === current?.id)
+      const rows = scoped.length > 0 ? scoped : models
+      const updated = fmtClock(summary?.updatedAt)
       const stale = Number.isFinite(summary?.updatedAt)
         && Date.now() - summary.updatedAt > (Number(summary?.refreshMs) || 60000) * 2
+      const canOpen = typeof layoutRef?.hasMainPanel === 'function' && layoutRef.hasMainPanel(PAGE_ID)
+
+      const strip = error || usageError
+        ? h('div', { style: styles.errorStrip, role: 'alert' },
+          h('span', null, error ? tr('刷新失败，保留上次数据') : tr('范围数据加载失败')),
+          h('button', { type: 'button', style: styles.button, onClick: refreshAll }, tr('重试')))
+        : null
+
+      let body
+      if (summary === null) {
+        body = h('div', { style: styles.empty }, panelError ? tr('Token 数据不可用') : tr('Token 数据加载中…'))
+      } else if (current === undefined) {
+        const degraded = summary?.providersDegraded === true
+        body = h('div', { style: styles.empty },
+          degraded ? tr('供应商探测失败') : tr('未检测到已配置供应商'),
+          degraded ? h('button', { type: 'button', style: styles.button, onClick: refreshAll }, tr('重试')) : null)
+      } else {
+        body = h(React.Fragment, null,
+          current.kind === 'subscription'
+            ? h(P2Windows, { provider: current })
+            : h(P2Summary, { provider: current, summary }),
+          h('div', { style: { marginTop: 10 } }, h(Segmented, {
+            value: range, onChange: setRange, label: tr('时间范围'),
+            options: RANGES.map(([value, label]) => ({ value, label: tr(label) })),
+          })),
+          strip,
+          usage === null && usageLoading
+            ? h('div', { style: styles.empty }, tr('范围数据加载中…'))
+            : h(TokenTable, { rows }),
+          h('div', { style: styles.footer },
+            h('span', { 'data-testid': 'token-dash-updated', style: { color: T.weak, fontSize: 12 } },
+              updated === null ? '' : tr('更新于 {time}', { time: updated })),
+            canOpen
+              ? h('button', {
+                type: 'button', 'data-td-btn': true, 'data-testid': 'token-dash-open-board',
+                style: styles.button, onClick: openBoardPage,
+              }, tr('全量看板'))
+              : null))
+      }
+
       return h('div', {
         ref: panelRef, tabIndex: -1, role: 'dialog', 'aria-label': tr('Token 看板'),
         'data-testid': 'token-dash-panel',
         style: { ...styles.panel, maxHeight, left },
       },
-        h(PanelHeader, {
-          tab, onTab: setTab, onRefresh: refreshAll, refreshing: refreshing || usageLoading,
-          onClose, showInfo: tab === 'usage', stale, hasUpdate,
-        }),
+        h(PanelHeader, { onRefresh: refreshAll, refreshing: refreshing || usageLoading, onClose, stale }),
         body)
     }
 
-    function BudgetRow({ provider }) {
-      const budget = provider.budget
-      const hasBudget = budget !== undefined && budget.state !== 'unset' && budget.amount > 0
-      const color = budgetColor(budget?.state)
-      return h('div', { 'data-testid': `token-dash-api-row-${provider.id}`, style: styles.budgetRow },
-        h('div', { style: styles.budgetHead },
-          h('span', { style: styles.budgetName, title: provider.name }, provider.name),
-          h('span', { style: { color, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' } },
-            hasBudget ? fmtRatio(budget.percent) : tr('未设置')),
-          h('span', { 'data-testid': `token-dash-budget-cost-${provider.id}`, style: { color: T.muted, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' } },
-            hasBudget ? `${fmtMoney(budget.used, provider.currency)}/${fmtMoney(budget.amount, provider.currency)}` : '—'),
-          h('span', { 'data-testid': `token-dash-budget-balance-${provider.id}`, style: { textAlign: 'left', color: T.muted, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' } },
-            `${tr('余额 {value}', { value: balanceText(provider, true) ?? '—' })}`)),
-        h('div', { 'data-testid': `token-dash-budget-bar-${provider.id}` },
-          h(MiniBar, { ratio: hasBudget ? budget.percent : 1, neutral: !hasBudget, stretch: true })))
-    }
-
-    /** 重置时间标准块：`3 小时后 · 11-03 20:15 重置`，P2 订阅行与 P3 共用。 */
-    function ResetLabel({ ts, style }) {
+    /** 重置时间标准块：P2 带「重置」，P3 传 suffix='' 只用两段。 */
+    function ResetLabel({ ts, suffix = tr('重置'), style }) {
       const text = fmtReset(ts)
       if (text === null) return null
-      return h('span', { 'data-testid': 'token-dash-reset', style: style ?? { marginLeft: 'auto', color: T.weak, fontSize: 10.5 } },
-        `${text} ${tr('重置')}`)
+      return h('span', {
+        'data-testid': 'token-dash-reset',
+        style: style ?? { marginLeft: 'auto', color: T.weak, fontSize: 12 },
+      }, suffix === '' ? text : `${text} ${suffix}`)
     }
 
-    function QuotaRow({ provider, reset = false, heading = true }) {
-      const windows = Array.isArray(provider.windows) ? provider.windows : []
-      const resetTs = reset && windows.length > 0 ? windows[windows.length - 1].resetAt : null
-      const resetNode = resetTs === null ? null : h(ResetLabel, { ts: resetTs })
-      return h('div', { 'data-testid': `token-dash-sub-row-${provider.id}`, style: { display: 'grid', gap: 2, padding: '2px 0' } },
-        heading ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
-          h('span', { style: styles.quotaName, title: provider.name }, provider.name),
-          resetNode) : null,
-        windows.length === 0
-          ? h('span', { style: styles.muted }, tr('套餐查询失败'))
-          : h('div', {
-            'data-testid': `token-dash-quota-windows-${provider.id}`,
-            style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' },
-          },
-          ...windows.map((plan) => h('span', { key: plan.key, style: { display: 'inline-flex', alignItems: 'center', gap: 4 } },
-            h('span', { style: { color: T.muted } }, windowLabel(plan.key)),
-            h('b', { style: { color: percentColor(plan.usedPercent ?? 0), fontVariantNumeric: 'tabular-nums', display: 'inline-block', minWidth: 34 } }, fmtPercent(plan.usedPercent)),
-            h(MiniBar, { ratio: (Number(plan.usedPercent) || 0) / 100 })))))
-    }
-
-    function DetailGroup({ rows }) {
-      return h('div', { style: styles.group },
-        h('div', { style: styles.groupName }, rows[0]?.providerName ?? rows[0]?.providerId ?? ''),
-        ...rows.map((model) => h('div', { key: `${model.providerId}:${model.modelId}`, style: { display: 'grid', gap: 1 } },
-          h('div', { style: styles.modelRow },
-            h('span', { style: styles.modelName, title: model.displayName ?? model.modelId }, model.displayName ?? model.modelId),
-            model.kind === 'api'
-              ? h('span', { style: styles.modelCost }, model.priced === false
-                ? tr('未定价')
-                : `${model.approximate === true ? '≈' : ''}${fmtMoney(model.cost, model.currency)}`)
-              : null),
-          h('div', { 'data-testid': 'token-dash-usage-line', style: styles.usageLine },
-            h('span', { style: styles.usagePrimary },
-              h('span', { style: styles.usageLabel }, 'Tokens '),
-              h('span', { style: styles.usageValue }, fmtTokens(model.tokens?.total ?? 0)),
-              h('span', { style: { ...styles.usageValue, color: T.muted } },
-                ` [${fmtTokens(model.tokens?.input ?? 0)}/${fmtTokens(model.tokens?.cache ?? 0)}/${fmtTokens(model.tokens?.output ?? 0)}]`)),
-            h('span', { style: { ...styles.usageMeta, marginLeft: 'auto' } },
-              h('span', { style: styles.usageLabel }, `${tr('请求')} `), h('span', { style: styles.usageValue }, model.requests)),
-            h('span', { style: styles.usageMeta },
-              h('span', { style: styles.usageLabel }, `${tr('命中')} `), h('span', { style: styles.usageValue }, model.hitRate === null || model.hitRate === undefined ? '—' : fmtRatio(model.hitRate)))))))
-    }
-
-    function UsageContent({ summary, usage, range, loading, usageError, error, onRange, onRetry, onRefreshSubs }) {
-      if (summary === null) {
-        return h('div', { style: styles.section },
-          h('div', { style: styles.empty }, error ? tr('Token 数据不可用') : tr('Token 数据加载中…')),
-          error ? h('button', { type: 'button', style: styles.button, onClick: onRetry }, tr('重试')) : null)
-      }
-      const providers = summary?.providers ?? []
-      const api = providers.filter((provider) => provider.kind === 'api')
-      const subscriptions = providers.filter((provider) => provider.kind === 'subscription')
-      const models = Array.isArray(usage?.models) ? usage.models : []
-      const groups = new Map()
-      for (const model of models) {
-        const list = groups.get(model.providerId) ?? []
-        list.push(model)
-        groups.set(model.providerId, list)
-      }
-      const pending = usage === null
-      const total = usage?.total ?? null
-      const costEntries = Object.entries(usage?.totals ?? {})
-      const hasUsage = usage !== null
-      const fixed = []
-      if (api.length > 0) {
-        fixed.push(h('div', { key: 'api-head', style: styles.sectionHead }, h('b', { style: styles.title }, tr('本月预算'))))
-        fixed.push(...api.map((provider) => h(BudgetRow, { key: provider.id, provider })))
-      }
-      if (subscriptions.length > 0) {
-        fixed.push(h('div', { key: 'sub-head', style: { ...styles.sectionHead, marginTop: 4 } },
-          h('b', { style: styles.title }, tr('订阅套餐（账户级）')),
-          h(IconButton, { label: tr('重新检测订阅配额'), testid: 'token-dash-rescan', onClick: () => { void onRefreshSubs?.() } },
-            h(Icon, { name: 'refresh', size: 12 }))))
-        fixed.push(...subscriptions.map((provider) => h(QuotaRow, { key: provider.id, provider, reset: true })))
-      }
-      if (fixed.length === 0) {
-        const degraded = summary?.providersDegraded === true
-        fixed.push(h('div', { key: 'empty', style: styles.empty },
-          degraded ? tr('供应商探测失败') : tr('未检测到已配置供应商'),
-          degraded ? h('button', { type: 'button', style: styles.button, onClick: onRetry }, tr('重试')) : null))
-      }
+    /** P2 API 主区：环+% / 已用·预算 / 真实余额 / 本月已花。 */
+    function P2Summary({ provider, summary }) {
+      const budget = provider.budget
+      const hasBudget = budget !== undefined && budget.state !== 'unset' && budget.amount > 0
+      const percent = hasBudget ? Number(budget.percent) * 100 : null
+      const balance = balanceText(provider, summary?.showBalance)
       return h(React.Fragment, null,
-        h('div', { style: styles.section }, ...fixed),
-        h('div', { style: { marginTop: 10 } }, h(Segmented, {
-          value: range, onChange: onRange, label: tr('时间范围'),
-          options: RANGES.map(([value, label]) => ({ value, label: tr(label) })),
-        })),
-        error || usageError ? h('div', { style: styles.errorStrip, role: 'alert' },
-          h('span', null, error ? tr('刷新失败，保留上次数据') : tr('范围数据加载失败')),
-          h('button', { type: 'button', style: styles.button, onClick: onRetry }, tr('重试'))) : null,
-        h('div', { style: styles.section },
-          h('div', { style: styles.rangeCard },
-            h('div', { style: styles.tile },
-              h('div', { style: styles.tileLabel }, tr('总费用')),
-              ...costEntries.map(([currency, value]) => h('div', { key: currency, style: { ...styles.tileValue, fontSize: 14, color: T.accent } }, fmtMoney(value.cost, currency))),
-              pending ? h('div', { key: 'pending', style: { ...styles.tileValue, fontSize: 14, color: T.accent } }, '—') : null),
-            h('div', { style: styles.tile },
-              h('div', { style: styles.tileLabel },
-                `${tr('真实 Tokens')} `,
-                h(InfoTip, {
-                  label: tr('Tokens 括号说明'),
-                  text: tr('Tokens 括号顺序：输入 / 缓存（读+写）/ 输出'),
-                  variant: 'inline',
-                }, h(Icon, { name: 'info', size: 11 }))),
-              h('div', { style: styles.tileValue }, pending ? '—' : fmtTokens(total?.tokens ?? 0)),
-              h('div', { style: styles.tileDetail }, pending
-                ? '—'
-                : `${fmtTokens(total?.input ?? 0)} · ${fmtTokens(total?.cache ?? 0)} · ${fmtTokens(total?.output ?? 0)}`))),
-          !hasUsage && loading ? h('div', { style: styles.empty }, tr('范围数据加载中…')) : null,
-          hasUsage && models.length === 0 ? h('div', { style: styles.empty }, tr('范围内暂无消耗')) : null,
-          hasUsage && models.length > 0 ? [...groups.entries()].map(([providerId, rows]) => h(DetailGroup, { key: providerId, rows })) : null))
+        h('div', { style: styles.providerLine },
+          h('span', { style: styles.title, title: provider.name }, provider.name),
+          h('span', { style: styles.providerChip }, `[ ${tr('按量 API')} ]`)),
+        h('div', { 'data-testid': 'token-dash-summary-row', style: styles.summaryRow },
+          h('span', { style: styles.summaryCell },
+            h('span', { 'data-testid': 'token-dash-summary-ring', style: { display: 'inline-flex' } },
+              h(ProgressRing, { percent, state: hasBudget ? ringState(percent, API_CRITICAL) : 'empty', size: 20, stroke: 2.5 })),
+            hasBudget
+              ? h('b', { style: { ...styles.num, color: percentColor(percent, API_CRITICAL) } }, fmtRatio(budget.percent))
+              : h('span', { style: styles.muted }, '—')),
+          h('span', { 'data-testid': 'token-dash-summary-used', style: styles.summaryCell },
+            hasBudget ? `${fmtMoney(budget.used, provider.currency)} / ${fmtMoney(budget.amount, provider.currency)}` : '—'),
+          h('span', {
+            'data-testid': 'token-dash-summary-balance', style: styles.summaryCell,
+            title: tr('账户真实余额，不受预算影响'),
+          },
+            h('span', { style: styles.summaryLabel }, tr('真实余额')),
+            h('span', { style: styles.num }, balance ?? '—')),
+          h('span', {
+            'data-testid': 'token-dash-summary-month', style: styles.summaryCell,
+            title: tr('本月累计消耗，等于已用/预算 的分子'),
+          },
+            h('span', { style: styles.summaryLabel }, tr('本月已花')),
+            h('span', { style: styles.num }, fmtMoney(provider.usage?.monthCost, provider.currency)))))
     }
 
-    function SettingsContent({ summary, onRefresh, onRefreshSubs }) {
-      const [prefs, setPrefs] = useState(null)
-      const [budgetText, setBudgetText] = useState({})
-      const [fieldErrors, setFieldErrors] = useState({})
+    /** P2 订阅窗口行：两段数字 + 倒计时 + 绝对时间（无「重置」后缀）。 */
+    function WindowRow({ providerId, plan }) {
+      const percent = plan === undefined || plan === null ? null : Number(plan.usedPercent)
+      const hasValue = Number.isFinite(percent)
+      const parts = hasValue ? resetParts(plan.resetAt) : { relative: null, absolute: null }
+      const left = hasValue ? Math.max(0, Math.round(100 - percent)) : null
+      const testKey = `${providerId}-${plan?.key ?? 'none'}`
+      return h('div', {
+        'data-testid': `token-dash-sub-window-${testKey}`,
+        style: styles.windowRow,
+      },
+        h('span', { style: styles.windowKey },
+          h('span', { style: styles.summaryLabel }, plan?.key ? windowLabel(plan.key) : '—'),
+          h(ProgressRing, { percent, state: hasValue ? ringState(percent, SUB_CRITICAL) : 'empty', size: 20, stroke: 2.5 }),
+          h('b', { style: { color: percentColor(hasValue ? percent : null, SUB_CRITICAL) } }, hasValue ? fmtPercent(percent) : '—')),
+        h('span', { 'data-testid': `token-dash-sub-left-${testKey}`, style: styles.muted },
+          left === null ? '—' : tr('剩余 {value}', { value: `${left}%` })),
+        h('span', { 'data-testid': `token-dash-sub-rel-${testKey}`, style: styles.muted }, parts.relative ?? '—'),
+        h('span', { 'data-testid': `token-dash-sub-abs-${testKey}`, style: styles.muted }, parts.absolute ?? '—'))
+    }
+
+    function P2Windows({ provider }) {
+      const windows = Array.isArray(provider.windows) ? provider.windows : []
+      return h(React.Fragment, null,
+        h('div', { style: styles.providerLine },
+          h('span', { style: styles.title, title: provider.name }, provider.name),
+          h('span', { style: styles.providerChip }, `[ ${tr('订阅')} ]`)),
+        windows.length === 0
+          ? h('div', { style: styles.empty }, tr('套餐查询失败'))
+          : windows.map((plan) => h(WindowRow, { key: plan.key, providerId: provider.id, plan })))
+    }
+
+    /** P3 底部胶囊：三行设置；prefs 由 BoardPage 持有。 */
+    function SettingsRows({ summary, prefs, onSave, onRefresh, onRefreshSubs }) {
       const [status, setStatus] = useState(null)
       const [subRefreshing, setSubRefreshing] = useState(false)
       const update = useUpdateSnapshot()
@@ -918,61 +1131,22 @@ window.__ModuleLoader__.load({
       const [importing, setImporting] = useState(false)
       const fileRef = useRef(null)
 
-      const loadPrefs = useCallback(async () => {
-        try {
-          const data = await getJson('/prefs')
-          setPrefs(data)
-          const next = {}
-          for (const [id, value] of Object.entries(data.budgets ?? {})) next[id] = value.amount > 0 ? String(value.amount) : ''
-          setBudgetText(next)
-        } catch {
-          setStatus({ text: tr('设置加载失败'), error: true })
-        }
-      }, [])
-
-      useEffect(() => { loadPrefs() }, [loadPrefs])
-
       function flash(text, error = false) {
         setStatus({ text, error })
         if (error !== true) setTimeout(() => setStatus((current) => (current?.text === text ? null : current)), 1600)
       }
 
       async function savePrefs(patch) {
-        if (prefs === null) return null
-        try {
-          const saved = await putPrefs({ ...prefs, ...patch })
-          setPrefs(saved)
-          flash(tr('已保存'))
-          void onRefresh?.()
-          return saved
-        } catch (error) {
-          setStatus({ text: tr('保存失败：{reason}', { reason: error.message }), error: true })
+        const result = await onSave?.(patch)
+        if (result?.ok !== true) {
+          setStatus({ text: tr('保存失败：{reason}', { reason: result?.reason ?? 'unknown' }), error: true })
           return null
         }
+        flash(tr('已保存'))
+        return result.prefs
       }
 
-      async function saveBudget(provider, raw) {
-        const text = String(raw).trim()
-        const budgets = { ...(prefs?.budgets ?? {}) }
-        if (text === '') {
-          // 显式 0：清空后不再被 DEFAULT_BUDGET 覆盖
-          budgets[provider.id] = { amount: 0, currency: provider.currency }
-          const saved = await savePrefs({ budgets })
-          if (saved !== null) { setBudgetText((current) => ({ ...current, [provider.id]: '' })); setFieldErrors((current) => ({ ...current, [provider.id]: null })) }
-          return
-        }
-        const amount = Number(text)
-        if (!/^\d+(?:\.\d{1,2})?$/.test(text) || !Number.isFinite(amount) || amount > 9999999.99) {
-          setFieldErrors((current) => ({ ...current, [provider.id]: tr('请输入 0 或正数') }))
-          return
-        }
-        budgets[provider.id] = { amount, currency: provider.currency }
-        const saved = await savePrefs({ budgets })
-        if (saved !== null) {
-          setBudgetText((current) => ({ ...current, [provider.id]: String(saved.budgets[provider.id]?.amount ?? '') }))
-          setFieldErrors((current) => ({ ...current, [provider.id]: null }))
-        }
-      }
+      const retryPrefs = () => { void onRefresh?.() }
 
       async function refreshSubscriptions() {
         setSubRefreshing(true)
@@ -1044,7 +1218,6 @@ window.__ModuleLoader__.load({
         try {
           const bundle = JSON.parse(await file.text())
           const result = await postJson('/import', bundle)
-          await loadPrefs()
           await onRefresh?.()
           flash(tr('已导入 {month} 数据', { month: result.month }))
         } catch (error) {
@@ -1065,39 +1238,11 @@ window.__ModuleLoader__.load({
       if (prefs === null) {
         return h('div', { 'data-testid': 'token-dash-settings', style: { display: 'grid', gap: 10 } },
           h('div', { style: styles.empty }, status?.text ?? tr('设置加载中…')),
-          status?.error === true ? h('button', { type: 'button', style: styles.button, onClick: loadPrefs }, tr('重试')) : null)
+          status?.error === true ? h('button', { type: 'button', style: styles.button, onClick: retryPrefs }, tr('重试')) : null)
       }
 
-      const providers = summary?.providers ?? []
-      const api = providers.filter((provider) => provider.kind === 'api')
-      const subscriptions = providers.filter((provider) => provider.kind === 'subscription')
       const version = summary?.version ?? ''
       const catalog = summary?.catalog
-      const section = (title, body, action = null, testid) => h('div', { 'data-testid': testid, style: styles.section },
-        h('div', { style: styles.sectionHead }, h('b', { style: styles.title }, title), action), body)
-
-      const apiRows = api.map((provider) => h('div', { key: provider.id, style: { display: 'grid', gap: 3, padding: '3px 0' } },
-        h('div', { style: styles.row }, h('b', { style: styles.budgetName, title: provider.name }, provider.name), h('span', { style: styles.weak }, tr('按量 API'))),
-        h('div', { style: styles.row }, h('span', { style: styles.muted }, tr('月度预算')),
-          h('span', { style: styles.rowStart },
-            h('input', {
-              type: 'text', inputMode: 'decimal', 'data-testid': `token-dash-budget-input-${provider.id}`,
-              'aria-label': tr('{name} 月度预算', { name: provider.name }), 'aria-invalid': fieldErrors[provider.id] !== undefined && fieldErrors[provider.id] !== null,
-              value: budgetText[provider.id] ?? String(provider.budget?.amount ?? ''), onChange: (event) => setBudgetText({ ...budgetText, [provider.id]: event.target.value }),
-              onBlur: (event) => saveBudget(provider, event.currentTarget.value),
-              onKeyDown: (event) => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur() } },
-              style: { ...styles.input, borderColor: fieldErrors[provider.id] ? T.over : T.border },
-            }), h('span', { style: styles.muted }, provider.currency))),
-        fieldErrors[provider.id] ? h('div', { style: { color: T.over, fontSize: 10.5, textAlign: 'right' }, role: 'alert' }, fieldErrors[provider.id]) : null))
-
-      const subRows = subscriptions.map((provider) => {
-        const windows = Array.isArray(provider.windows) ? provider.windows : []
-        const resetTs = windows.length > 0 ? windows[windows.length - 1].resetAt : null
-        return h('div', { key: provider.id, style: { padding: '3px 0' } },
-          h('div', { style: styles.row },
-            h('b', { style: styles.budgetName, title: provider.name }, provider.name),
-            resetTs === null ? null : h(ResetLabel, { ts: resetTs, style: styles.weak })))
-      })
 
       let updateControl
       const updateBusy = update.phase === 'checking' || update.phase === 'installing'
@@ -1128,39 +1273,350 @@ window.__ModuleLoader__.load({
       }
 
       const statusText = update.text ?? status?.text ?? tr('版本 {version}', { version })
-      return h('div', { 'data-testid': 'token-dash-settings', style: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 0, minWidth: 0 } },
-        api.length > 0 ? section(tr('API 计费'), h('div', null, ...apiRows)) : null,
-        subscriptions.length > 0 ? section(tr('订阅'),
-          h('div', null, ...subRows),
-          h(IconButton, { label: tr('重新检测订阅配额'), testid: 'token-dash-settings-rescan', disabled: subRefreshing, onClick: refreshSubscriptions }, h(Icon, { name: subRefreshing ? 'loader' : 'refresh', size: 12 }))) : null,
-        section(tr('显示'), h('div', { style: { display: 'grid', gap: 7 } },
-          h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 } },
-            h('span', { style: { whiteSpace: 'nowrap' } }, tr('刷新间隔')),
-            h('div', { 'data-testid': 'token-dash-refresh-segment', style: { width: 168, flex: '0 1 168px', minWidth: 0 } }, h(Segmented, { value: prefs.refreshMs, onChange: (ms) => savePrefs({ refreshMs: ms }), label: tr('刷新间隔'), kind: 'radiogroup', options: REFRESH_OPTIONS.map(([value, label]) => ({ value, label: tr(label) })) }))),
-          h('div', { style: styles.row }, h('span', null, tr('账户余额')), h(Toggle, { checked: prefs.showBalance, label: tr('账户余额'), onChange: (next) => savePrefs({ showBalance: next }) })))),
-        section(tr('数据与日志'), [
-          h('div', { key: 'log', style: styles.row },
-            h('span', null, tr('日志')),
-            h('span', { style: styles.rowStart },
-              h('button', { type: 'button', 'data-testid': 'token-dash-log-open', style: styles.button, onClick: openLogs }, tr('打开日志文件夹')),
-              h('button', { type: 'button', 'data-testid': 'token-dash-log-export', style: styles.button, onClick: exportLogs }, tr('导出日志')))),
-          h('div', { key: 'data', style: styles.row },
-            h('span', null, tr('备份与恢复')),
-            h('span', { style: styles.rowStart },
-              h('button', { type: 'button', 'data-testid': 'token-dash-data-export', style: styles.button, onClick: () => { void exportData() } }, tr('导出数据')),
-              h('button', { type: 'button', 'data-testid': 'token-dash-data-import', disabled: importing, style: styles.button, onClick: () => fileRef.current?.click() }, importing ? tr('导入中…') : tr('导入数据')),
-              h('input', { ref: fileRef, type: 'file', accept: 'application/json', style: { display: 'none' }, onChange: (event) => { void importData(event.target.files?.[0]) } })))],
-        null, 'token-dash-data-log-section'),
-        section(tr('价格与版本'), h('div', { style: { display: 'grid', gap: 6 } },
-          h('div', { 'data-testid': 'token-dash-price-links', style: styles.priceLinks },
-            (summary?.pricingLinks ?? []).map((link) => h('a', { key: link.id ?? link.label, href: link.url, target: '_blank', rel: 'noopener', style: styles.link }, linkLabel(link)))),
-          h('div', { style: { ...styles.muted, fontSize: 10 } },
+      return h('div', { 'data-testid': 'token-dash-settings', style: { display: 'grid', gap: 10, minWidth: 0 } },
+        h('div', { 'data-testid': 'token-dash-settings-row-1', style: styles.settingsRow },
+          h('span', { style: styles.rowStart },
+            h(IconButton, {
+              label: tr('立即刷新'), testid: 'token-dash-board-refresh', onClick: () => { void onRefresh?.() },
+            }, h(Icon, { name: 'refresh', size: 12 })),
+            h('span', { style: { whiteSpace: 'nowrap' } }, tr('刷新间隔'))),
+          h('span', { style: styles.rowStart },
+            h('div', {
+              'data-testid': 'token-dash-refresh-segment',
+              style: { width: 168, flex: '0 1 168px', minWidth: 0 },
+            }, h(Segmented, {
+              value: prefs.refreshMs, onChange: (ms) => savePrefs({ refreshMs: ms }), label: tr('刷新间隔'),
+              kind: 'radiogroup', options: REFRESH_OPTIONS.map(([value, label]) => ({ value, label: tr(label) })),
+            })),
+            h('span', null, tr('账户余额')),
+            h(Toggle, { checked: prefs.showBalance, label: tr('账户余额'), onChange: (next) => savePrefs({ showBalance: next }) }))),
+        h('div', { 'data-testid': 'token-dash-settings-row-2', style: styles.settingsRow },
+          h('span', { style: styles.rowStart },
+            h('button', { type: 'button', 'data-testid': 'token-dash-log-open', style: styles.button, onClick: openLogs }, tr('打开日志文件夹')),
+            h('button', { type: 'button', 'data-testid': 'token-dash-log-export', style: styles.button, onClick: exportLogs }, tr('导出日志'))),
+          h('span', { style: styles.rowStart },
+            h('button', { type: 'button', 'data-testid': 'token-dash-data-export', style: styles.button, onClick: () => { void exportData() } }, tr('导出数据')),
+            h('button', { type: 'button', 'data-testid': 'token-dash-data-import', disabled: importing, style: styles.button, onClick: () => fileRef.current?.click() }, importing ? tr('导入中…') : tr('导入数据')),
+            h('input', { ref: fileRef, type: 'file', accept: 'application/json', style: { display: 'none' }, onChange: (event) => { void importData(event.target.files?.[0]) } }))),
+        h('div', { 'data-testid': 'token-dash-settings-row-3', style: styles.settingsRow },
+          h('span', { style: { ...styles.muted, fontSize: 10 } },
             `${tr('价格表')} `, formatCatalogTime(catalog?.updatedAt), ' · ',
             catalog?.url
               ? h('a', { href: catalog.url, target: '_blank', rel: 'noopener', style: { ...styles.link, color: T.muted } }, tr('社区'))
               : h('span', null, sourceLabel(catalog?.source))),
-          h('div', { style: styles.row }, h('span', { style: { ...styles.status, color: status?.error ? T.over : T.muted }, role: 'status', 'aria-live': 'polite', title: statusText }, statusText), updateControl)), null, 'token-dash-price-section'),
-        api.length === 0 && subscriptions.length === 0 ? h('div', { style: styles.empty }, tr('未检测到已配置供应商')) : null)
+          h('span', { style: styles.rowStart },
+            h('span', {
+              'data-testid': 'token-dash-settings-status', role: 'status', 'aria-live': 'polite',
+              style: { ...styles.status, color: status?.error ? T.over : T.muted }, title: statusText,
+            }, statusText),
+            updateControl)))
+    }
+
+    const BUDGET_COLS = 'minmax(8ch,1fr) 14ch 12ch 11ch 11ch'
+
+    /** P3 按量表：四列 + 预算就地编辑，计划余额可负。 */
+    function BudgetTable({ providers, prefs, onSave }) {
+      const [editing, setEditing] = useState(null)
+      const [draft, setDraft] = useState('')
+      const [fieldError, setFieldError] = useState(null)
+      const [saving, setSaving] = useState(false)
+      const escRef = useRef(false)
+
+      const begin = (provider) => {
+        const entry = prefs?.budgets?.[provider.id]
+        setEditing(provider.id)
+        setDraft(entry === undefined ? '' : (entry.amount > 0 ? String(entry.amount) : ''))
+        setFieldError(null)
+        escRef.current = false
+      }
+      const cancel = () => { setEditing(null); setFieldError(null) }
+
+      const commit = async (provider, raw) => {
+        if (editing !== provider.id) return
+        const text = String(raw ?? draft).trim()
+        if (text !== '' && (!/^\d+(?:\.\d{1,2})?$/.test(text) || Number(text) > 9999999.99)) {
+          setFieldError(tr('请输入 0 或正数'))
+          return
+        }
+        const amount = text === '' ? 0 : Number(text)
+        const budgets = { ...(prefs?.budgets ?? {}) }
+        budgets[provider.id] = { amount, currency: provider.currency }
+        setSaving(true)
+        const result = await onSave?.({ budgets })
+        setSaving(false)
+        if (result?.ok !== true) {
+          setFieldError(tr('保存失败：{reason}', { reason: result?.reason ?? 'unknown' }))
+          return
+        }
+        setEditing(null)
+        setFieldError(null)
+      }
+
+      return h('div', { 'data-td-scroll': true },
+        h('div', {
+          'data-testid': 'token-dash-budget-table',
+          style: { ...styles.table, gridTemplateColumns: BUDGET_COLS, columnGap: 8, minWidth: 560 },
+        },
+        h('div', { style: { display: 'contents' } },
+          h('span', null, tr('名称')),
+          h('span', { style: { textAlign: 'right' } }, tr('月度预算')),
+          h('span', { style: { textAlign: 'right' } }, tr('已用')),
+          h('span', { style: { textAlign: 'right' } }, tr('计划余额')),
+          h('span', { style: { textAlign: 'right' } }, tr('真实余额'))),
+        ...providers.map((provider) => {
+          const budget = provider.budget
+          const hasBudget = budget !== undefined && budget.state !== 'unset' && budget.amount > 0
+          const percent = hasBudget ? Number(budget.percent) * 100 : null
+          const used = Number(budget?.used ?? 0)
+          const plan = hasBudget ? Number(budget.amount) - used : null
+          const balance = balanceText(provider, true)
+          const isEditing = editing === provider.id
+          return h('div', {
+            key: provider.id,
+            'data-testid': `token-dash-budget-row-${provider.id}`,
+            style: { display: 'contents' },
+          },
+            h('span', { style: styles.cellName, title: provider.name }, provider.name),
+            h('span', { 'data-testid': `token-dash-budget-budget-${provider.id}`, style: { ...styles.cellNum, textAlign: 'right' } },
+              isEditing
+                ? h('input', {
+                  autoFocus: true,
+                  type: 'text', inputMode: 'decimal', disabled: saving,
+                  'data-testid': `token-dash-budget-input-${provider.id}`,
+                  'aria-label': tr('{name} 月度预算', { name: provider.name }),
+                  'aria-invalid': fieldError !== null,
+                  value: draft,
+                  onChange: (event) => setDraft(event.target.value),
+                  onBlur: (event) => {
+                    if (escRef.current) { escRef.current = false; return }
+                    void commit(provider, event.currentTarget.value)
+                  },
+                  onKeyDown: (event) => {
+                    if (event.key === 'Escape') { event.preventDefault(); escRef.current = true; cancel(); return }
+                    if (event.key === 'Enter') { event.preventDefault(); void commit(provider, event.currentTarget.value) }
+                  },
+                  style: { ...styles.input, width: 96, borderColor: fieldError ? T.over : T.border },
+                })
+                : h('span', { style: styles.inlineWrap },
+                  hasBudget ? fmtMoney(budget.amount, provider.currency) : tr('未设置'),
+                  h('button', {
+                    type: 'button', 'data-testid': `token-dash-budget-edit-${provider.id}`,
+                    'aria-label': tr('编辑预算'), title: tr('编辑预算'),
+                    style: { ...styles.inlineInfoButton, fontSize: 12 },
+                    onClick: () => begin(provider),
+                  }, '✎'))),
+            h('span', { 'data-testid': `token-dash-budget-used-${provider.id}`, style: { ...styles.cellNum, textAlign: 'right', display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 } },
+              h(ProgressRing, { percent, state: hasBudget ? ringState(percent, API_CRITICAL) : 'empty', size: 14, stroke: 2 }),
+              hasBudget ? fmtRatio(budget.percent) : '—'),
+            h('span', {
+              'data-testid': `token-dash-budget-plan-${provider.id}`,
+              style: { ...styles.cellNum, textAlign: 'right', color: plan !== null && plan < 0 ? T.over : T.text },
+            }, plan === null ? '—' : `${plan < 0 ? '-' : ''}${fmtMoney(Math.abs(plan), provider.currency)}`),
+            h('span', { 'data-testid': `token-dash-budget-balance-${provider.id}`, style: { ...styles.cellNum, textAlign: 'right', color: T.muted } },
+              balance ?? '—'))
+        }),
+        fieldError === null ? null : h('div', {
+          style: { gridColumn: '1 / -1', color: T.over, fontSize: 11, textAlign: 'right' }, role: 'alert',
+        }, fieldError)))
+    }
+
+    const QUOTA_KEYS = ['5h', 'week', 'month']
+
+    function QuotaCell({ providerId, plan, windowKey }) {
+      const percent = plan === undefined ? null : Number(plan.usedPercent)
+      const hasValue = Number.isFinite(percent)
+      const parts = hasValue ? resetParts(plan.resetAt) : { relative: null, absolute: null }
+      const left = hasValue ? Math.max(0, Math.round(100 - percent)) : null
+      const testKey = `${providerId}-${windowKey}`
+      return h('div', { 'data-testid': `token-dash-quota-cell-${testKey}`, style: { display: 'grid', gap: 2, minWidth: 0 } },
+        h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' } },
+          h('span', { style: styles.summaryLabel }, windowLabel(windowKey)),
+          h(ProgressRing, { percent, state: hasValue ? ringState(percent, SUB_CRITICAL) : 'empty', size: 14, stroke: 2 }),
+          h('b', { style: { color: percentColor(hasValue ? percent : null, SUB_CRITICAL) } }, hasValue ? fmtPercent(percent) : '—'),
+          h('span', { style: styles.muted }, left === null ? '—' : tr('剩余 {value}', { value: `${left}%` }))),
+        h('div', { style: { ...styles.muted, whiteSpace: 'nowrap' } },
+          h('span', { 'data-testid': `token-dash-quota-rel-${testKey}` }, parts.relative ?? '—'), ' · ',
+          h('span', { 'data-testid': `token-dash-quota-abs-${testKey}` }, parts.absolute ?? '—')))
+    }
+
+    /** P3 订阅表：每个窗口两行（环+%+剩余 / 倒计时 · 绝对时间），缺窗占位。 */
+    function QuotaTable({ providers }) {
+      return h('div', { 'data-testid': 'token-dash-quota-table', style: { display: 'grid', gap: 12 } },
+        ...providers.map((provider) => {
+          const windows = Array.isArray(provider.windows) ? provider.windows : []
+          const byKey = new Map(windows.map((item) => [item.key, item]))
+          return h('div', { key: provider.id, 'data-testid': `token-dash-quota-row-${provider.id}`, style: { display: 'grid', gap: 6 } },
+            h('div', { style: styles.providerLine },
+              h('span', { style: styles.title, title: provider.name }, provider.name),
+              h('span', { style: styles.providerChip }, `[ ${tr('订阅')} ]`)),
+            h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 12 } },
+              ...QUOTA_KEYS.map((windowKey) => h(QuotaCell, {
+                key: windowKey, providerId: provider.id, plan: byKey.get(windowKey), windowKey,
+              }))))
+        }))
+    }
+
+    /** 预算保存后就地重算 budget，避免等下一轮轮询。 */
+    function mergeBudgets(summary, prefs) {
+      const providers = (summary?.providers ?? []).map((provider) => {
+        const entry = prefs?.budgets?.[provider.id]
+        if (entry === undefined) return provider
+        const amount = Number(entry.amount) || 0
+        const used = Number(provider.budget?.used ?? provider.usage?.monthCost ?? 0)
+        const percent = amount > 0 ? Math.min(9.99, used / amount) : 0
+        const state = amount <= 0 ? 'unset' : percent >= 1 ? 'over' : percent >= 0.8 ? 'warn' : 'ok'
+        return {
+          ...provider,
+          budget: { ...(provider.budget ?? {}), amount, used, remaining: Math.max(0, amount - used), percent, state, currency: provider.currency },
+        }
+      })
+      return { ...summary, providers }
+    }
+
+    const openBoardPage = () => {
+      try {
+        if (typeof layoutRef?.hasMainPanel === 'function' && layoutRef.hasMainPanel(PAGE_ID) !== true) return
+        layoutRef?.selectPanel?.(PAGE_ID)
+      } catch { /* 宿主未注册时保持当前页 */ }
+    }
+
+    function BoardEntry() {
+      return h('span', {
+        'data-testid': 'token-dash-sidebar-entry', 'aria-hidden': true,
+        style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16 },
+      }, h('svg', {
+        width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+        strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+      },
+        h('path', { d: 'M4 19V9' }), h('path', { d: 'M10 19V5' }), h('path', { d: 'M16 19v-6' }), h('path', { d: 'M2 19h20' })))
+    }
+
+    /** P3 整页：自取数 + 两表 + 两格卡与明细 + 底部设置胶囊。 */
+    function BoardPage(props) {
+      const active = rawActiveProvider(props)
+      const [summary, setSummary] = useState(null)
+      const [usage, setUsage] = useState(null)
+      const [prefs, setPrefs] = useState(null)
+      const [range, setRange] = useState('all')
+      const [refreshing, setRefreshing] = useState(false)
+      const [error, setError] = useState(false)
+      const [usageError, setUsageError] = useState(false)
+      const [repoStars, setRepoStars] = useState(null)
+      const prefsRef = useRef(null)
+      prefsRef.current = prefs
+
+      const loadSummary = useCallback(async () => {
+        try {
+          const data = await getJson(summaryPath(active))
+          setSummary(data)
+          setError(false)
+        } catch {
+          setError(true)
+        }
+      }, [active])
+
+      const loadPrefs = useCallback(async () => {
+        try { setPrefs(await getJson('/prefs')) } catch { /* keep previous */ }
+      }, [])
+
+      const loadUsage = useCallback(async () => {
+        try {
+          const data = await getJson(`/usage?range=${encodeURIComponent(range)}`)
+          setUsage(data)
+          setUsageError(false)
+        } catch {
+          setUsageError(true)
+        }
+      }, [range])
+
+      const refresh = useCallback(async () => {
+        setRefreshing(true)
+        try {
+          await Promise.all([loadSummary(), loadPrefs(), loadUsage()])
+        } finally {
+          setRefreshing(false)
+        }
+      }, [loadSummary, loadPrefs, loadUsage])
+
+      useEffect(() => { void refresh() }, [refresh])
+      usePolling(() => { void loadSummary() }, { refreshMs: Number(summary?.refreshMs) || 60000 })
+
+      const savePrefs = useCallback(async (patch) => {
+        if (prefsRef.current === null) return { ok: false, reason: 'not-ready' }
+        try {
+          const saved = await putPrefs({ ...prefsRef.current, ...patch })
+          prefsRef.current = saved
+          setPrefs(saved)
+          setSummary((current) => (current === null ? current : mergeBudgets(current, saved)))
+          return { ok: true, prefs: saved }
+        } catch (error) {
+          return { ok: false, reason: error.message }
+        }
+      }, [])
+
+      const refreshSubs = useCallback(async () => {
+        try { await fetch(`${API}/providers/refresh`, { method: 'POST', headers: { accept: 'application/json' } }) } catch { /* ignore */ }
+        await refresh()
+      }, [refresh])
+
+      useEffect(() => {
+        let alive = true
+        getJson('/repo')
+          .then((data) => { if (alive) setRepoStars(Number.isFinite(data?.stars) ? data.stars : null) })
+          .catch(() => { if (alive) setRepoStars(null) })
+        return () => { alive = false }
+      }, [])
+
+      const providers = summary?.providers ?? []
+      const api = providers.filter((provider) => provider.kind === 'api')
+      const subscriptions = providers.filter((provider) => provider.kind === 'subscription')
+      const models = Array.isArray(usage?.models) ? usage.models : []
+      const updated = fmtClock(summary?.updatedAt)
+      const degraded = summary?.providersDegraded === true
+      const emptyAll = summary !== null && api.length === 0 && subscriptions.length === 0
+
+      return h('div', { 'data-testid': 'token-dash-board', style: styles.board },
+        h('style', null, TD_CSS),
+        h('div', { style: styles.boardHead },
+          h('div', null,
+            h('div', { style: styles.boardTitle }, tr('Token 看板')),
+            h('div', { style: styles.boardMeta },
+              `${tr('数据来自本机会话记录')}${updated === null ? '' : ` · ${tr('更新于 {time}', { time: updated })}`}`)),
+          h('a', {
+            href: REPO_URL, target: '_blank', rel: 'noopener',
+            'data-testid': 'token-dash-repo', title: tr('查看仓库'), style: styles.repoChip,
+          }, repoStars === null ? '★' : `★ ${fmtTokens(repoStars)}`)),
+        error ? h('div', { style: styles.errorStrip, role: 'alert' },
+          h('span', null, tr('刷新失败，保留上次数据')),
+          h('button', { type: 'button', style: styles.button, onClick: () => { void refresh() } }, tr('重试'))) : null,
+        api.length > 0 ? h('section', { style: styles.boardSection },
+          h('div', { style: styles.boardSectionHead }, h('b', { style: styles.sectionTitle }, tr('按量计价（按供应商）'))),
+          h(BudgetTable, { providers: api, prefs, onSave: savePrefs })) : null,
+        subscriptions.length > 0 ? h('section', { style: styles.boardSection },
+          h('div', { style: styles.boardSectionHead },
+            h('b', { style: styles.sectionTitle }, tr('订阅套餐（按供应商）')),
+            h(IconButton, {
+              label: tr('重新检测订阅配额'), testid: 'token-dash-board-rescan',
+              disabled: refreshing, onClick: () => { void refreshSubs() },
+            }, h(Icon, { name: refreshing ? 'loader' : 'refresh', size: 13 }))),
+          h(QuotaTable, { providers: subscriptions })) : null,
+        emptyAll ? h('div', { 'data-testid': 'token-dash-board-empty', style: styles.cardBox },
+          h('div', { style: styles.empty }, degraded ? tr('供应商探测失败') : tr('未检测到已配置供应商')),
+          degraded ? h('button', { type: 'button', style: styles.button, onClick: () => { void refresh() } }, tr('重试')) : null) : null,
+        h('section', { style: styles.boardSection },
+          h('div', { style: styles.boardSectionHead }, h('b', { style: styles.sectionTitle }, tr('时间范围'))),
+          h('div', null, h(Segmented, {
+            value: range, onChange: setRange, label: tr('时间范围'),
+            options: RANGES.map(([value, label]) => ({ value, label: tr(label) })),
+          })),
+          usageError ? h('div', { style: styles.errorStrip, role: 'alert' },
+            h('span', null, tr('范围数据加载失败')),
+            h('button', { type: 'button', style: styles.button, onClick: () => { void loadUsage() } }, tr('重试'))) : null,
+          h(RangeCards, { usage }),
+          h('div', { style: { marginTop: 16 } }, h(DetailTable, { rows: models }))),
+        h('div', { 'data-testid': 'token-dash-settings-capsule', style: styles.capsule },
+          h('div', { style: styles.boardSectionHead }, h('b', { style: styles.sectionTitle }, tr('设置与数据管理'))),
+          h(SettingsRows, { summary, prefs, onSave: savePrefs, onRefresh: refresh, onRefreshSubs: refreshSubs })))
     }
 
     return {
@@ -1181,6 +1637,12 @@ window.__ModuleLoader__.load({
             return () => clearTimeout(timer)
           }, 'update:startup')
         }
+        ctxRef = typeof ctx === 'object' ? ctx : null
+        try {
+          layoutRef = typeof ctx.get === 'function' ? ctx.get('layout') ?? null : ctx.layout ?? null
+        } catch {
+          layoutRef = null
+        }
         const slots = typeof ctx.get === 'function' ? ctx.get('slots') : ctx.slots
         if (slots === undefined || typeof slots.inject !== 'function') return
         const reportMount = (slot) => {
@@ -1198,6 +1660,14 @@ window.__ModuleLoader__.load({
         slots.inject('conversation.composer.dock', () => {
           reportMount('conversation.composer.dock')
           return slots.register({ name: 'conversation.composer.dock', id: 'token-dash-input', order: -1 }, LocaleRoot)
+        })
+        slots.inject('main', () => {
+          reportMount('main')
+          return slots.register({ name: 'main', key: PAGE_ID, label: tr('Token 看板') }, BoardPage)
+        })
+        slots.inject('sidebar.panellist', () => {
+          reportMount('sidebar.panellist')
+          return slots.register({ name: 'sidebar.panellist', id: PAGE_ID, order: 6, label: tr('Token 看板') }, BoardEntry)
         })
       },
     }

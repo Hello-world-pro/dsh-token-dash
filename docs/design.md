@@ -1,5 +1,6 @@
 # dsh-token-dash 设计文档
 
+> 更新时间：2026-11-04（v3.1，同步 Provider 扩展与鉴权目标形态）<br>
 > 面向贡献者的一页式架构说明。需求背景见 [token-dash 计划（已归档）](plan/archived/feature_token_dash.md)，已归档的 UI 迭代见 [UI 迭代计划](plan/archived/feature_ui_refresh.md)；Provider/VM/UI 边界收口见 [边界计划](plan/archived/feature_provider_boundary.md)；UI 视觉以 [UI 设计](ui-design.md) 为唯一真源。
 
 ## 总体架构
@@ -12,7 +13,7 @@
 │  host 端（index.js，Node 环境）                client 端（client.js，浏览器环境）   │
 │  ┌──────────────────────────────┐             ┌────────────────────────────────┐  │
 │  │ 会话事件监听 session/event     │             │ P1 底栏 Pill（两槽位）          │  │
-│  │ → collect.ingest 三层归属      │   /summary   │ P2 浮层看板 / P3 设置          │  │
+│  │ → collect.ingest 三层归属      │   /summary   │ P2 浮层 / P3 整页              │  │
 │  │ → daily.json（本地存储）        │ ──────────→ │ fetch 轮询（refreshMs 可配）    │  │
 │  │ readProviders → Snapshot      │ ←────────── │ POST /prefs /log /refresh …    │  │
 │  │ buildSummary(state, prefs,    │             └────────────────────────────────┘  │
@@ -24,7 +25,7 @@
 ```
 
 - **host 端**只做数据：采集、归属、聚合、侦测、路由、日志；无 UI。
-- **client 端**只做展示：Pill 常驻 + 浮层（P2 看板 / P3 设置），无业务计算。
+- **client 端**只做展示：Pill 常驻 + P2 浮层（当前模型）+ P3 整页（全量），无业务计算。
 - **provider 边界**：adapter 只输出 `ProviderSnapshot`；VM 只输出 `SummaryVM`；UI 只消费 VM，不知道 provider id / 价格页 URL。
 - 两端只通过 `/token-dash/api/*` HTTP 前缀路由通信。
 
@@ -40,7 +41,7 @@
   → store 持久化 daily.json（2s 防抖 flush，原子写 tmp+rename）
 
 浏览器请求 /summary（可选 ?active=<raw>）
-  → readProviders（30s TTL 缓存；五家余额/配额）
+  → readProviders（当前 30s 单档 TTL；计划成功 60s / 失败 10s + 在途合并）
   → toSnapshot（统一 windows/error/quotaError/status/fetchedAt）
   → core.buildSummary(state, prefs, now, snapshots)
        ← providerRegistry（默认模型/币种/前缀/展示名/价格页）
@@ -94,17 +95,52 @@ SummaryVM（core.js → client 的唯一 DTO）
 ```
 
 - **Adapters**：只负责外部请求、解析、错误分类；出口用 `toSnapshot` 归一化，不把 `plans` / `_error` 等内部字段带进 VM。
-- **VM**：纯聚合，不做 IO；通过 `providerRegistry` 查元数据，不直接 import provider 数据表；输出 `windows` 和 `pricingLinks`。
+- **VM**：纯聚合，不做 IO；通过 `providerRegistry` 查元数据，不直接 import provider 数据表；输出 `windows` 和 `pricingLinks`。`windows` 长度 0–3，缺窗不补占位对象。
 - **UI**：只读 `SummaryVM`；按 `kind` / `status` / `currency` 渲染，不出现 provider id、价格页 URL、默认模型等 provider 知识。
 - **页面入口**：P3 走宿主「全局面板」机制——`slots.inject('main')` 注册整页（`key = token-dash`），`sidebar.panellist` 注册同 `id` 的左侧常驻行；`ctx.get('layout').selectPanel('token-dash')` 可从浮层直达（已实测）。
 - **兼容**：VM 可读取旧 `plans` 输入，但输出只保留 `windows`；`DEFAULT_MODELS` 保留为派生导出，供旧调用方过渡。
+
+## Provider 扩展（目标形态）
+
+> 现状五家固定、逐家 if 分支；扩到第七家前先把取数收敛成表。详细条目见 [后端能力清单](checklist/active/backend-capability-checklist.md) §4。
+
+```text
+quota-sources.js（新增）
+  zhipu      { baseUrl, path, credentialRef, auth:'bearer', normalize }
+  opencode   { … auth:'bearer', normalize }      ← 新增
+  commandcode{ … auth:'bearer', preflight, normalize }  ← 新增
+  kimi       { … auth:'oauth-reuse', readSecret }
+  deepseek / openrouter / qwen { … }
+
+adapters.readProviders
+  → for (源 of 表) { secret = resolveSecret(源); query = preflight?.(…); fetch(baseUrl+path+query) }
+  → toSnapshot（窗口 0–3、百分比夹取）
+  → ProviderSnapshot[]
+```
+
+| 约束 | 定义 |
+|---|---|
+| 源表形状 | `{ id, baseUrl, path, credentialRef, auth, headers?, validate?, normalize }` |
+| 凭据 | 只支持 `bearer` 与 `oauth-reuse`；不做 Cookie、不读本机登录文件 |
+| preflight | 取数前可选，返回 query 片段；异常返回空串，主请求继续 |
+| 窗口 | 长度 0–3，`key ∈ 5h/week/month`，`usedPercent ∈ [0,100]`，缺窗不补占位 |
+| 新增一家 | 源表 1 行 + `normalize` / `readSecret` / `preflight` 三个可选钩子 + 1 份 fixture |
+
+## 路由与鉴权
+
+| 项 | 现状 | 目标 |
+|---|---|---|
+| 挂载 | 宿主 `webServer.register({ kind:'prefix', path:'/token-dash/api' })` | 不变 |
+| 鉴权 | **无判断**；e2e 中无 token 的 `PUT /prefs` 返回 200 | 优先 `connection.requestRejection`，无则校验 `remoteAddress` + `host` + `origin` |
+| 脱敏 | 日志已过滤，响应未统一 | 错误消息 / `source` / `raw` 三处统一 |
+| 附加路由 | 无 `/repo` | `/repo` 固定仓库、6h 缓存 + ETag，失败静默 |
 
 ## 文件目录组织
 
 ```text
 dsh-token-dash/
 ├── index.js               host 端入口：服务注册、web 路由、spawn 更新、日志接线
-├── client.js              client 端 bundle：Pill / Panel（P2+P3）/ 全部 UI 组件与样式
+├── client.js              client 端 bundle：Pill / Panel（P2）/ BoardPage（P3）/ 公共组件与样式
 ├── src/
 │   ├── core.js            纯聚合：buildSummary（VM）、addRecord、月/日键、排序、预算
 │   ├── collect.js         会话事件采集：recordFromEvent / headerFromEvent / ingest / backfill
@@ -152,13 +188,15 @@ dsh-token-dash/
 
 1. **严格本月口径**：费用/用量明细与预算均按当月；"配置即可见"兜底（已配置 provider 无消耗时补默认模型行）
 2. **三层模型归属**：兼容老数据（无 source 标注的历史记录靠前缀兜底），不迁移 `daily.json`
-3. **余额语义**：余额 = 账户余额（adapter 查询），预算剩余只进进度条
+3. **余额语义**：余额 = 账户真实余额（adapter 查询）；预算维度用「已用 / 计划余额」表达，**不渲染进度条**（v3.0 起）
 4. **纯 JS 无构建**：源码即产物——GitHub 安装长期可用；npm 发布时 `files` 字段控制包内容
 5. **只读本地数据**（REQ-14）：不统计标题生成、不发起计费请求、凭据经宿主解析不落盘
-6. **Provider 边界收口**：五家固定 provider；adapter 输出 `ProviderSnapshot`，VM 输出 `SummaryVM`，UI 只消费 VM；provider 差异留在 descriptor/adapter，不扩散到 VM/UI
-7. **不做 provider 插件系统**：不拆 per-provider 文件、不引入 DI；五家规模用单文件 registry，避免过度抽象
+6. **Provider 边界收口**：现有五家、目标七家（+OpenCode Go / Command Code）；adapter 输出 `ProviderSnapshot`，VM 输出 `SummaryVM`，UI 只消费 VM；provider 差异留在 descriptor/adapter，不扩散到 VM/UI
+7. **不做 provider 插件系统**：不拆 per-provider 文件、不引入 DI；七家规模用单文件源表 + 三个可选钩子，避免过度抽象
 8. **配置面收口**：`prefs` 只保留 `budgets` / `billingModes` / `refreshMs` / `showBalance`（+ `version`）；legacy `budget`、`showMonthTokens`、`logLevel` 只做读取兼容，不参与计算，保存时自然消失；预算未配置时默认 100（provider 币种，不写盘）
 9. **整页入口走宿主全局面板**：P3 不再塞进浮层，改用 `main` + `sidebar.panellist` 同 key 注册；浮层只保留当前模型，避免同一套表格两处维护（v3.0）
 10. **仓库元信息单独出口**：star 计数走 `/repo`（6h 缓存 + ETag，失败静默），不进 `SummaryVM`——它是展示性元数据，与用量/预算无关
-11. **升级不迁移数据**：账本与设置在 `$DSH_HOME/dsh-token-dash/`，与 profile 的 `node_modules` 分离，`dsh plugin add` 不触碰；跨机迁移走 P3「导出 / 导入」，导出只含设置与当月使用，不含配额、余额与日志
+11. **取数收敛成源表**：provider 元数据、凭据形态与归一化集中到 `quota-sources.js`，`readProviders` 按表迭代；新增家只加表行与可选钩子，`adapters.js` 不再新增 if 分支（待实施，见后端清单 B8）
+12. **不做 Cookie / 本机登录态**：百炼 Token Plan、小米 MiMo、Codex `~/.codex/auth.json` 均不接入——凭据会过期或越界读用户目录
+13. **升级不迁移数据**：账本与设置在 `$DSH_HOME/dsh-token-dash/`，与 profile 的 `node_modules` 分离，`dsh plugin add` 不触碰；跨机迁移走 P3「导出 / 导入」，导出只含设置与当月使用，不含配额、余额与日志
 

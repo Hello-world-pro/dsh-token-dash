@@ -30,9 +30,9 @@
 </p>
 
 - **Providers**: DeepSeek (DS account / API key), GLM Coding (subscription), Kimi Coding (subscription), Kimi / OpenRouter / Qwen (pay-as-you-go; OpenRouter in USD, Qwen CNY domestic / USD international) — paste a key and the billing mode is detected automatically
-- **Pages**: bottom bar Pill → floating dashboard (usage / settings tabs); click the pill to expand, click outside to collapse
-- **Dashboard data**: time range (today / last 7 days / last 30 days / all), per-provider monthly budget progress (used / total / percent), today's spend, account balance, subscription 5h / weekly windows with reset times; two tiles for **total cost by currency** and **real Tokens (including cache read/write)**; per provider/model cost, requests and hit rate below
-- **Settings**: per-provider monthly budget (with currency, defaults to 100 when empty), three refresh intervals, balance toggle, logs, data export / import, check for updates
+- **Pages**: bottom bar Pill → floating "current model" panel (four-column summary + time range + usage table); "Full dashboard" at the bottom or the sidebar entry opens the full page with pay-as-you-go and subscription tables, two summary tiles, model breakdown and a settings capsule
+- **Dashboard data**: time range (today / last 7 days / last 30 days / all), monthly budget with used ring, planned balance, real account balance, month-to-date spend, subscription 5h / weekly / monthly windows with countdown; two tiles for **total cost by currency** and **real Tokens (including cache read/write)**
+- **Settings**: three rows in the page footer — refresh now with interval, logs with data export/import, price table with version check; per-provider budgets are edited inline in the pay-as-you-go table (defaults to 100 when empty)
 - **Data**: daily / monthly usage estimated locally (built-in price catalog + community price table), three-layer model attribution, read-only local sessions; subscription models count toward Tokens but not cost, and the billing mode is pinned per key instead of following quota flakiness
 
 ---
@@ -70,13 +70,13 @@ Screenshots below use mock data so the full layout is visible at once:
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-sub.png" alt="Subscription pill" />
 </p>
 
-**P2 · Floating dashboard (usage tab)**: monthly budgets and subscriptions, time range, two summary tiles, per-model breakdown
+**P2 · Floating panel (current model)**: used ring and percent, used / budget, real balance, month-to-date spend, time range and usage table
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-dashboard.png" alt="Dashboard" />
 </p>
 
-**P3 · Settings tab**: API billing, subscriptions, display, data & logs, pricing & version
+**P3 · Full-page dashboard**: pay-as-you-go, subscription plans, summary tiles and model breakdown, settings and data
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/settings.png" alt="Settings" />

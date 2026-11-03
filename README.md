@@ -30,9 +30,9 @@
 </p>
 
 - **厂商支持**：DeepSeek（DS 账号 / API Key）、GLM Coding（订阅）、Kimi Coding（订阅）、Kimi / OpenRouter / Qwen（按量，OpenRouter USD、Qwen 国内 CNY / 国际 USD）——填 Key 自动识别订阅或按量计费
-- **页面**：底栏 Pill → 浮层看板（用量 / 设置双 tab）；Pill 点击展开、点击浮层外收起
-- **看板数据**：时间范围（当天 / 近 7 天 / 近 30 天 / 全部）、本月预算进度（已用 / 总额 / 百分比）、今日消耗、账户余额、订阅 5h / 周窗口与重置时间；两格卡显示**总费用（按币种）**与**真实 Tokens（含缓存读写）**；下方按 provider / 模型列出费用、请求数与命中率
-- **设置**：按供应商的月度预算（带币种，未填写默认 100）、刷新间隔三档、账户余额开关、日志、数据导出 / 导入、检查更新
+- **页面**：底栏 Pill → 浮层「当前模型」（四列主区 + 时间范围 + 用量表）；浮层底部「全量看板」或左侧栏入口进入整页，按量计价与订阅套餐两张表、两格卡与明细、底部设置胶囊
+- **看板数据**：时间范围（当天 / 近 7 天 / 近 30 天 / 全部）、月度预算与已用环、计划余额、账户真实余额、本月已花、订阅 5h / 周 / 月窗口与倒计时；两格卡显示**总费用（按币种）**与**真实 Tokens（含缓存读写）**
+- **设置**：整页底部三行——立即刷新与刷新间隔、日志与数据导出导入、价格表与版本检查；按供应商的月度预算在按量表行内编辑（未填写默认 100）
 - **数据口径**：每日 / 每月用量本地估算（内置价格表 + 社区价格表），三层模型归属，只读本地会话；订阅模型计入 Tokens 但不计费用，计费形态按 Key 固化，不随配额接口抖动
 
 ---
@@ -60,7 +60,7 @@ dsh plugin --profile desktop add /path/to/dsh-token-dash-1.1.0.tgz
 
 以下截图使用假数据演示，便于一次看到完整效果：
 
-**P1 · 底栏 Pill**（按量 / 订阅两种形态；点击展开看板，点击浮层外或 `×` 收起）
+**P1 · 底栏 Pill**（按量 / 订阅两种形态；点击展开浮层，点击浮层外、`×` 或 `Esc` 收起）
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-api.png" alt="按量 Pill" />
@@ -70,16 +70,16 @@ dsh plugin --profile desktop add /path/to/dsh-token-dash-1.1.0.tgz
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-sub.png" alt="订阅 Pill" />
 </p>
 
-**P2 · 浮层看板（用量 tab）**：本月预算与订阅、时间范围、两格统计卡、按模型明细
+**P2 · 浮层（当前模型）**：环与百分比、已用 / 预算、真实余额、本月已花，时间范围与用量表
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-dashboard.png" alt="浮层看板" />
 </p>
 
-**P3 · 设置 tab**：API 计费、订阅、显示、数据与日志、价格与版本
+**P3 · 整页看板**：按量计价、订阅套餐、两格卡与明细、设置与数据管理
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/settings.png" alt="设置" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/settings.png" alt="整页看板" />
 </p>
 
 ---

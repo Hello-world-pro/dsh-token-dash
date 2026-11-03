@@ -138,12 +138,7 @@ try {
   await panel.screenshot({ path: join(outDir, 'panel-dashboard.png') })
   console.log('[shots] panel-dashboard.png')
 
-  // 设置：五分区
-  await jsClick(panel.getByRole('tab', { name: '设置' }))
-  await page.locator('[data-testid=token-dash-settings]').waitFor({ timeout: 8000 })
-  await page.waitForTimeout(400)
-  await panel.screenshot({ path: join(outDir, 'settings.png') })
-  console.log('[shots] settings.png')
+  // 整页看板截图放到最后（切走中栏后 pill 不再可见）
 
   // P1 Pill（按量形态）：面板固定在左上角，pill 仍在底栏可见
   const shotPill = async (file) => {
@@ -185,6 +180,29 @@ try {
   }
   await page.waitForTimeout(700)
   await shotPill('pill-sub.png')
+
+  // 整页看板：先切回全量数据（七家），再从侧栏入口进中栏整页
+  activeSummary = summary
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(900)
+  await page.evaluate(() => {
+    for (const node of document.querySelectorAll('[role=presentation]')) node.remove()
+    document.body.setAttribute('data-ds-dark-theme', '1')
+  })
+  await page.waitForTimeout(400)
+  const entry = page.locator('[data-testid=token-dash-sidebar-entry]')
+  await entry.waitFor({ timeout: 10000 })
+  await jsClick(entry.first())
+  const board = page.locator('[data-testid=token-dash-board]')
+  await board.waitFor({ timeout: 10000 })
+  await page.waitForTimeout(600)
+  // 元素截图会拼接滚动区域：胶囊改静态，整体缩放以在固定视口内完整呈现
+  await page.addStyleTag({
+    content: '[data-testid=token-dash-settings-capsule]{position:static !important}[data-testid=token-dash-board]{zoom:.72}',
+  })
+  await page.waitForTimeout(300)
+  await board.screenshot({ path: join(outDir, 'settings.png') })
+  console.log('[shots] settings.png')
 } finally {
   await browser?.close().catch(() => {})
   stopTree(server?.child)

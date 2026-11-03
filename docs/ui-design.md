@@ -218,7 +218,7 @@ DeepSeek-V4.1-F…    12.5k [12.3k/0/195]      1      0%
 ### 5.1 入口
 
 - `main` 槽注册整页，`key = token-dash`；`sidebar.panellist` 同 `id`、`order: 6`。
-- 必须 `slots.inject` 后再 `register`；入口 label 来自注册参数，语言切换需 dispose + 重注册。
+- 必须 `slots.inject` 后再 `register`；入口 label 来自注册参数，当前接受语言切换重启后生效（不引入 dispose / 重注册）。
 - 实测：侧栏「插件」分组出现入口，点击切中栏整页；`selectPanel` 亦可直达。
 
 ### 5.2 结构

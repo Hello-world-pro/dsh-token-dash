@@ -33,14 +33,17 @@ export const summary = {
     provider('deepseek-official', 'DeepSeek', 'api', 'CNY', {
       budget: budget(100, 'CNY', 91.9),
       balance: { amount: 87.66, status: 'ok', currency: 'CNY', updatedAt: now },
+      usage: { todayTokens: 128_400, monthTokens: 3_960_000, todayCost: 0.16, monthCost: 91.9, requests: 148 },
     }),
     provider('openrouter', 'OpenRouter', 'api', 'USD', {
       budget: budget(60, 'USD', 22.8),
       balance: { amount: 7.66, status: 'ok', currency: 'USD', updatedAt: now },
+      usage: { todayTokens: 40_000, monthTokens: 960_000, todayCost: 0.12, monthCost: 22.8, requests: 12 },
     }),
     provider('qwen', '通义千问', 'api', 'CNY', {
       budget: budget(5, 'CNY', 0.4),
       balance: { amount: null, status: 'unsupported', currency: 'CNY', updatedAt: now },
+      usage: { todayTokens: 80_000, monthTokens: 480_000, todayCost: 0.04, monthCost: 0.4, requests: 24 },
     }),
     provider('zhipu', 'GLM Coding', 'subscription', 'CNY', {
       canSubscribe: false,
@@ -55,6 +58,24 @@ export const summary = {
         { key: '5h', usedPercent: 30, resetAt: now + 3 * 3600_000 },
         { key: 'week', usedPercent: 12, resetAt: now + 26 * 3600_000 },
       ],
+    }),
+    provider('opencode-go', 'OpenCode Go', 'subscription', 'USD', {
+      canSubscribe: false,
+      usage: { todayTokens: 24_000, monthTokens: 480_000, todayCost: 0, monthCost: 0, requests: 22 },
+      windows: [
+        { key: '5h', usedPercent: 12, resetAt: now + 2 * 3600_000 },
+        { key: 'week', usedPercent: 34, resetAt: now + 4 * 86400_000 },
+        { key: 'month', usedPercent: 58, resetAt: now + 18 * 86400_000 },
+      ],
+    }),
+    provider('command-code', 'Command Code', 'subscription', 'CNY', {
+      canSubscribe: false,
+      usage: { todayTokens: 6_000, monthTokens: 120_000, todayCost: 0, monthCost: 0, requests: 5 },
+      windows: [
+        { key: '5h', usedPercent: 96, resetAt: now + 90 * 60_000 },
+        { key: 'week', usedPercent: 61, resetAt: now + 5 * 86400_000 },
+      ],
+      credits: { amount: 12.5, status: 'ok', currency: 'CNY', updatedAt: now },
     }),
   ],
   pricingLinks: [
@@ -110,6 +131,8 @@ const monthModels = [
   row('openrouter', 'OpenRouter', 'deepseek-v4.1-flash', 'DeepSeek-V4.1-Flash', 'api', 'USD', 22.8, { input: 20_000, cacheRead: 10_000, cacheWrite: 0, output: 10_000 }, 12, true),
   row('qwen', '通义千问', 'qwen3.8-max', 'Qwen3.8-Max', 'api', 'CNY', 0.4, { input: 50_000, cacheRead: 20_000, cacheWrite: 0, output: 10_000 }, 24),
   row('zhipu', 'GLM Coding', 'glm-5.3', 'GLM-5.3', 'subscription', 'CNY', 0, { input: 300_000, cacheRead: 520_000, cacheWrite: 0, output: 40_000 }, 64),
+  row('opencode-go', 'OpenCode Go', 'claude-sonnet', 'Claude Sonnet', 'subscription', 'USD', 0, { input: 60_000, cacheRead: 120_000, cacheWrite: 0, output: 8_000 }, 22),
+  row('command-code', 'Command Code', 'gpt-5.4', 'GPT-5.4', 'subscription', 'CNY', 0, { input: 20_000, cacheRead: 40_000, cacheWrite: 0, output: 4_000 }, 6),
 ]
 
 const todayModels = [

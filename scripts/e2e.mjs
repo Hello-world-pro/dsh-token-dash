@@ -4,11 +4,12 @@
  */
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
 
 const root = resolve('.')
+const PKG_VERSION = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
 const keep = process.argv.includes('--keep')
 const tmpRoot = join(root, '.tmp')
 const home = join(tmpRoot, `e2e-home-${Date.now()}`)
@@ -69,8 +70,16 @@ const apiProviders = [
   provider('openrouter', 'OpenRouter', 'api', 'USD', { budget: budget(50, 'USD', 19, 0.38), balance: { amount: 7.66, status: 'ok', currency: 'USD', updatedAt: now } }),
 ]
 const subProviders = [
-  provider('zhipu', 'GLM Coding', 'subscription', 'CNY', { windows: [{ key: '5h', usedPercent: 42.5, resetAt: now + 3600_000 }, { key: 'week', usedPercent: 18.2, resetAt: now + 3600_000 }] }),
-  provider('moonshot', 'Kimi Coding', 'subscription', 'CNY', { windows: [{ key: '5h', usedPercent: 30, resetAt: now + 3600_000 }, { key: 'week', usedPercent: 12, resetAt: now + 3600_000 }] }),
+  provider('zhipu', 'GLM Coding', 'subscription', 'CNY', { windows: [{ key: '5h', usedPercent: 42.5, resetAt: now + 3600_000 }, { key: 'week', usedPercent: 18.2, resetAt: now + 26 * 3600_000 }] }),
+  provider('moonshot', 'Kimi Coding', 'subscription', 'CNY', { windows: [{ key: '5h', usedPercent: 96, resetAt: now + 600_000 }, { key: 'week', usedPercent: 12, resetAt: now + 26 * 3600_000 }] }),
+  provider('opencode-go', 'OpenCode Go', 'subscription', 'USD', {
+    usage: { todayTokens: 24_000, monthTokens: 480_000, todayCost: 0, monthCost: 0, requests: 22 },
+    windows: [
+      { key: '5h', usedPercent: 12, resetAt: now + 2 * 3600_000 },
+      { key: 'week', usedPercent: 34, resetAt: now + 4 * 86400_000 },
+      { key: 'month', usedPercent: 58, resetAt: now + 18 * 86400_000 },
+    ],
+  }),
 ]
 const pricingLinks = [
   { id: 'deepseek-official', label: 'DeepSeek', url: 'https://api-docs.deepseek.com/quick_start/pricing' },
@@ -97,7 +106,7 @@ let currentSummary = {
   pricingLinks,
   catalog: { version: 1, updatedAt: '1793591115', source: 'community-gitee', url: 'https://gitee.com/oyw125/model-price-table' },
   showBalance: true,
-  version: '1.1.2',
+  version: PKG_VERSION,
   refreshMs: 60000,
   currentProviderId: 'deepseek-official',
   updatedAt: now,
@@ -128,6 +137,7 @@ let failUsage = false
 let updateAvailable = false
 let updateRequests = 0
 let usageDelay = 0
+let repoMode = '404'
 const env = { ...process.env, DSH_HOME: home }
 let server
 let browser
@@ -167,7 +177,7 @@ try {
   // Seed prefs used by P3.
   const prefsResponse = await fetch(`${base}/token-dash/api/prefs`, {
     method: 'PUT', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ budgets: { 'deepseek-official': { amount: 100, currency: 'CNY' }, openrouter: { amount: 50, currency: 'USD' } }, billingModes: { zhipu: 'subscription', moonshot: 'subscription' } }),
+    body: JSON.stringify({ budgets: { 'deepseek-official': { amount: 100, currency: 'CNY' }, openrouter: { amount: 50, currency: 'USD' } }, billingModes: { zhipu: 'subscription', moonshot: 'subscription', 'opencode-go': 'subscription' } }),
   })
   assert.equal(prefsResponse.status, 200)
 
@@ -184,9 +194,15 @@ try {
     if (failUsage) return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ ok: false, reason: 'mock-usage' }) })
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: usageFor(range) }) })
   })
+  await page.route('**/token-dash/api/repo*', (route) => {
+    if (repoMode === 'ok') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { ok: true, stars: 1200, fetchedAt: now } }) })
+    }
+    return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ ok: false }) })
+  })
   await page.route('**/token-dash/api/update', (route) => {
     updateRequests += 1
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '1.1.3', current: '1.1.2' } }) })
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { published: true, hasUpdate: updateAvailable, latest: '9.9.9', current: PKG_VERSION } }) })
   })
   await page.route('**/open-in-app/open', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }))
   await page.route('**/token-dash/api/logs/export*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { content: '{"type":"header"}\n' } }) }))
@@ -210,7 +226,9 @@ try {
   await pill.waitFor({ timeout: 20000 })
   assert.ok(await pill.isVisible())
   assert.match(await pill.innerText(), /\[API\]/)
+  assert.match(await pill.innerText(), /12\.3%/)
   assert.match(await pill.innerText(), /¥49\.86/)
+  assert.equal(await pill.locator('[data-testid=token-dash-pill-ring-budget] svg').count(), 1)
   await page.waitForTimeout(4300)
   assert.ok(updateRequests >= 1, 'startup update check should run once')
 
@@ -218,24 +236,39 @@ try {
   const openPanel = async () => {
     if (await page.locator('[data-testid=token-dash-panel]').count() === 0) await jsClick(pill)
     await page.locator('[data-testid=token-dash-panel]').waitFor({ timeout: 8000 })
-    await page.waitForTimeout(200)
+    await page.waitForTimeout(250)
   }
   const panel = page.locator('[data-testid=token-dash-panel]')
   await openPanel()
-  await page.screenshot({ path: join(tmpRoot, 'e2e', 'p2-fresh.png'), fullPage: true })
+  await page.screenshot({ path: join(tmpRoot, 'e2e', 'p2-current.png'), fullPage: true })
+
+  // P2: adaptive width, no tabs, current-model four columns.
   const panelBox = await panel.boundingBox()
-  assert.ok(panelBox !== null && Math.abs(panelBox.width - 360) < 1, `panel width ${panelBox?.width} should be 360`)
-  assert.match(await panel.innerText(), /本月预算/)
-  assert.match(await panel.innerText(), /订阅套餐（账户级）/)
-  assert.match(await panel.innerText(), /¥12\.34\/¥100\.00/)
-  assert.match(await panel.innerText(), /余额 ¥49\.86/)
+  assert.ok(panelBox !== null && panelBox.width >= 280 && panelBox.width <= 480, `panel width ${panelBox?.width} should be in 280..480`)
+  assert.match(await panel.innerText(), /当前模型/)
+  assert.match(await panel.innerText(), /按量 API/)
+  assert.equal(await panel.getByRole('tab').count(), 4) // range capsule only
+  assert.ok(!(await panel.innerText()).includes('本月预算'))
+  assert.ok(!(await panel.innerText()).includes('订阅套餐（账户级）'))
+  const summaryRow = panel.getByTestId('token-dash-summary-row')
+  assert.equal(await summaryRow.count(), 1)
+  assert.match(await summaryRow.innerText(), /12\.3%/)
+  assert.match(await summaryRow.innerText(), /¥12\.34 \/ ¥100\.00/)
+  assert.match(await summaryRow.innerText(), /¥49\.86/)
+  assert.match(await summaryRow.innerText(), /¥12\.34/)
+  assert.equal(await panel.getByTestId('token-dash-summary-ring').locator('svg').count(), 1)
+
+  // Usage table: four columns, Tokens bracket, no cost column.
   assert.match(await panel.innerText(), /DeepSeek-V4\.1-Flash/)
-  assert.match(await panel.innerText(), /Tokens 320k \[100k\/200k\/20k\]/)
-  assert.match(await panel.innerText(), /请求 12/)
-  assert.match(await panel.innerText(), /命中 /)
-  const usageLine = panel.getByTestId('token-dash-usage-line').first()
-  assert.match(await usageLine.innerText(), /Tokens 320k .*请求 12\s*命中 /s)
-  assert.ok((await usageLine.boundingBox()).height < 24, 'usage metrics should stay on one line')
+  assert.match(await panel.innerText(), /320k\s*\[100k\/200k\/20k\]/)
+  const usageRow = panel.getByTestId('token-dash-usage-row-deepseek-official-deepseek-flash')
+  assert.equal(await usageRow.count(), 1)
+  assert.match(await usageRow.innerText(), /12/)
+  assert.ok(!(await panel.innerText()).includes('费用'))
+  const usageLineBox = await panel.getByTestId('token-dash-usage-line').first().boundingBox()
+  assert.ok(usageLineBox !== null && usageLineBox.height < 30, 'usage metrics should stay on one line')
+  assert.match(await panel.innerText(), /更新于/)
+  assert.equal(await panel.getByTestId('token-dash-open-board').count(), 1, 'board entry should render once main is registered')
 
   // Header icon buttons share one control size.
   const info = panel.getByRole('button', { name: '查看支持的 API Key 范围' })
@@ -245,209 +278,38 @@ try {
   for (const [name, box] of [['info', infoBox], ['refresh', refreshBox], ['close', closeBox]]) {
     assert.ok(box !== null && Math.abs(box.width - 22) < 0.5 && Math.abs(box.height - 22) < 0.5, `${name} header button ${box?.width}x${box?.height} should be 22x22`)
   }
-
-  // Support tooltip is a fixed overlay, independent from panel clipping.
   await jsClick(info)
   await page.waitForTimeout(100)
   assert.match(await panel.innerText(), /目前支持 DeepSeek \/ Kimi \/ GLM \/ OpenRouter \/ Qwen API Key/)
-  const headerTip = page.getByRole('tooltip')
-  await headerTip.waitFor({ timeout: 5000 })
-  assert.equal(await headerTip.evaluate((node) => getComputedStyle(node).position), 'fixed')
-  const headerTipBox = await headerTip.boundingBox()
-  assert.ok(headerTipBox !== null && headerTipBox.x >= 0 && headerTipBox.x + headerTipBox.width <= 1280, 'header tooltip should stay inside viewport')
-  assert.ok(Math.abs((headerTipBox.x + headerTipBox.width / 2) - (infoBox.x + infoBox.width / 2)) < 1.5, 'header tooltip should be centered on trigger')
   await jsClick(info)
 
-  // Detail rows no longer carry per-model info buttons; one legend lives on Real Tokens.
-  assert.equal(await panel.getByRole('button', { name: /DeepSeek-V4\.1-Flash Token 明细/ }).count(), 0)
-  const tokenInfo = panel.getByRole('button', { name: 'Tokens 括号说明' })
-  assert.equal(await tokenInfo.count(), 1)
-  assert.equal(await tokenInfo.evaluate((node) => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)')
-  assert.equal(await tokenInfo.evaluate((node) => getComputedStyle(node).borderTopStyle), 'none')
-  await jsClick(tokenInfo)
-  await page.waitForTimeout(100)
-  const modelTip = page.getByRole('tooltip')
-  await modelTip.waitFor({ timeout: 5000 })
-  assert.equal(await modelTip.evaluate((node) => getComputedStyle(node).position), 'fixed')
-  assert.match(await modelTip.innerText(), /Tokens 括号顺序：输入 \/ 缓存（读\+写）\/ 输出/)
-  const inlineBox = await tokenInfo.boundingBox()
-  const modelTipBox = await modelTip.boundingBox()
-  assert.ok(modelTipBox !== null && inlineBox !== null, 'legend tooltip and trigger should have boxes')
-  assert.ok(modelTipBox.y + modelTipBox.height <= inlineBox.y + 1, 'legend tooltip should default above trigger')
-  // maxWidth 220 作用在内容盒，padding 7×2 额外计入；总宽上限 234
-  assert.ok(modelTipBox.width < 236, `legend tooltip width ${modelTipBox.width} should clamp to 220 content`)
-  assert.ok(Math.abs((modelTipBox.x + modelTipBox.width / 2) - (inlineBox.x + inlineBox.width / 2)) < 1.5, 'legend tooltip should be centered on trigger')
-  await page.screenshot({ path: join(tmpRoot, 'e2e', 'tooltip.png'), fullPage: true })
-  await jsClick(tokenInfo)
-  assert.equal(await panel.getByRole('tab').count(), 6) // 2 tabs + 4 range items
-
-  // Range switch must keep the previous complete view while loading.
+  // Range switch keeps previous data while loading.
   usageDelay = 600
   await jsClick(panel.getByRole('tab', { name: '近30天' }))
   await page.waitForTimeout(120)
-  assert.match(await panel.innerText(), /Tokens 320k \[100k\/200k\/20k\]/)
+  assert.match(await panel.innerText(), /320k\s*\[100k\/200k\/20k\]/)
   assert.ok(!(await panel.innerText()).includes('Tokens 0'))
-  await page.waitForTimeout(650)
+  await page.waitForTimeout(700)
   usageDelay = 0
   assert.match(await panel.innerText(), /近30天/)
 
-  // P2 range and detail.
-  await jsClick(panel.getByRole('tab', { name: '近7天' }))
+  // Esc closes the panel.
+  await page.keyboard.press('Escape')
   await page.waitForTimeout(200)
-  assert.match(await panel.innerText(), /真实 Tokens/)
-  // 两格卡精简：去掉「按币种」与「入/缓存/出」标签，副行只留数字
-  assert.equal((await panel.innerText()).includes('按币种'), false)
-  assert.equal((await panel.innerText()).includes('缓存'), false)
-  assert.match(await panel.innerText(), /近7天/)
-  assert.equal(await page.locator('[data-testid=token-dash-api-row-deepseek-official]').count(), 1)
-  assert.equal(await page.locator('[data-testid=token-dash-sub-row-zhipu]').count(), 1)
-  // 预算行数字列左对齐：两行的费用列起点一致
-  const costBoxA = await page.getByTestId('token-dash-budget-cost-deepseek-official').boundingBox()
-  const costBoxB = await page.getByTestId('token-dash-budget-cost-openrouter').boundingBox()
-  assert.ok(costBoxA !== null && costBoxB !== null, 'budget cost cells should have boxes')
-  assert.ok(Math.abs(costBoxA.x - costBoxB.x) <= 1, `budget cost column should be left aligned (${costBoxA.x} vs ${costBoxB.x})`)
-  // 余额列同样左对齐（首行右端固定宽度 + 左对齐）
-  const balBoxA = await page.getByTestId('token-dash-budget-balance-deepseek-official').boundingBox()
-  const balBoxB = await page.getByTestId('token-dash-budget-balance-openrouter').boundingBox()
-  assert.ok(balBoxA !== null && balBoxB !== null, 'budget balance cells should have boxes')
-  assert.ok(Math.abs(balBoxA.x - balBoxB.x) <= 1, `budget balance column should be left aligned (${balBoxA.x} vs ${balBoxB.x})`)
-  // 预算条满宽（≥200px），不再是 48px 小条
-  const barBox = await page.getByTestId('token-dash-budget-bar-deepseek-official').boundingBox()
-  assert.ok(barBox !== null && barBox.width >= 200, `budget bar should stretch (${barBox?.width})`)
-  // 重置文案带相对时间：`x 小时/天后 · MM-DD HH:mm 重置`
-  assert.match(await panel.innerText(), /(分钟后|小时后|天后) · \d{2}-\d{2} \d{2}:\d{2} 重置/)
-  // 订阅窗口组左右分开：右侧「周」组的迷你条右端贴分区内容右边界
-  const windowsRow = panel.getByTestId('token-dash-quota-windows-zhipu')
-  const windowsBox = await windowsRow.boundingBox()
-  const lastWindowBox = await windowsRow.locator(':scope > span').last().boundingBox()
-  assert.ok(windowsBox !== null && lastWindowBox !== null, 'quota windows should have boxes')
-  const rightGap = (windowsBox.x + windowsBox.width) - (lastWindowBox.x + lastWindowBox.width)
-  assert.ok(rightGap <= 2, `quota windows right edge should align (gap ${rightGap})`)
+  assert.equal(await page.locator('[data-testid=token-dash-panel]').count(), 0)
 
-  // P3 structure and no legacy controls.
-  await jsClick(panel.getByRole('tab', { name: '设置' }))
-  await page.waitForTimeout(300)
-  const settings = page.locator('[data-testid=token-dash-settings]')
-  await settings.waitFor({ timeout: 8000 })
-  assert.match(await settings.innerText(), /API 计费/)
-  assert.match(await settings.innerText(), /订阅/)
-  // 订阅行只保留供应商名与重置时间，不再显示「账户套餐」与窗口百分比
-  assert.equal((await settings.innerText()).includes('账户套餐'), false)
-  assert.equal((await settings.innerText()).includes('5h'), false)
-  assert.equal((await settings.innerText()).includes('周'), false)
-  assert.match(await settings.innerText(), /(分钟后|小时后|天后) · \d{2}-\d{2} \d{2}:\d{2} 重置/)
-  assert.match(await settings.innerText(), /显示/)
-  assert.match(await settings.innerText(), /日志/)
-  assert.match(await settings.innerText(), /价格与版本/)
-  assert.ok(!(await settings.innerText()).includes('诊断'))
-  assert.ok(!(await settings.innerText()).includes('清空日志'))
-  assert.ok(!(await settings.innerText()).includes('本月 Token'))
-  assert.equal(await settings.locator('select').count(), 0)
-
-  // Refresh interval must stay compact and the title must stay on one line.
-  const refreshSegment = settings.getByTestId('token-dash-refresh-segment')
-  const refreshSegmentBox = await refreshSegment.boundingBox()
-  assert.ok(refreshSegmentBox !== null && refreshSegmentBox.width <= 170, `refresh segment width ${refreshSegmentBox?.width} should be <= 170`)
-  const refreshLabel = settings.getByText('刷新间隔', { exact: true })
-  assert.equal(await refreshLabel.evaluate((node) => node.getClientRects().length), 1)
-
-  // Logs and data share one section; price stays a separate single-column section.
-  const logSection = settings.getByTestId('token-dash-data-log-section')
-  const priceSection = settings.getByTestId('token-dash-price-section')
-  assert.equal(await logSection.count(), 1)
-  assert.equal(await priceSection.count(), 1)
-  const logBox = await logSection.boundingBox()
-  const priceBox = await priceSection.boundingBox()
-  assert.ok(logBox !== null && priceBox !== null)
-  assert.ok(logBox.y + logBox.height <= priceBox.y + 1, 'log section should be above price section')
-  assert.equal(await logSection.locator('b').first().evaluate((node) => node.getClientRects().length), 1)
-  assert.equal(await settings.locator('section').count(), 0)
-  assert.equal(await panel.getByRole('button', { name: '查看支持的 API Key 范围' }).count(), 0)
-  await page.screenshot({ path: join(tmpRoot, 'e2e', 'p3-v2.png'), fullPage: true })
-  const priceLinks = settings.getByTestId('token-dash-price-links').getByRole('link')
-  assert.equal(await priceLinks.count(), 5)
-  assert.ok(!(await settings.innerText()).includes('查看价格明细'))
-  assert.ok(!(await settings.innerText()).includes('1793591115'))
-  assert.match(await settings.innerText(), /价格表 2026-\d{2}-\d{2}/)
-  const community = settings.getByRole('link', { name: '社区' })
-  assert.equal(await community.count(), 1)
-  assert.equal(await community.getAttribute('href'), 'https://gitee.com/oyw125/model-price-table')
-  assert.match(await settings.innerText(), /版本 1\.1\.2/)
-  assert.ok(!(await settings.innerText()).includes('· 已保存'))
-
-  // Price links share a row.
-  const linkBoxes = await priceLinks.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().top))
-  assert.ok(Math.max(...linkBoxes) - Math.min(...linkBoxes) < 2, 'price links should share one row')
-
-  // Update check must restore the button after "up to date".
-  const updateButton = settings.getByTestId('token-dash-update')
-  await updateButton.waitFor({ timeout: 5000 })
-  await jsClick(updateButton)
-  await page.waitForTimeout(250)
-  assert.match(await settings.innerText(), /已是最新/)
-  assert.equal(await updateButton.isEnabled(), true)
-  await page.waitForTimeout(1800)
-  assert.match(await settings.innerText(), /版本 1\.1\.2/)
-  assert.equal(await updateButton.isVisible(), true)
-
-  // Available state opens an explicit confirm, not an auto install.
-  updateAvailable = true
-  await jsClick(updateButton)
-  await page.waitForTimeout(250)
-  assert.match(await settings.innerText(), /发现 1\.1\.3/)
-  await jsClick(settings.getByRole('button', { name: '取消' }))
-  updateAvailable = false
-
-  // Budget valid/invalid.
-  const budgetInput = settings.getByTestId('token-dash-budget-input-deepseek-official')
-  assert.equal(await budgetInput.inputValue(), '100')
-  const setBudget = (value) => budgetInput.evaluate((node, next) => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
-    setter.call(node, next)
-    node.dispatchEvent(new Event('input', { bubbles: true }))
-    node.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
-  }, value)
-  await setBudget('200.50')
-  await page.waitForTimeout(500)
-  assert.match(await settings.innerText(), /已保存/)
-  assert.ok(!(await settings.innerText()).includes('版本 1.1.2 · 已保存'))
-  await page.waitForTimeout(1800)
-  assert.match(await settings.innerText(), /版本 1\.1\.2/)
-  assert.ok(!(await settings.innerText()).includes('· 已保存'))
-  const savedPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
-  assert.equal(savedPrefs.budgets['deepseek-official'].amount, 200.5)
-  await setBudget('-1')
-  await page.waitForTimeout(300)
-  assert.match(await settings.innerText(), /请输入 0 或正数/)
-  const invalidPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
-  assert.equal(invalidPrefs.budgets['deepseek-official'].amount, 200.5)
-  // 清空写 0（未设置），不会被默认 100 覆盖
-  await setBudget('')
-  await page.waitForTimeout(400)
-  const clearedPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
-  assert.equal(clearedPrefs.budgets['deepseek-official'].amount, 0)
-
-  // Logs and update icon.
-  await jsClick(settings.getByTestId('token-dash-log-open'))
+  // Narrow viewport: panel clamps and page does not scroll horizontally.
+  await page.setViewportSize({ width: 360, height: 800 })
+  await openPanel()
+  const narrowBox = await panel.boundingBox()
+  assert.ok(narrowBox !== null && narrowBox.width <= 344, `panel width ${narrowBox?.width} should clamp to viewport`)
+  assert.ok(narrowBox.x >= 0 && narrowBox.x + narrowBox.width <= 360, `panel bounds ${narrowBox.x}+${narrowBox.width} should fit viewport`)
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  assert.equal(overflow, 0)
+  await jsClick(closeButton)
   await page.waitForTimeout(200)
-  assert.match(await settings.innerText(), /已打开日志文件夹|无法打开，已复制路径/)
-  await jsClick(settings.getByTestId('token-dash-log-export'))
-  await page.waitForTimeout(200)
-  assert.equal(await settings.getByTestId('token-dash-update').count(), 1)
-
-  // Data section: export / import entries exist between logs and prices.
-  const dataSection = settings.getByTestId('token-dash-data-log-section')
-  assert.equal(await dataSection.count(), 1)
-  assert.equal(await dataSection.getByTestId('token-dash-data-export').count(), 1)
-  assert.equal(await dataSection.getByTestId('token-dash-data-import').count(), 1)
-  assert.equal(await dataSection.getByTestId('token-dash-log-open').count(), 1)
-  assert.match(await dataSection.innerText(), /备份与恢复/)
-  assert.match(await dataSection.innerText(), /日志/)
-
-  // Back to usage, range is retained.
-  await jsClick(panel.getByRole('tab', { name: '用量' }))
-  await page.waitForTimeout(200)
-  assert.match(await panel.innerText(), /近7天/)
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await openPanel()
 
   // Error states and empty provider.
   failSummary = true
@@ -458,7 +320,7 @@ try {
   await jsClick(panel.getByTestId('token-dash-refresh'))
   await page.waitForTimeout(300)
   failUsage = true
-  await jsClick(panel.getByRole('tab', { name: '当天' }))
+  await jsClick(panel.getByRole('tab', { name: '近7天' }))
   await page.waitForTimeout(300)
   assert.match(await panel.innerText(), /范围数据加载失败/)
   failUsage = false
@@ -466,33 +328,162 @@ try {
   await jsClick(panel.getByTestId('token-dash-refresh'))
   await page.waitForTimeout(300)
   assert.match(await panel.innerText(), /未检测到已配置供应商/)
-  // 探测失败与"未配置"区分：曾探测到 provider、本次为空
   currentSummary = { ...currentSummary, providersDegraded: true }
   await jsClick(panel.getByTestId('token-dash-refresh'))
   await page.waitForTimeout(300)
   assert.match(await panel.innerText(), /供应商探测失败/)
-  assert.equal(await panel.getByRole('button', { name: '重试' }).count() >= 1, true)
-  currentSummary = { ...currentSummary, providersDegraded: false }
+  assert.ok(await panel.getByRole('button', { name: '重试' }).count() >= 1)
+  currentSummary = { ...currentSummary, providers: [...apiProviders, ...subProviders], providersDegraded: false }
   assert.match(await pill.innerText(), /--/)
-  assert.equal(await page.locator('[data-testid=token-dash-refresh] span').count(), 1)
 
-  // Dark theme token check.
-  await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', '1'))
+  // Back to full data, then open the full-page board from the panel.
+  await jsClick(panel.getByTestId('token-dash-refresh'))
+  await page.waitForTimeout(400)
+  await jsClick(panel.getByTestId('token-dash-open-board'))
+  const board = page.locator('[data-testid=token-dash-board]')
+  await board.waitFor({ timeout: 8000 })
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: join(tmpRoot, 'e2e', 'p3-board.png'), fullPage: true })
+
+  assert.match(await board.innerText(), /按量计价（按供应商）/)
+  assert.match(await board.innerText(), /订阅套餐（按供应商）/)
+  assert.match(await board.innerText(), /设置与数据管理/)
+  // Two tables split by kind.
+  assert.equal(await board.locator('[data-testid^=token-dash-budget-row-]').count(), apiProviders.length)
+  assert.equal(await board.locator('[data-testid^=token-dash-quota-row-]').count(), subProviders.length)
+  // Budget table four columns.
+  assert.match(await board.getByTestId('token-dash-budget-budget-deepseek-official').innerText(), /¥100\.00/)
+  assert.match(await board.getByTestId('token-dash-budget-used-deepseek-official').innerText(), /12\.3%/)
+  assert.match(await board.getByTestId('token-dash-budget-plan-deepseek-official').innerText(), /¥87\.66/)
+  assert.match(await board.getByTestId('token-dash-budget-balance-deepseek-official').innerText(), /¥49\.86/)
+  const planBox = await board.getByTestId('token-dash-budget-plan-deepseek-official').boundingBox()
+  const planBox2 = await board.getByTestId('token-dash-budget-plan-openrouter').boundingBox()
+  assert.ok(planBox !== null && planBox2 !== null && Math.abs(planBox.x - planBox2.x) <= 1, 'plan balance column should be left aligned')
+  // Subscription table: three window cells per provider, two lines each.
+  assert.equal(await board.locator('[data-testid^=token-dash-quota-cell-]').count(), subProviders.length * 3)
+  assert.match(await board.getByTestId('token-dash-quota-cell-moonshot-5h').innerText(), /96\.0%|96%/)
+  assert.match(await board.getByTestId('token-dash-quota-cell-opencode-go-month').innerText(), /58\.0%|58%/)
+  assert.match(await board.getByTestId('token-dash-quota-rel-opencode-go-month').innerText(), /天后|小时后|分钟后/)
+  assert.match(await board.getByTestId('token-dash-quota-abs-opencode-go-month').innerText(), /\d{2}-\d{2} \d{2}:\d{2}/)
+  // Two cards with border, above the detail table.
+  const cardCost = board.getByTestId('token-dash-card-cost')
+  const cardTokens = board.getByTestId('token-dash-card-tokens')
+  const [costBox, tokensBox] = await Promise.all([cardCost.boundingBox(), cardTokens.boundingBox()])
+  assert.ok(costBox !== null && tokensBox !== null)
+  assert.ok(Math.abs((tokensBox.x - costBox.x - costBox.width) - 12) < 2, 'cards should be 12px apart')
+  const borderStyle = await cardCost.evaluate((node) => getComputedStyle(node).borderTopStyle)
+  assert.equal(borderStyle, 'solid')
+  const detailTable = board.getByTestId('token-dash-detail-table')
+  const detailBox = await detailTable.boundingBox()
+  assert.ok(detailBox !== null && costBox !== null && detailBox.y - (costBox.y + costBox.height) >= 16, 'cards should be 16px above detail table')
+  assert.match(await detailTable.innerText(), /费用（API 计价估算）/)
+  assert.equal(await board.locator('[data-testid^=token-dash-detail-row-]').count(), models.length)
+  // Settings capsule: three rows and expected controls.
+  assert.equal(await board.getByTestId('token-dash-settings-row-1').count(), 1)
+  assert.equal(await board.getByTestId('token-dash-settings-row-2').count(), 1)
+  assert.equal(await board.getByTestId('token-dash-settings-row-3').count(), 1)
+  const refreshSegment = board.getByTestId('token-dash-refresh-segment')
+  const refreshSegmentBox = await refreshSegment.boundingBox()
+  assert.ok(refreshSegmentBox !== null && refreshSegmentBox.width <= 170, `refresh segment width ${refreshSegmentBox?.width} should be <= 170`)
+  assert.equal(await board.locator('select').count(), 0)
+  assert.match(await board.innerText(), new RegExp(`版本 ${PKG_VERSION.replaceAll('.', '\\.')}`))
+  assert.ok(!(await board.innerText()).includes('诊断'))
+  assert.ok(!(await board.innerText()).includes('清空日志'))
+  assert.ok(!(await board.innerText()).includes('本月 Token'))
+
+  // Star chip degrades to a bare star when /repo fails.
+  const repoChip = board.getByTestId('token-dash-repo')
+  assert.equal((await repoChip.innerText()).trim(), '★')
+  assert.ok((await repoChip.getAttribute('href'))?.includes('github.com'))
+
+  // Budget inline edit: save updates used% and plan balance immediately.
+  await jsClick(board.getByTestId('token-dash-budget-edit-deepseek-official'))
+  const budgetInput = board.getByTestId('token-dash-budget-input-deepseek-official')
+  await budgetInput.waitFor({ timeout: 5000 })
+  assert.equal(await budgetInput.inputValue(), '100')
+  // Headless 窗口拿不到系统焦点：值走原生 setter + input 事件，按键直接派发。
+  const setInputValue = (locator, value) => locator.evaluate((node, next) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+    setter.call(node, next)
+    node.dispatchEvent(new Event('input', { bubbles: true }))
+  }, value)
+  const pressInInput = (locator, key) => locator.evaluate((node, value) => {
+    node.dispatchEvent(new KeyboardEvent('keydown', { key: value, bubbles: true }))
+  }, key)
+  await setInputValue(budgetInput, '200.50')
   await page.waitForTimeout(80)
-  const darkTabBg = await panel.getByRole('tab', { name: '用量' }).evaluate((node) => getComputedStyle(node).backgroundColor)
-  assert.notEqual(darkTabBg, 'rgb(255, 255, 255)')
+  await pressInInput(budgetInput, 'Enter')
+  await page.waitForTimeout(500)
+  assert.match(await board.getByTestId('token-dash-budget-budget-deepseek-official').innerText(), /¥200\.50/)
+  assert.match(await board.getByTestId('token-dash-budget-plan-deepseek-official').innerText(), /¥188\.16/)
+  assert.match(await board.getByTestId('token-dash-budget-used-deepseek-official').innerText(), /6\.2%/)
+  // Invalid value keeps editing and reports the error.
+  await jsClick(board.getByTestId('token-dash-budget-edit-deepseek-official'))
+  const secondInput = board.getByTestId('token-dash-budget-input-deepseek-official')
+  await setInputValue(secondInput, '-1')
+  await page.waitForTimeout(50)
+  await pressInInput(secondInput, 'Enter')
+  await page.waitForTimeout(300)
+  assert.match(await board.innerText(), /请输入 0 或正数/)
+  // Esc cancels editing without saving.
+  await pressInInput(secondInput, 'Escape')
+  await page.waitForTimeout(300)
+  assert.equal(await board.getByTestId('token-dash-budget-input-deepseek-official').count(), 0)
+  assert.match(await board.getByTestId('token-dash-budget-budget-deepseek-official').innerText(), /¥200\.50/)
+  // Clearing writes an explicit zero => unset.
+  await jsClick(board.getByTestId('token-dash-budget-edit-deepseek-official'))
+  const thirdInput = board.getByTestId('token-dash-budget-input-deepseek-official')
+  await setInputValue(thirdInput, '')
+  await page.waitForTimeout(50)
+  await pressInInput(thirdInput, 'Enter')
+  await page.waitForTimeout(500)
+  assert.match(await board.getByTestId('token-dash-budget-budget-deepseek-official').innerText(), /未设置/)
+  const clearedPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
+  assert.equal(clearedPrefs.budgets['deepseek-official'].amount, 0)
+
+  // Update check restores the button after "up to date".
+  const updateButton = board.getByTestId('token-dash-update')
+  await updateButton.waitFor({ timeout: 5000 })
+  await jsClick(updateButton)
+  await page.waitForTimeout(250)
+  assert.match(await board.innerText(), /已是最新/)
+  assert.equal(await updateButton.isEnabled(), true)
+  updateAvailable = true
+  await jsClick(updateButton)
+  await page.waitForTimeout(250)
+  assert.match(await board.innerText(), /发现 9\.9\.9/)
+  await jsClick(board.getByRole('button', { name: '取消' }))
+  updateAvailable = false
+
+  // Logs / data entries stay reachable from the capsule.
+  await jsClick(board.getByTestId('token-dash-log-open'))
+  await page.waitForTimeout(200)
+  assert.match(await board.innerText(), /已打开日志文件夹|无法打开，已复制路径/)
+  await jsClick(board.getByTestId('token-dash-log-export'))
+  await page.waitForTimeout(200)
+  assert.equal(await board.getByTestId('token-dash-data-export').count(), 1)
+  assert.equal(await board.getByTestId('token-dash-data-import').count(), 1)
+
+  // Star count renders once /repo succeeds.
+  repoMode = 'ok'
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1200)
+  const reloadedEntry = page.locator('[data-testid=token-dash-sidebar-entry]')
+  await reloadedEntry.waitFor({ timeout: 10000 })
+  await jsClick(reloadedEntry.first())
+  const reloadedBoard = page.locator('[data-testid=token-dash-board]')
+  await reloadedBoard.waitFor({ timeout: 8000 })
+  await page.waitForTimeout(400)
+  assert.match(await reloadedBoard.getByTestId('token-dash-repo').innerText(), /★ 1\.2k/)
+
+  // Dark theme: chrome follows host tokens, no hard-coded white panel.
+  await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', '1'))
+  await page.waitForTimeout(120)
+  const capsuleBg = await reloadedBoard.getByTestId('token-dash-settings-capsule').evaluate((node) => getComputedStyle(node).backgroundColor)
+  assert.notEqual(capsuleBg, 'rgba(0, 0, 0, 0)')
+  await page.screenshot({ path: join(tmpRoot, 'e2e', 'p3-dark.png'), fullPage: true })
   await page.evaluate(() => document.body.removeAttribute('data-ds-dark-theme'))
 
-  // Responsive viewport.
-  await page.setViewportSize({ width: 360, height: 800 })
-  await page.waitForTimeout(200)
-  const box = await panel.boundingBox()
-  assert.ok(box.width <= 344, `panel width ${box.width} should clamp to viewport`)
-  assert.ok(box.x >= 0 && box.x + box.width <= 360, `panel bounds ${box.x}+${box.width} should fit viewport`)
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-  assert.equal(overflow, 0)
-
-  await page.screenshot({ path: join(tmpRoot, 'e2e', 'ui-v2.png'), fullPage: true })
   console.log('[e2e] UI assertions passed')
 } finally {
   await browser?.close().catch(() => {})
