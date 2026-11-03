@@ -73,7 +73,11 @@ Screenshots below use mock data so the full layout is visible at once:
 **P2 · Floating panel (current model)**: used ring and percent, used / budget, real balance, month-to-date spend, time range and usage table
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-dashboard.png" alt="Dashboard" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-api.png" alt="Floating panel - pay-as-you-go" />
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-sub.png" alt="Floating panel - subscription" />
 </p>
 
 **P3 · Full-page dashboard**: pay-as-you-go, subscription plans, summary tiles and model breakdown, settings and data

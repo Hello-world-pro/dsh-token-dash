@@ -73,7 +73,11 @@ dsh plugin --profile desktop add /path/to/dsh-token-dash-1.1.0.tgz
 **P2 · 浮层（当前模型）**：环与百分比、已用 / 预算、真实余额、本月已花，时间范围与用量表
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-dashboard.png" alt="浮层看板" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-api.png" alt="浮层 · 按量形态" />
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-sub.png" alt="浮层 · 订阅形态" />
 </p>
 
 **P3 · 整页看板**：按量计价、订阅套餐、两格卡与明细、设置与数据管理

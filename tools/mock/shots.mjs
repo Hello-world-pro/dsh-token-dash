@@ -2,7 +2,7 @@
  * 生成 README 截图：临时 DSH_HOME + web profile + 假数据注入，不读真实账本。
  *
  * 用法：npm run shots [-- --keep]
- * 产物：docs/pic/panel-dashboard.png（用量）、docs/pic/settings.png（设置）
+ * 产物：docs/pic/panel-api.png / panel-sub.png（P2 两种形态）、settings.png（P3 整页）、pill-*.png
  */
 import { execFileSync, spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
@@ -132,11 +132,11 @@ try {
   })
   await page.waitForTimeout(300)
 
-  // 用量：切到近 30 天，让两格卡有完整数字
+  // API 形态：切到近 30 天，让表内数据更完整
   await jsClick(panel.getByRole('tab', { name: '近30天' }))
   await page.waitForTimeout(600)
-  await panel.screenshot({ path: join(outDir, 'panel-dashboard.png') })
-  console.log('[shots] panel-dashboard.png')
+  await panel.screenshot({ path: join(outDir, 'panel-api.png') })
+  console.log('[shots] panel-api.png')
 
   // 整页看板截图放到最后（切走中栏后 pill 不再可见）
 
@@ -179,6 +179,27 @@ try {
     await page.waitForTimeout(200)
   }
   await page.waitForTimeout(700)
+
+  // 订阅形态：打开浮层截 P2（当前 provider 为订阅，展示窗口行）
+  const subPill = page.locator('[data-testid=token-dash-pill]')
+  await subPill.waitFor({ timeout: 10000 })
+  await jsClick(subPill)
+  const subPanel = page.locator('[data-testid=token-dash-panel]')
+  await subPanel.waitFor({ timeout: 8000 })
+  await page.evaluate(() => {
+    for (const node of document.querySelectorAll('[role=dialog],[role=presentation]')) {
+      if (node.matches('[data-testid=token-dash-panel]')) continue
+      if (node.querySelector('[data-testid=token-dash-panel]') !== null) continue
+      node.remove()
+    }
+  })
+  await page.addStyleTag({
+    content: '[data-testid=token-dash-panel]{position:fixed !important;top:8px !important;left:8px !important;bottom:auto !important;max-height:none !important;overflow:visible !important}',
+  })
+  await page.waitForTimeout(600)
+  await subPanel.screenshot({ path: join(outDir, 'panel-sub.png') })
+  console.log('[shots] panel-sub.png')
+
   await shotPill('pill-sub.png')
 
   // 整页看板：先切回全量数据（七家），再从侧栏入口进中栏整页

@@ -23,7 +23,7 @@
 |---|---|---|---|
 | L1 | `npm test` | host 侧聚合、备份、locale 词典 | 76 项：75 通过 / 1 跳过（local 跳过 Release notes） |
 | L2+L3 | `npm run e2e` | 真实宿主 + Playwright：P1/P2/P3、编辑、空态、窄屏、暗色 | 全绿 |
-| 脚本 | `npm run shots` | README 三张截图可重新生成 | 已重生成 `panel-dashboard` / `settings` / `pill-*` |
+| 脚本 | `npm run shots` | README 截图可重新生成 | 已重生成 `panel-api` / `panel-sub` / `settings` / `pill-*` |
 | 打包 | `npm run pack` | `build/dsh-token-dash-1.2.0-local.2.tgz` | 待执行 |
 
 ## 三、执行日志

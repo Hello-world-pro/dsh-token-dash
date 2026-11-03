@@ -99,7 +99,7 @@ export const summary = {
 export const summarySubOnly = {
   ...summary,
   providers: summary.providers.filter((item) => item.kind === 'subscription'),
-  currentProviderId: null,
+  currentProviderId: 'zhipu',
 }
 
 const row = (providerId, providerName, modelId, displayName, kind, currency, cost, buckets, requests, approximate = false) => {
@@ -138,6 +138,7 @@ const monthModels = [
 const todayModels = [
   row('deepseek-official', 'DeepSeek', 'deepseek-v4.1-flash', 'DeepSeek-V4.1-Flash', 'api', 'CNY', 0.04, { input: 8_000, cacheRead: 12_000, cacheWrite: 0, output: 1_200 }, 4),
   row('openrouter', 'OpenRouter', 'deepseek-v4.1-flash', 'DeepSeek-V4.1-Flash', 'api', 'USD', 0.12, { input: 3_000, cacheRead: 2_000, cacheWrite: 0, output: 800 }, 2, true),
+  row('zhipu', 'GLM Coding', 'glm-5.3', 'GLM-5.3', 'subscription', 'CNY', 0, { input: 20_000, cacheRead: 30_000, cacheWrite: 0, output: 2_000 }, 6),
 ]
 
 function aggregate(models) {
