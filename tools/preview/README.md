@@ -1,11 +1,11 @@
 # tools/preview
 
-组件与布局的「真实比例」预览工具：规格 + 模板 → HTML → 截图。原型本身是设计依据，会反向约束 `ui-design.md` 与实现。
+组件与布局的「真实比例」预览工具：规格 + 模板 → 单文件 HTML，直接在 IDE 里预览；只有需要静态图时才截 PNG。原型本身是设计依据，会反向约束 `ui-design.md` 与实现。
 
 ## 为什么需要
 
 - 手搓临时 HTML 看比例，尺寸/字号会散落在各处，改一次要改三处；本目录把数值收进 `spec.mjs`。
-- 预览图属于临时产物，不该进 `docs/pic/`；但生成图的**方法**与原型要可复现、可入库、可 review。
+- 预览产物（HTML / PNG）属于临时产物，不该进 `docs/pic/`；但生成的**方法**与原型要可复现、可入库、可 review。
 
 ## 四层约定
 
@@ -13,7 +13,7 @@
 |---|---|---|---|---|
 | 定稿原型 | `templates/` | 是 | 人写 + review | 数值走 `spec.mjs`，可被设计文档引用 |
 | 探索稿 | `drafts/` | 是 | 人写，可粗糙 | 允许硬编码；定稿后 promote |
-| 生成物 | `.tmp/preview/` | 否 | 仅 `render.mjs` | 模板注入规格后的 HTML + PNG |
+| 生成物 | `.tmp/preview/` | 否 | 仅 `render.mjs` | HTML（默认）；PNG 仅在 `--png` / publish 时生成 |
 | 定稿图 | `docs/pic/` | 是 | 仅 `preview:publish` | README / 设计文档引用 |
 
 ## 结构与命令
@@ -33,12 +33,13 @@ tools/preview/
 ```
 
 ```bash
-npm run preview ring             # → .tmp/preview/ring.png（环的全量状态）
-npm run preview inline-ring           # → .tmp/preview/inline-ring.png（P1/P2 内联组合）
+npm run preview ring             # → .tmp/preview/ring.html（IDE 直接预览）
+npm run preview inline-ring
 npm run preview cards-sub
 npm run preview cards-api
-npm run preview drafts/explore   # → .tmp/preview/draft-explore.png
-npm run preview ring -- --scale 3
+npm run preview drafts/explore   # → .tmp/preview/draft-explore.html
+npm run preview ring -- --png    # 需要静态图时再截 → ring.png（2x）
+npm run preview ring -- --png --scale 3
 npm run preview:publish ring     # → docs/pic/ring.png（仅定稿）
 ```
 
@@ -62,7 +63,7 @@ npm run preview:publish ring     # → docs/pic/ring.png（仅定稿）
 | 改动类型 | 需要同步的位置 | 验证 |
 |---|---|---|
 | 环径、字号、间距、颜色 | `spec.mjs` → 重跑预览 → `ui-design.md` 对应章节 → checklist §九 → 后续 E2E 尺寸断言 | `npm run preview <name>` 目检 |
-| 新增 / 调整卡片状态 | `tools/mock/fixtures.mjs` 数据 + 对应模板 → `cards-*.png` → `tools/mock/AGENTS.md` §2 状态表 | 逐态对照，缺一态即不合格 |
+| 新增 / 调整卡片状态 | `tools/mock/fixtures.mjs` 数据 + 对应模板 → IDE 预览 `cards-*.html` → `tools/mock/AGENTS.md` §2 状态表 | 逐态对照，缺一态即不合格 |
 | 新增 provider | fixtures 六处（provider / windows / usage / todayModels / monthModels / pricingLinks）→ 预览 → 状态覆盖表 | `npm run shots` + 预览 |
 | 改交互（预算输入、展开、编辑） | 模板 JS + `ui-design.md` 交互章节（§5.6 等）+ checklist 对应 D 条目 | 预览里实际改值 / 点击一遍 |
 | 新增或删除模板 | `templates/` + 本文件「模板对照」表；若进 README 另走 publish | `npm run preview <name>` |
@@ -86,4 +87,5 @@ npm run preview:publish ring     # → docs/pic/ring.png（仅定稿）
 - **手写 HTML 永不落 `.tmp/`**：探索进 `drafts/`，定稿进 `templates/`；`.tmp/preview/` 只接受渲染器输出。
 - 文档引用稳定路径（`templates/…`）或命令，不引用 `.tmp/`。
 - `docs/pic/` 只接受 publish 写入；分析跑留在 `.tmp/preview/`。
+- 默认不截图：IDE 预览 HTML 即可；PNG 只在 `--png` / publish 时生成。
 - 尺寸变更只改 `spec.mjs`；预览与后续 E2E 断言都从它取值。

@@ -94,7 +94,7 @@
 | P2 320px 不出横向滚动、宽度 ≤480 | 待执行 | `scrollWidth === clientWidth` |
 | P3 卡片列数：1000px=4 / 760=3 / 520=2 | 待执行 | 三档截图量列数 |
 | 订阅卡窗口列数 = 实际窗口数（两窗不出「月」列） | 待执行 | Kimi / Command Code 各一张 |
-| 状态图覆盖 6 / 4 / 6 / 5 态 | 待执行 | 目检 ring / inline / cards-sub / cards-api |
+| 状态页覆盖 6 / 4 / 6 / 5 态 | 待执行 | IDE 预览 ring / inline-ring / cards-sub / cards-api |
 | 按量与订阅 Gauge 环直径均 = 40，环心分别为「已用」与周期 | 待执行 | 截图量环与中心文字 |
 | 百分比在环下 16px、剩余/时间 11px | 待执行 | 目检单卡字号层级 |
 | 按量卡左 Gauge、右预算输入框；改预算后环与计划余额即时更新 | 待执行 | 预览中改值目检 |
@@ -131,6 +131,7 @@
 | 2026-11-04 | 预览精简 | 删除 `gauge.html` / `gauge.png`（与 `ring` + `cards-sub` 重复）；状态图收敛为 ring / cards-sub / cards-api 三张；README、清单与 mock 规则同步 |
 | 2026-11-04 | 组件分层 | 环不加数字槽位：`ProgressRing`（几何）+ `PercentValue`（文本/颜色）+ `InlineRing`（P1/P2）+ `QuotaGauge`（P3）；新增 `inline-ring.html` 与 4 态预览 |
 | 2026-11-04 | 辅助文字 | 卡片三行辅助文字 45% → 68%（`label-secondary`），与环心同色；不用状态色（D13） |
+| 2026-11-04 | 预览流程 | 默认只生成 `.tmp/preview/<name>.html` 在 IDE 预览，不再默认截图；`--png` 才出图，publish 仍写 `docs/pic/` |
 | 2026-11-04 | 状态矩阵 | 预览改为「状态穷举」：Gauge 5 / 订阅 4 / 按量 5；新增 `tools/mock/AGENTS.md` 定义假数据覆盖规则 |
 
 ## 九、环与组合层控件要求（P1 / P2 / P3 共用）
@@ -234,11 +235,11 @@ InlineRing({
 
 ### 9.7 预览方式（本轮已验证）
 
-- 四张独立状态图（各 2x，按内容高度裁剪）：
-  - `npm run preview ring` → `.tmp/preview/ring.png`：环的全量状态（6 态矩阵 + API/订阅 3 组阈值边界 + P1/P2/P3 三档尺寸 + 无标签/周期/「已用」三种环心）。
-  - `npm run preview inline-ring` → `.tmp/preview/inline-ring.png`：InlineRing 4 态 × P1/P2 两档尺寸，附「预算」「订阅窗口」组合示例。
-  - `npm run preview cards-sub` → `.tmp/preview/cards-sub.png`：订阅卡 6 态（三窗 ×2 / 两窗无月 / 两窗 critical / 单窗 / 含空窗），卡顶为真实供应商名。环 + 三行辅助信息的组合只在这里看，不再单独出 Gauge 状态图。
-  - `npm run preview cards-api` → `.tmp/preview/cards-api.png`：按量卡 5 态（normal / warn / over / 预算未设置 / 余额不支持）；右侧预算输入框可改，环与计划余额即时重算，卡下 caption 跟随状态。
+- 四个状态页（默认只生成 HTML，**在 IDE 里直接预览**；需要静态图时加 `--png`）：
+  - `npm run preview ring` → `.tmp/preview/ring.html`：环的全量状态（6 态矩阵 + API/订阅 3 组阈值边界 + P1/P2/P3 三档尺寸 + 无标签/周期/「已用」三种环心）。
+  - `npm run preview inline-ring` → `.tmp/preview/inline-ring.html`：InlineRing 4 态 × P1/P2 两档尺寸，附「预算」「订阅窗口」组合示例。
+  - `npm run preview cards-sub` → `.tmp/preview/cards-sub.html`：订阅卡 6 态（三窗 ×2 / 两窗无月 / 两窗 critical / 单窗 / 含空窗），卡顶为真实供应商名。环 + 三行辅助信息的组合只在这里看，不再单独出 Gauge 状态图。
+  - `npm run preview cards-api` → `.tmp/preview/cards-api.html`：按量卡 5 态（normal / warn / over / 预算未设置 / 余额不支持）；右侧预算输入框可改，环与计划余额即时重算，卡下 caption 跟随状态。
 - 状态覆盖口径见 [`tools/mock/AGENTS.md`](../../../tools/mock/AGENTS.md) §2：组件有 N 种状态就出 N 个样本，不合并。
 - 尺寸来源：[`tools/preview/spec.mjs`](../../../tools/preview/spec.mjs)；模板在 [`tools/preview/templates/`](../../../tools/preview/templates/)，公共样式在 `_base.css`。
 - 探索稿放 `tools/preview/drafts/`（入库，可粗糙），定稿时接 `spec.mjs` 再移入 `templates/`；手写 HTML 不落 `.tmp/`。
