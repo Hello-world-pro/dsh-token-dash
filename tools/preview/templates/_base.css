@@ -59,22 +59,11 @@ section { margin-bottom: 28px; }
 .line { font-size: var(--gauge-meta); color: var(--muted); line-height: 15px; white-space: nowrap; }
 
 /* 按量卡：左侧 Gauge，右侧预算输入框，下面三行 label-value */
-.api-body {
-  display: flex; align-items: center; justify-content: center; gap: 20px;
-  margin: 12px 0 36px; /* 底部留给绝对定位的百分比 */
-}
-/* 环块只占 40，百分比浮到下方，环心才能与输入框中心对齐 */
-.api-body .gauge { position: relative; height: var(--api-ring); justify-content: flex-start; }
-.api-body .gauge .pct {
-  position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%);
-  margin-top: 0;
-}
-/* 预算块只占输入框高度，标签浮在上方 */
-.budget { position: relative; display: flex; align-items: flex-end; }
-.budget .k {
-  position: absolute; bottom: calc(100% + 4px); right: 0;
-  font-size: 11px; color: var(--weak); white-space: nowrap;
-}
+/* 按量卡：环 → 百分比 → 月度预算 → 输入框，整列居中 */
+.api-body { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 12px 0 14px; }
+.api-body .gauge { justify-content: center; }
+.budget { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 4px; }
+.budget .k { font-size: 11px; color: var(--muted); white-space: nowrap; }
 .budget-input {
   display: inline-flex; align-items: center; gap: 2px;
   border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px;
