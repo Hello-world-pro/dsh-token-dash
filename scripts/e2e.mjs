@@ -361,6 +361,15 @@ try {
   const board = page.locator('[data-testid=token-dash-board]')
   await board.waitFor({ timeout: 8000 })
   await page.waitForTimeout(400)
+  const boardScroll = page.getByTestId('token-dash-board-scroll')
+  const scrollMetrics = await boardScroll.evaluate((node) => ({
+    client: node.clientHeight,
+    scroll: node.scrollHeight,
+  }))
+  assert.ok(
+    scrollMetrics.scroll > scrollMetrics.client,
+    `board should own its scroll: ${scrollMetrics.scroll} > ${scrollMetrics.client}`,
+  )
   // 清掉宿主欢迎/引导浮层，避免遮挡看板截图。
   await page.evaluate(() => {
     for (const node of document.querySelectorAll('[role=dialog],[role=presentation]')) {
@@ -425,6 +434,21 @@ try {
     ))
   })
   assert.ok(detailDiff.every((diff) => diff <= 1), `P3 numeric columns should right-align: ${detailDiff}`)
+  const detailCols = await detailTable.evaluate((table) => {
+    const cells = [...table.querySelector('[role=row]').querySelectorAll('[role=cell]')]
+    const widths = cells.map((cell) => cell.getBoundingClientRect().width)
+    return {
+      model: widths[0],
+      numeric: widths.slice(1),
+      font: getComputedStyle(cells[1]).fontSize,
+    }
+  })
+  assert.ok(detailCols.model <= 241, `model column ${detailCols.model} should be <= 240`)
+  assert.ok(
+    Math.max(...detailCols.numeric) - Math.min(...detailCols.numeric) <= 2,
+    `numeric columns should be equal width: ${detailCols.numeric}`,
+  )
+  assert.equal(detailCols.font, '13px', 'numeric cell font should be 13px')
   // Settings capsule: three rows and expected controls.
   const rangeSection = board.locator('section').last()
   const [rangeSectionBox, capsuleBox] = await Promise.all([
@@ -439,21 +463,21 @@ try {
   assert.equal(await board.getByTestId('token-dash-settings-row-1').count(), 1)
   assert.equal(await board.getByTestId('token-dash-settings-row-2').count(), 1)
   assert.equal(await board.getByTestId('token-dash-settings-row-3').count(), 1)
-  const [leftGroup, centerGroup, rightGroup] = await Promise.all([
+  const [leftGroup, rightGroup] = await Promise.all([
     board.getByTestId('token-dash-settings-refresh-left').boundingBox(),
-    board.getByTestId('token-dash-settings-refresh-center').boundingBox(),
     board.getByTestId('token-dash-settings-refresh-right').boundingBox(),
   ])
-  assert.ok(leftGroup !== null && centerGroup !== null && rightGroup !== null)
-  assert.ok(leftGroup.x < centerGroup.x && centerGroup.x < rightGroup.x, 'refresh row groups should be left / center / right')
+  assert.ok(leftGroup !== null && rightGroup !== null)
+  assert.ok(leftGroup.x < rightGroup.x, 'refresh row groups should be two ends')
   assert.ok(
-    Math.abs((centerGroup.x + centerGroup.width / 2) - (capsuleBox.x + capsuleBox.width / 2)) <= 2,
-    'refresh interval group should be centered',
+    Math.abs(leftGroup.x - (capsuleBox.x + 17)) <= 2,
+    'refresh interval group should align to the left edge',
   )
   assert.ok(
-    Math.abs((rightGroup.x + rightGroup.width) - (capsuleBox.x + capsuleBox.width - 16)) <= 2,
+    Math.abs((rightGroup.x + rightGroup.width) - (capsuleBox.x + capsuleBox.width - 17)) <= 2,
     'account balance group should align to the right edge',
   )
+  assert.equal(await board.getByTestId('token-dash-board-refresh').count(), 0)
   const boardBox = await board.boundingBox()
   assert.ok(
     boardBox !== null && capsuleBox !== null

@@ -271,3 +271,46 @@ flowchart LR
 **验收**：模板与实现截图一致；e2e 通过。
 
 - 2026-11-05：页头两按钮 44×26、胶囊三组、按钮蓝色、底部 32 已落地；e2e 通过。
+
+### Issue #4 · P3 滚动、胶囊与明细列宽（[已修复]）
+
+**现象**
+
+1. 设置栏「立即刷新」多余；刷新间隔应直接左对齐。
+2. P3 变长后 DSH 右侧没有竖向滚动条，内容被裁切。
+3. 明细右对齐后模型列占用过宽，数值列被压缩、字号显小。
+
+**规则**
+
+- 胶囊第一行：去掉「立即刷新」与「刷新」标签；刷新间隔 segmented 左对齐、账户余额右对齐，`1fr auto` 两组。
+- 滚动：BoardPage 外层 `board-scroll` 宽 100% / 高 100% / `overflow-y: auto`，滚动条贴窗口右缘；内层 `board` 保持 `max-width 1000`、padding 24；底部留白只靠胶囊 `margin-bottom: 32`，移除 96 兜底。
+- 明细：模型列上限 240；7 个数值列 `minmax(56px, 1fr)` 等宽；数值 13px、表头 11px，仍全部右对齐。
+
+**文档**
+
+| 章节 | 内容 |
+|---|---|
+| `ui-design.md` §5.2 | 结构图补滚动容器 |
+| `ui-design.md` §5.5 | 模型列 240、数值列等宽 1fr、字号 13 |
+| `ui-design.md` §5.7 | 第一行去掉立即刷新，间隔左 / 余额右 |
+| `ui-design.md` §8 | P3 由 BoardPage 自持滚动，不改宿主 |
+| checklist | 记录本次三项 |
+
+**代码**
+
+| 落点 | 改动 |
+|---|---|
+| `BoardPage` | 增加 `board-scroll` 外层；`board` 作为内层 |
+| `styles.boardScroll` | `width/height 100%`、`overflow-y:auto`、thin scrollbar |
+| `styles.board` | `paddingBottom: 0`，移除 `PAGE_PADDING_BOTTOM` |
+| `SettingsRows` | 第一行改两组，移除 `token-dash-board-refresh` |
+| `DETAIL_COLS` / `DetailTable` | `minmax(0,240px) repeat(7,minmax(56px,1fr))`；cell 13 / 表头 11 |
+
+**测试**
+
+- e2e：胶囊仅左（间隔）/ 右（余额）两组；`board-scroll.scrollHeight > clientHeight` 且滚到底；模型列 ≤240、7 个数值列宽差 ≤2、字号 13、右缘对齐。
+- 模板：`page-p3` 截图与实现一致。
+
+**验收**：e2e 通过；无双重滚动；模板与实现一致。
+
+- 2026-11-05：`board-scroll` 自持滚动、胶囊两组、明细 240 + 7×1fr 已落地；`npm test` 75 通过、e2e 通过。

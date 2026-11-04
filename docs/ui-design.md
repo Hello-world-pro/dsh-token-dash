@@ -341,11 +341,11 @@ Token 看板   数据来自本机会话记录 · 更新于 12:30        [ ★ ] 
 - 日志与检查更新为 ghost（蓝字、透明底 / 透明边），不再使用主按钮。
 - 胶囊底部留 `--space-6`（32px）空白，页面不贴底。
 
-### 5.8 锚定
+### 5.8 滚动
 
-- 胶囊 `position: sticky; bottom: 12px`；页面末尾 `padding-bottom: 96px`。
-- 实测：宿主中栏滚动容器为 `overflow: hidden`（`scrollHeight 1389 / clientHeight 900`），sticky 仍生效（`bottom = 视口高 − 12`）。
-- 退化：视口高 <480 / 胶囊高 >40vh / 宽 <760 时改 `static`。
+- `BoardPage` 自持滚动：外层 `board-scroll` 宽 / 高 `100%`、`overflow-y: auto`；内层 `board` 保持 `max-width: 1000`、padding 24。
+- 滚动条贴在窗口右缘，`scrollbar-width: thin` + WebKit 8px；不修改宿主 `main`，避免双重滚动。
+- 胶囊为静态排布，底部留 `--space-6`（32px）；不再使用 sticky 或 96px 兜底。
 
 ### 5.9 P3 状态
 

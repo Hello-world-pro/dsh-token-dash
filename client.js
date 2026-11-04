@@ -16,7 +16,7 @@ window.__ModuleLoader__.load({
     const SUB_CRITICAL = 90
     const API_CRITICAL = 100
     const STALE_MS = 5000
-    const PAGE_PADDING_BOTTOM = 96
+    
     const RANGES = [
       ['today', '当天'],
       ['7d', '近7天'],
@@ -35,6 +35,9 @@ window.__ModuleLoader__.load({
       '@media (max-width:560px){[data-td-cards]{grid-template-columns:minmax(0,1fr)}}',
       '[data-td-scroll]{overflow-x:auto}',
       '[data-td-scroll] > *{min-width:560px}',
+      '[data-testid=token-dash-board-scroll]::-webkit-scrollbar{width:8px}',
+      '[data-testid=token-dash-board-scroll]::-webkit-scrollbar-thumb{background:color-mix(in srgb,currentColor 28%,transparent);border-radius:4px}',
+      '[data-testid=token-dash-board-scroll]::-webkit-scrollbar-track{background:transparent}',
     ].join('')
     const EN = {
       '当天': 'Today', '近7天': 'Last 7 days', '近30天': 'Last 30 days', '全部': 'All',
@@ -404,8 +407,14 @@ window.__ModuleLoader__.load({
       cellNum: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
       cellName: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
       footer: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12, minHeight: 22 },
+      boardScroll: {
+        width: '100%', height: '100%', overflowY: 'auto', overflowX: 'hidden',
+        boxSizing: 'border-box', overscrollBehavior: 'contain',
+        scrollbarWidth: 'thin',
+        scrollbarColor: 'color-mix(in srgb, currentColor 28%, transparent) transparent',
+      },
       board: {
-        padding: 24, display: 'grid', gap: 24, paddingBottom: PAGE_PADDING_BOTTOM,
+        padding: 24, display: 'grid', gap: 24,
         color: T.text, fontSize: 13, minWidth: 0, width: '100%', maxWidth: 1000, margin: '0 auto', boxSizing: 'border-box',
       },
       boardHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' },
@@ -436,10 +445,9 @@ window.__ModuleLoader__.load({
         display: 'grid', gridTemplateColumns: '40px minmax(0,1fr)', alignItems: 'center', gap: 12,
         padding: '8px 0', minHeight: 24, borderTop: '1px solid color-mix(in srgb, currentColor 6%, transparent)',
       },
-      settingsRowRefresh: { gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)' },
+      settingsRowRefresh: { gridTemplateColumns: 'minmax(0,1fr) auto' },
       settingsGroup: { display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 },
       settingsGroupLeft: { justifySelf: 'start' },
-      settingsGroupCenter: { justifySelf: 'center' },
       settingsGroupRight: { justifySelf: 'end' },
       settingsLabel: { color: T.weak, fontSize: 11 },
       repoChip: {
@@ -792,16 +800,16 @@ window.__ModuleLoader__.load({
             row.hitRate === null || row.hitRate === undefined ? '—' : fmtRatio(row.hitRate)))))
     }
 
-    const DETAIL_COLS = 'minmax(0,1fr) auto auto auto auto auto auto auto'
+    const DETAIL_COLS = 'minmax(0, 240px) repeat(7, minmax(56px, 1fr))'
 
     /** P3 明细表：八列，费用只对 API 计价行展示。 */
     function DetailTable({ rows, providerNames = {} }) {
       if (rows.length === 0) return h('div', { style: styles.empty }, tr('范围内暂无消耗'))
       const headCell = (text, align = 'right') => h('span', {
         role: 'columnheader',
-        style: { color: T.weak, fontSize: 12, textAlign: align, paddingBottom: 6, borderBottom: `1px solid ${T.border}` },
+        style: { color: T.weak, fontSize: 11, textAlign: align, paddingBottom: 8, borderBottom: `1px solid ${T.border}` },
       }, text)
-      const cell = { padding: '5px 0', borderBottom: TABLE_BORDER, fontSize: 12, minWidth: 0 }
+      const cell = { padding: '4px 0', borderBottom: TABLE_BORDER, fontSize: 13, minWidth: 0 }
       return h('div', { role: 'table', 'aria-label': tr('模型用量明细') },
         h('div', { 'data-testid': 'token-dash-detail-table', style: { ...styles.table, gridTemplateColumns: DETAIL_COLS, columnGap: 8, minWidth: 720 } },
         h('div', { style: { display: 'contents' } },
@@ -1453,15 +1461,6 @@ window.__ModuleLoader__.load({
             'data-testid': 'token-dash-settings-refresh-left',
             style: { ...styles.settingsGroup, ...styles.settingsGroupLeft },
           },
-            h('span', { style: styles.settingsLabel }, tr('刷新')),
-            h('button', {
-              type: 'button', 'data-testid': 'token-dash-board-refresh',
-              style: { ...styles.primary, gap: 4 }, onClick: () => { void onRefresh?.() },
-            }, h(Icon, { name: 'refresh', size: 12 }), tr('立即刷新'))),
-          h('div', {
-            'data-testid': 'token-dash-settings-refresh-center',
-            style: { ...styles.settingsGroup, ...styles.settingsGroupCenter },
-          },
             h('span', { style: styles.settingsLabel }, tr('刷新间隔')),
             h('div', {
               'data-testid': 'token-dash-refresh-segment',
@@ -1756,7 +1755,8 @@ window.__ModuleLoader__.load({
       const degraded = summary?.providersDegraded === true
       const emptyAll = summary !== null && api.length === 0 && subscriptions.length === 0
 
-      return h('div', { 'data-testid': 'token-dash-board', style: styles.board },
+      return h('div', { 'data-testid': 'token-dash-board-scroll', style: styles.boardScroll },
+        h('div', { 'data-testid': 'token-dash-board', style: styles.board },
         h('style', null, TD_CSS),
         h('div', { style: styles.boardHead },
           h('div', { style: styles.boardTitleRow },
@@ -1810,7 +1810,7 @@ window.__ModuleLoader__.load({
               providerNames: Object.fromEntries(providers.map((provider) => [provider.id, provider.name])),
             })))),
         h('div', { 'data-testid': 'token-dash-settings-capsule', style: styles.capsule },
-          h(SettingsRows, { summary, prefs, onSave: savePrefs, onRefresh: refresh, onRefreshSubs: refreshSubs })))
+          h(SettingsRows, { summary, prefs, onSave: savePrefs, onRefresh: refresh, onRefreshSubs: refreshSubs }))))
     }
 
     return {
