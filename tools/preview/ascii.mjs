@@ -1,18 +1,17 @@
 /**
  * ASCII 草图生成器：按固定字符宽度画卡片 / 表格，保证边框对齐。
  *
+ * 用法：
+ *   npm run sketch          # 打印 P3 卡片示例（与 checklist §九 一致）
+ *   或 import { box, rowOf, fit, right } from './tools/preview/ascii.mjs'
+ *
+ * 比例：页级草图 1 字符 ≈ 9.6px、1 行 ≈ 18px；卡宽由 spec.mjs 推导，
+ * 因此改规格后草图宽度会自动跟着变，不用手调。
+ *
  * 背景：Markdown 预览里 CJK 宽度不等于 2×ASCII，手写带左右边框的草图必然错位；
  * 用本脚本按字符数生成再贴进文档，就不会歪。
- *
- * 用法：
- *   node scripts/sketch.mjs          # 打印 P3 卡片示例（与 checklist §九 一致）
- *   或 import { box, rowOf, fit, right, columnCount, cardWidth } from './scripts/sketch.mjs'
- *
- * 比例约定（1000px 中栏 / 952px 内容宽）：
- *   页级草图 1 字符 ≈ 9.6px、1 行 ≈ 18px；宽度按真实 px 折算，高度为行数近似。
- *
- * 不引入依赖，纯 ESM。
  */
+import { SPEC, cardWidth, toChars } from './spec.mjs'
 
 /** 按字符数右补空格（超出则截断），用于对齐卡片内容 */
 export const fit = (text, width) => {
@@ -40,22 +39,14 @@ export const rowOf = (cards, gap = ' ') => {
   return Array.from({ length: height }, (_, index) => padded.map((card) => card[index] ?? '').join(gap))
 }
 
-/** auto-fit / minmax(minCard, 1fr) 在给定内容宽下的列数 */
-export const columnCount = (contentWidth, minCard, gap) => Math.max(
-  1,
-  Math.floor((contentWidth + gap) / (minCard + gap)),
-)
+// 页级宽度由规格推导：3 家 / 4 家两张一行
+const API_CARD_CHARS = toChars(cardWidth(SPEC.layout.contentWidth, 3, SPEC.layout.gap))
+const SUB_CARD_CHARS = toChars(cardWidth(SPEC.layout.contentWidth, 4, SPEC.layout.gap))
+const SUB_INNER = SUB_CARD_CHARS - 2
 
-/** 给定列数时每张卡的实际宽度（px，向下取整） */
-export const cardWidth = (contentWidth, columns, gap) => Math.floor(
-  (contentWidth - gap * (columns - 1)) / columns,
-)
-
-// ---------- P3 卡片示例（与 docs/checklist/active/board-visual-review-checklist.md §九 对应） ----------
-
-/** 按量卡：3 家时 309px（32 字符 ≈ 9.6px/字符） */
-const apiCard = (name, percent, used, plan, real, month) => box(32, [
-  ` ${name}`.padEnd(30 - 7) + '[PAYG]',
+/** 按量卡 */
+const apiCard = (name, percent, used, plan, real, month) => box(API_CARD_CHARS, [
+  ` ${name}`.padEnd(API_CARD_CHARS - 2 - 7) + '[PAYG]',
   '',
   `   (o) ${percent}`,
   ` used  ${used}`,
@@ -64,13 +55,12 @@ const apiCard = (name, percent, used, plan, real, month) => box(32, [
   ` month ${month}`,
 ])
 
-/** 订阅卡：4 家时 229px（24 字符）；窗口按实际数量等分，缺窗不出列 */
+/** 订阅卡：环心周期 + 环下百分比；窗口按实际数量等分，缺窗不出列 */
 const subCard = (name, windows) => {
-  const inner = 22
-  const colWidth = Math.floor(inner / windows.length)
+  const colWidth = Math.floor(SUB_INNER / windows.length)
   const line = (pick) => ` ${windows.map((win) => fit(pick(win), colWidth)).join('')}`
-  return box(24, [
-    ` ${name}`.padEnd(inner - 6) + '[SUB]',
+  return box(SUB_CARD_CHARS, [
+    ` ${name}`.padEnd(SUB_INNER - 6) + '[SUB]',
     line((win) => `(${win.key})`),
     line((win) => win.percent),
     line((win) => win.left),
@@ -106,8 +96,9 @@ const subRow = rowOf([
   ]),
 ])
 
+// 单卡放大图沿用 2× 比例（1 字符 ≈ 4.8px）
 const apiZoom = box(64, [
-  ' DeepSeek'.padEnd(62 - 7) + '[PAYG]',
+  ' DeepSeek'.padEnd(64 - 2 - 7) + '[PAYG]',
   '',
   '   (o) 91.9%',
   ' used   CNY 91.90 / 100.00',
@@ -117,27 +108,13 @@ const apiZoom = box(64, [
 ])
 
 const subZoom = box(48, [
-  ' GLM Coding'.padEnd(46 - 6) + '[SUB]',
+  ' GLM Coding'.padEnd(48 - 2 - 6) + '[SUB]',
   '      (5h)         (week)        (mo)',
   '     42.5%         18.2%         3.0%',
   '     L58%          L82%          L97%',
   '     3h            1d            18d',
   '     22:51         11-05         11-22',
 ])
-
-const CONTENT_WIDTH = 952
-const GAP = 12
-const MIN_CARD = 220
-
-const printSizeTable = () => {
-  const rows = [1000, 760, 520].map((viewport) => {
-    const content = viewport - 48
-    const columns = columnCount(content, MIN_CARD, GAP)
-    return `  ${String(viewport).padStart(4)}px 视口 → 内容 ${content}px，${columns} 列，每卡 ${cardWidth(content, columns, GAP)}px`
-  })
-  console.log('== 尺寸换算（P3 中栏 1000px，padding 24×2） ==')
-  console.log(rows.join('\n'))
-}
 
 const main = () => {
   console.log('== 按量计价 · 3 家 → 一行 3 张 ==')
@@ -146,10 +123,16 @@ const main = () => {
   console.log(subRow.join('\n'))
   console.log('\n== 单卡放大：按量 309 × 164 ==')
   console.log(apiZoom.join('\n'))
-  console.log('\n== 单卡放大：订阅 229 × 140（三窗） ==')
+  console.log('\n== 单卡放大：订阅 229 × 175（三窗） ==')
   console.log(subZoom.join('\n'))
   console.log('')
-  printSizeTable()
+  console.log('== 尺寸换算（P3 中栏 1000px，padding 24×2） ==')
+  for (const viewport of [1000, 760, 520]) {
+    const content = viewport - SPEC.layout.pagePadding * 2
+    const columns = Math.max(1, Math.floor((content + SPEC.layout.gap) / (SPEC.layout.minCard + SPEC.layout.gap)))
+    const width = Math.floor((content - SPEC.layout.gap * (columns - 1)) / columns)
+    console.log(`  ${String(viewport).padStart(4)}px 视口 → 内容 ${content}px，${columns} 列，每卡 ${width}px`)
+  }
 }
 
-if (process.argv[1]?.endsWith('sketch.mjs')) main()
+if (process.argv[1]?.endsWith('ascii.mjs')) main()

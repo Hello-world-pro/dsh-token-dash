@@ -111,11 +111,12 @@
 | 2026-11-04 | 反馈定案 | 新增 UI-15 / UI-16；D1–D6 |
 | 2026-11-04 | 二轮评审 | 按量表改均分、`✎` 常驻、缺窗口径修正；补 D9 / D10 与 UI-17 |
 | 2026-11-04 | 三轮评审 | 推翻「一整张大卡」：改**每供应商一张卡**；按量卡字段竖排、订阅卡窗口一排、环 28；草图重绘 |
-| 2026-11-04 | 四轮评审 | 确认 `QuotaGauge`：环 40、环心周期、环下百分比；新增 §十 控件要求；用 `.tmp/sketch/gauge.html` 生成真实比例预览并目检 |
+| 2026-11-04 | 四轮评审 | 确认 `QuotaGauge`：环 40、环心周期、环下百分比；新增 §十 控件要求；用临时 HTML 生成真实比例预览并目检 |
+| 2026-11-04 | 工具迁移 | 预览与草图工具迁入 `tools/preview/`（spec / render / ascii / templates），临时产物统一 `.tmp/preview/`；AGENTS.md 增加三层约定 |
 
 ## 九、新样式草图
 
-> 草图由 [`scripts/sketch.mjs`](../../../scripts/sketch.mjs) 生成，`npm run sketch` 可重新打印：页级 1 字符 ≈ 9.6px、1 行 ≈ 18px，框线按字符宽度对齐，宽度按真实 px 折算、高度为行数近似。卡片内用 ASCII 缩写：`(o)` = 环，`L58%` = 剩余 58%，`edit` = `✎`。
+> 草图由 [`tools/preview/ascii.mjs`](../../../tools/preview/ascii.mjs) 生成，`npm run sketch` 可重新打印；卡宽从 [`tools/preview/spec.mjs`](../../../tools/preview/spec.mjs) 推导，改规格后无需手调。页级 1 字符 ≈ 9.6px、1 行 ≈ 18px，宽度按真实 px 折算、高度为行数近似。卡片内用 ASCII 缩写：`(o)` = 环，`L58%` = 剩余 58%，`edit` = `✎`。
 
 ### 9.1 P2 浮层（表头线与行分隔，保持表格）
 
@@ -278,5 +279,7 @@ QuotaGauge({
 
 ### 10.7 预览方式（本轮已验证）
 
-- 临时 HTML：`.tmp/sketch/gauge.html`（真实 229px 卡 + 40px 环），`node .tmp/sketch/shot.mjs` 输出 `.tmp/sketch/gauge.png`。
-- 产物与脚本只在 `.tmp/`，不进 git；定稿后把尺寸 / 状态写回本清单与 `ui-design.md`。
+- 预览：`npm run preview gauge` → `.tmp/preview/gauge.png`（真实 229px 卡 + 40px 环，2x）；模板在 [`tools/preview/templates/gauge.html`](../../../tools/preview/templates/gauge.html)。
+- 尺寸来源：[`tools/preview/spec.mjs`](../../../tools/preview/spec.mjs)；改环径 / 字号只改这一处，预览与草图同步。
+- 只有会被 README / 设计文档引用的图才 `npm run preview:publish <name>`；分析图一律留在 `.tmp/preview/`。
+- 定稿后把尺寸 / 状态写回本清单与 `ui-design.md`。

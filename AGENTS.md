@@ -15,6 +15,7 @@
 | 施工 / 走查 | `docs/checklist/AGENTS.md` | `docs/checklist/active/`、`docs/checklist/archived/` |
 | 发布 / 版本 | `docs/release.md` | `.agents/skills/dsh-token-dash-release/SKILL.md`、版本记录 `.agents/skills/dsh-token-dash-release/references/official-release-version.md` |
 | 用户说明 / 变更历史 | `README.md` / `README.en.md` | `CHANGELOG.md`、`docs/pic/` |
+| 组件预览 / 草图 | `tools/preview/README.md` | `tools/preview/spec.mjs`、`templates/` |
 | Skill 维护 | `.agents/skills/`（项目 skill） | `D:\Projects\Context-Engineer\skills\`（全局 skill 真源） |
 
 - 当前 active plan / checklist 不在此复制；进入目录后按文件头状态判断，避免本文件与文档状态漂移。
@@ -32,13 +33,22 @@
 - 保持现有五家 provider 边界：adapter 只输出 `ProviderSnapshot`，VM 只输出 `SummaryVM`，UI 只消费 VM；不引入 provider 插件系统或 per-provider 文件拆分。
 - 不做无关重构；改动范围以 plan / checklist 声明为准，越界先更新文档并确认。
 - 日志用 `[TD:<module>]` 语义前缀；错误不吞，关键链路带 `errorKind` / `httpStatus`。
-- 临时产物、一次性脚本和 MCP 输出统一放 `.tmp/`；不在仓库根或 `src/` 下新建临时文件。
+- 临时产物、一次性脚本和 MCP 输出统一放 `.tmp/`（预览图放 `.tmp/preview/`）；不在仓库根或 `src/` 下新建临时文件。
 
 ## Skill 归属
 
 - 项目 skill 只放在仓库 `.agents/skills/`，Codex 与 DSH 原生识别，不复制到用户层。
 - 全局 skill 真源只放在 `D:\Projects\Context-Engineer\skills\`；`~/.agents/skills/<name>` 用 junction 指向 CE，不保留副本。
 - 新增或修改全局 skill 在 CE 内完成，再建 junction；项目 skill 与全局 skill 不混放。
+
+## 预览工件与预览工具
+
+- 三层分离：临时产物 `.tmp/preview/`（不入库）、预览工具 `tools/preview/`（入库）、定稿图 `docs/pic/`（入库）。判断标准只有一个：这张图会不会被 README / 设计文档引用——会 → `docs/pic`，不会 → `.tmp`。
+- 需要看真实比例时不要手搓临时 HTML：在 `tools/preview/templates/` 加模板，跑 `npm run preview <name>`，产物自动落 `.tmp/preview/`。
+- 尺寸、字号、间距只在 `tools/preview/spec.mjs` 定义一次；预览模板、`npm run sketch` 的 ASCII 草图、后续 E2E 尺寸断言都从它取值，禁止各写一份。
+- 只有定稿图才 `npm run preview:publish <name>` 写入 `docs/pic/`；分析跑一律留在 `.tmp/preview/`，避免截图噪声混进版本库。
+- 文档引用命令而不是 `.tmp/` 路径（临时目录会被清理）。
+- ASCII 草图由 `npm run sketch`（`tools/preview/ascii.mjs`）生成，不手写带边框的草图。
 
 ## 提交前规则
 

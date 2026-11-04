@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>QuotaGauge 比例预览</title>
+<style>
+  :root {
+    /*__SPEC_CSS__*/
+    --bg: #1c1c1e;
+    --card-bg: #242426;
+    --border: rgba(235, 235, 235, .18);
+    --text: #eeeeee;
+    --muted: rgba(235, 235, 235, .65);
+    --weak: rgba(235, 235, 235, .45);
+    --accent: #6ea8ff;
+    --error: #e05a5a;
+    --track: rgba(235, 235, 235, .22);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px; background: var(--bg); color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  h2 { font-size: 13px; font-weight: 600; margin: 0 0 12px; color: var(--muted); }
+  section { margin-bottom: 28px; }
+
+  .page { width: var(--content-width); }
+  .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--layout-gap); }
+  .grid.two { grid-template-columns: repeat(2, var(--card-width)); }
+
+  .card {
+    width: var(--card-width);
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: var(--card-padding);
+  }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .name { font-size: var(--card-header-font); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip { font-size: var(--card-chip-font); color: var(--muted); white-space: nowrap; }
+
+  .windows { display: grid; gap: var(--layout-gap); margin-top: 10px; }
+  .gauge { display: flex; flex-direction: column; align-items: center; gap: var(--gauge-gap); min-width: 0; }
+  .ring { position: relative; width: var(--gauge-ring); height: var(--gauge-ring); flex: none; }
+  .ring svg { display: block; width: 100%; height: 100%; }
+  .ring-label {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: var(--gauge-label); font-weight: 500; color: var(--weak); letter-spacing: .2px;
+  }
+  .pct { font-size: var(--gauge-percent); font-weight: 600; line-height: 20px; margin-top: var(--gauge-percent-offset); }
+  .pct.normal { color: var(--accent); }
+  .pct.critical { color: var(--error); }
+  .pct.empty { color: var(--weak); }
+  .line { font-size: var(--gauge-meta); color: var(--weak); line-height: 15px; white-space: nowrap; }
+
+  .zoom { transform: scale(3); transform-origin: left top; display: inline-block; margin: 8px 0 88px 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <section>
+    <h2>订阅卡 4 张一行（窗口一排等分）</h2>
+    <div class="grid" id="cards"></div>
+  </section>
+
+  <section>
+    <h2>两窗卡（列宽翻倍）</h2>
+    <div class="grid two" id="cards2"></div>
+  </section>
+
+  <section>
+    <h2>单个 Gauge 放大 3×</h2>
+    <div class="zoom" id="zoom"></div>
+  </section>
+</div>
+
+<script>
+  window.__SPEC__ = /*__SPEC_JSON__*/
+</script>
+<script>
+  const S = window.__SPEC__.gauge
+  const R = (S.ring - S.stroke) / 2
+  const C = 2 * Math.PI * R
+
+  const ring = (percent, state) => {
+    const arc = state === 'critical' ? 'var(--error)' : 'var(--text)'
+    const filled = state === 'empty' ? 0 : Math.max(0, Math.min(100, percent))
+    return `
+      <svg viewBox="0 0 ${S.ring} ${S.ring}" aria-hidden="true">
+        <circle cx="${S.ring / 2}" cy="${S.ring / 2}" r="${R}" fill="none" stroke="var(--track)" stroke-width="${S.stroke}" />
+        ${state === 'empty' ? '' : `<circle cx="${S.ring / 2}" cy="${S.ring / 2}" r="${R}" fill="none"
+          stroke="${arc}" stroke-width="${S.stroke}" stroke-linecap="round"
+          transform="rotate(-90 ${S.ring / 2} ${S.ring / 2})"
+          stroke-dasharray="${(C * filled / 100).toFixed(2)} ${C.toFixed(2)}" />`}
+      </svg>`
+  }
+
+  const gauge = (label, percent, state) => `
+    <div class="gauge">
+      <div class="ring">
+        ${ring(percent, state)}
+        <span class="ring-label">${label}</span>
+      </div>
+      <div class="pct ${state}">${state === 'empty' ? '—' : percent.toFixed(1) + '%'}</div>
+      <div class="line">${state === 'empty' ? '—' : `剩余 ${Math.round(100 - percent)}%`}</div>
+      <div class="line">${state === 'empty' ? '—' : '3 小时后'}</div>
+      <div class="line">${state === 'empty' ? '—' : '22:51'}</div>
+    </div>`
+
+  const card = (name, windows) => `
+    <div class="card">
+      <div class="head"><span class="name">${name}</span><span class="chip">[ 订阅 ]</span></div>
+      <div class="windows" style="grid-template-columns: repeat(${windows.length}, minmax(0, 1fr))">
+        ${windows.map((win) => gauge(win.label, win.percent, win.state)).join('')}
+      </div>
+    </div>`
+
+  document.getElementById('cards').innerHTML = [
+    card('GLM Coding', [
+      { label: '5h', percent: 42.5, state: 'normal' },
+      { label: '周', percent: 18.2, state: 'normal' },
+      { label: '月', percent: 3, state: 'normal' },
+    ]),
+    card('Kimi Coding', [
+      { label: '5h', percent: 96, state: 'critical' },
+      { label: '周', percent: 12, state: 'normal' },
+      { label: '月', percent: 0, state: 'empty' },
+    ]),
+    card('OpenCode Go', [
+      { label: '5h', percent: 12, state: 'normal' },
+      { label: '周', percent: 34, state: 'normal' },
+      { label: '月', percent: 58, state: 'normal' },
+    ]),
+    card('Command Code', [
+      { label: '5h', percent: 96, state: 'critical' },
+      { label: '周', percent: 61, state: 'normal' },
+    ]),
+  ].join('')
+
+  document.getElementById('cards2').innerHTML = [
+    card('Kimi Coding', [
+      { label: '5h', percent: 96, state: 'critical' },
+      { label: '周', percent: 12, state: 'normal' },
+    ]),
+    card('单窗示例', [
+      { label: '月', percent: 58, state: 'normal' },
+    ]),
+  ].join('')
+
+  document.getElementById('zoom').innerHTML = gauge('5h', 42.5, 'normal')
+</script>
+</body>
+</html>
