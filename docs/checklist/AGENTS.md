@@ -7,8 +7,9 @@
 - 参考类清单**只定能力与形态，不写实现步骤**，且**不构成施工授权**；实施步骤、验收项、测试用例一律写 `docs/plan/active/feature_*.md`，按 plan-workflow 批准后执行。
 - 回写 plan 时走 `docs/plan/`，并先加载全局 `plan-workflow` skill。
 - 当前 active：
-  - `docs/checklist/active/fullpage-board-build-checklist.md`：整页看板施工稿（已完成）
-  - `docs/checklist/active/board-visual-review-checklist.md`：假数据截图走查与改进项（待批准）
+  - `docs/checklist/active/fullpage-board-build-checklist.md`：整页看板施工稿（已完成，待归档）
+  - `docs/checklist/active/board-visual-review-checklist.md`：视觉走查与设计决策（设计定稿，D1–D18）
+  - `docs/checklist/active/board-redesign-build-checklist.md`：卡片化重构施工稿（待施工，配 `feature_board_cards_redesign.md`）
 - 参考类清单已归档（细则以 `docs/ui-design.md` v3.1 与 `docs/design.md` 为准）：
   - `docs/checklist/archived/ui-reference-checklist.md`
   - `docs/checklist/archived/backend-capability-checklist.md`
