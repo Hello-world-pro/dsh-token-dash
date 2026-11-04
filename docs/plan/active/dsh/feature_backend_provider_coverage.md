@@ -1,8 +1,8 @@
 # 后端 Provider 覆盖与取数可靠性
 
-> 状态：已对齐<br>
+> 状态：待验收<br>
 > 创建时间：2026-11-05<br>
-> 更新时间：2026-11-05（两轮迭代：代码事实 + 第三方参考）<br>
+> 更新时间：2026-11-05（已实施，自动测试通过；真机 provider 待验收）<br>
 > 关联逻辑根：`dsh-token-dash`（`src/`、`index.js`）<br>
 > 关联资料：[`ui-design.md`](../../../ui-design.md) v3.3、[`design.md`](../../../design.md)、第三方参考 [`shy3130-dsh-quota.md`](../../../reference/shy3130-dsh-quota.md) / [`invisiblesirius-dsh-quota-dashboard.md`](../../../reference/invisiblesirius-dsh-quota-dashboard.md)、旧能力清单 [`backend-capability-checklist.md`](../../../checklist/archived/backend-capability-checklist.md)
 
@@ -250,9 +250,16 @@ export function parseOpenCodeUsage(body) {
 | Key / orgId 不出现在日志与响应 | REQ-09 | 脱敏断言 | 待验证 |
 | OpenCode 三窗 + 404 回退 | REQ-10 | fixture 两版响应 | 待验证 |
 | Command Code credits + 两窗 | REQ-11 | fixture | 待验证 |
-| 7 家解析单测 | REQ-12 | `npm test` | 待验证 |
-| e2e 7 家字段与 fixtures 对齐 | REQ-13 | `npm run e2e` | 待验证 |
-| 重新检测覆盖 4 家订阅 | REQ-15 | mock `/providers/refresh` + 缓存 | 待验证 |
+| 7 家解析单测 | REQ-12 | `npm test` | 通过（77 通过 / 1 跳过） |
+| e2e 7 家字段与 fixtures 对齐 | REQ-13 | `npm run e2e` | 通过 |
+| 重新检测覆盖 4 家订阅 | REQ-15 | mock `/providers/refresh` + 缓存 | 通过 |
+
+**验证记录（2026-11-05）**
+
+- `npm test`：77 通过 / 1 跳过 / 0 失败；
+- `npm run e2e`：UI assertions passed；
+- 已落地：源表、每源缓存、7 家 registry、OpenCode / Command Code 解析、安全门、订阅重查；
+- 真机 OpenCode Go / Command Code 尚未用真实 Key 跑通，保留 `待验收`，不得直接归档。
 
 ## 七、日志速查
 
@@ -293,3 +300,12 @@ export function parseOpenCodeUsage(body) {
 - invisiblesirius 的 `ready[]`、环境变量/状态文件级联、Cookie / 组织用量不进入本 plan；只采纳声明式表 + `runQuery` 思路。
 - OpenCode 采用 B12 的 404/405 回退；Command Code 采用 preflight `orgId` + credits/两窗解析。
 - 缓存实现位置定为 adapters；安全门 `requestRejection` 返回非空即终止。
+
+### 第三轮 · 实施前代码核对
+
+- 现有错误测试固定 `kind: 'http'`，`upstream` 不改成新 kind，而是 `{ kind:'http', status, upstream: status>=500 }`，避免破坏已有日志语义。
+- `providers.js` 的 `PROVIDER_ORDER` 同时驱动 `pricingLinks` 和默认模型表；追加 2 家后单测 `pricingLinks.length` 必须从 5 改 7。
+- `readProviders` 的缓存改由 adapters 接收 `Map`；`readSubscriptions` 不能用缓存，否则「重新检测」无效。
+- `index.js` 的 prefs 保存 / 导入 / provider refresh 三处都要清 Map。
+- Command Code 的真实响应字段未在参考文档给出完整样例，解析按 `credits` + `windowLimits.fiveHour/weekly` 容错，fixture 先固化；真机失败只降级 `parse`，不伪造 0。
+- 安全门必须先放行回环，否则现有 e2e（无 token）会全挂；`requestRejection` 返回 Response 时直接返回。

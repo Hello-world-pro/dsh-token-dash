@@ -20,10 +20,14 @@ const ALIASES = {
   aliyun: 'qwen',
   tongyi: 'qwen',
   openrouter: 'openrouter',
+  opencode: 'opencode-go',
+  'opencode-go': 'opencode-go',
+  commandcode: 'command-code',
+  'command-code': 'command-code',
 }
 
 /** Display order is also the P3 pricing-link order. */
-export const PROVIDER_ORDER = ['deepseek-official', 'zhipu', 'moonshot', 'openrouter', 'qwen']
+export const PROVIDER_ORDER = ['deepseek-official', 'zhipu', 'moonshot', 'openrouter', 'qwen', 'opencode-go', 'command-code']
 
 const PROVIDERS = {
   'deepseek-official': {
@@ -91,6 +95,26 @@ const PROVIDERS = {
       'qwen3.8-flash': 'Qwen3.8-Flash',
     },
     pricingUrl: 'https://help.aliyun.com/zh/model-studio/billing-for-alibaba-cloud-model-studio',
+  },
+  'opencode-go': {
+    id: 'opencode-go',
+    label: 'OpenCode Go',
+    currency: 'USD',
+    subscription: true,
+    defaultModel: '-',
+    prefixes: [/^opencode/],
+    modelLabels: {},
+    pricingUrl: 'https://opencode.ai/',
+  },
+  'command-code': {
+    id: 'command-code',
+    label: 'Command Code',
+    currency: 'CNY',
+    subscription: true,
+    defaultModel: '-',
+    prefixes: [],
+    modelLabels: {},
+    pricingUrl: 'https://commandcode.ai/',
   },
 }
 

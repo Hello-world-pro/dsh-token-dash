@@ -1,6 +1,6 @@
 # dsh-token-dash 设计文档
 
-> 更新时间：2026-11-04（v3.1，同步 Provider 扩展与鉴权目标形态）<br>
+> 更新时间：2026-11-05（v3.3，7 家 Provider 源表、每源缓存与路由安全门）<br>
 > 面向贡献者的一页式架构说明。需求背景见 [token-dash 计划（已归档）](plan/archived/feature_token_dash.md)，已归档的 UI 迭代见 [UI 迭代计划](plan/archived/feature_ui_refresh.md)；Provider/VM/UI 边界收口见 [边界计划](plan/archived/feature_provider_boundary.md)；UI 视觉以 [UI 设计](ui-design.md) 为唯一真源。
 
 ## 总体架构
@@ -40,8 +40,8 @@
   → core.addRecord 按 天/provider/model 入账
   → store 持久化 daily.json（2s 防抖 flush，原子写 tmp+rename）
 
-浏览器请求 /summary（可选 ?active=<raw>）
-  → readProviders（当前 30s 单档 TTL；计划成功 60s / 失败 10s + 在途合并）
+浏览器请求 /summary
+  → readProviders(ctx, prefs, cache)（每源成功 60s / 失败 10s + in-flight）
   → toSnapshot（统一 windows/error/quotaError/status/fetchedAt）
   → core.buildSummary(state, prefs, now, snapshots)
        ← providerRegistry（默认模型/币种/前缀/展示名/价格页）
@@ -94,39 +94,42 @@ SummaryVM（core.js → client 的唯一 DTO）
 - **页面入口**：P3 走宿主「全局面板」机制——`slots.inject('main')` 注册整页（`key = token-dash`），`sidebar.panellist` 注册同 `id` 的左侧常驻行；`layout` 通过 `inject` 注入，浮层底部「全量看板」与侧栏入口调用 `selectPanel('token-dash')`（点击时再校验 `hasMainPanel`）。
 - **兼容**：VM 可读取旧 `plans` 输入，但输出只保留 `windows`；`DEFAULT_MODELS` 保留为派生导出，供旧调用方过渡。
 
-## Provider 扩展（目标形态）
+## Provider 源表（v3.3）
 
-> 现状五家固定、逐家 if 分支；扩到第七家前先把取数收敛成表。详细条目见 [后端能力清单](checklist/archived/backend-capability-checklist.md) §4。
+> 当前 7 家：DeepSeek / GLM / Kimi / OpenRouter / Qwen / OpenCode Go / Command Code。前 5 家用 `legacy` 函数保留既有账号钱包、双路径等特例；后 2 家由声明式 `credential + quota + preflight` 驱动。详细能力见 [后端能力清单](checklist/archived/backend-capability-checklist.md) §4。
 
 ```text
-quota-sources.js（新增）
-  zhipu      { baseUrl, path, credentialRef, auth:'bearer', normalize }
-  opencode   { … auth:'bearer', normalize }      ← 新增
-  commandcode{ … auth:'bearer', preflight, normalize }  ← 新增
-  kimi       { … auth:'oauth-reuse', readSecret }
-  deepseek / openrouter / qwen { … }
+quota-sources.js
+  PROVIDER_SOURCES = [
+    { id, kind, currency, legacy? }                       // 既有 5 家
+    { id, kind, currency, credential, quota, preflight? } // OpenCode / Command Code
+  ]
 
-adapters.readProviders
-  → for (源 of 表) { secret = resolveSecret(源); query = preflight?.(…); fetch(baseUrl+path+query) }
-  → toSnapshot（窗口 0–3、百分比夹取）
-  → ProviderSnapshot[]
+adapters.readProviders(ctx, prefs, cache)
+  → for (源 of 表)
+      旧源: legacy(ctx, prefs)
+      新源: resolveCredential → preflight?.(query) → fetch(quota.url | fallbackUrl)
+  → parse → normalizeWindows（0–3、夹取、缺窗不补）
+  → toSnapshot → ProviderSnapshot[]
+  → 每源缓存 60s / 10s + in-flight
 ```
 
 | 约束 | 定义 |
 |---|---|
-| 源表形状 | `{ id, baseUrl, path, credentialRef, auth, headers?, validate?, normalize }` |
-| 凭据 | 只支持 `bearer` 与 `oauth-reuse`；不做 Cookie、不读本机登录文件 |
+| 源表形状 | `{ id, kind, currency, legacy?, credential?, quota?, preflight? }`；`quota = { url, fallbackUrl?, parse }` |
+| 凭据 | 只支持 `bearer` 与 `oauth-reuse`；统一走宿主 `credentials.resolve`，不做 Cookie、不读本机文件 |
 | preflight | 取数前可选，返回 query 片段；异常返回空串，主请求继续 |
 | 窗口 | 长度 0–3，`key ∈ 5h/week/month`，`usedPercent ∈ [0,100]`，缺窗不补占位 |
-| 新增一家 | 源表 1 行 + `normalize` / `readSecret` / `preflight` 三个可选钩子 + 1 份 fixture |
+| 新增一家 | 源表 1 行 + `parse`（或 legacy reader）+ 1 份 fixture |
+| 错误 | `unconfigured` 不算刷新失败；5xx 带 `upstream: true`；`probe.misses` 记录 `none/error/hidden` |
 
 ## 路由与鉴权
 
 | 项 | 现状 | 目标 |
 |---|---|---|
 | 挂载 | 宿主 `webServer.register({ kind:'prefix', path:'/token-dash/api' })` | 不变 |
-| 鉴权 | **无判断**；e2e 中无 token 的 `PUT /prefs` 返回 200 | 优先 `connection.requestRejection`，无则校验 `remoteAddress` + `host` + `origin` |
-| 脱敏 | 日志已过滤，响应未统一 | 错误消息 / `source` / `raw` 三处统一 |
+| 鉴权 | 回环放行；非回环优先 `connection.requestRejection`，无则校验 `remoteAddress + host + origin`，失败 403 | 同现状 |
+| 脱敏 | 日志已过滤；错误响应只返回 `reason`，不含上游 body / Key | 保持 |
 | 附加路由 | 无 `/repo` | 不新增；仓库入口为静态 `REPO_URL` 链接 |
 
 ## 文件目录组织
@@ -138,7 +141,8 @@ dsh-token-dash/
 ├── src/
 │   ├── core.js            纯聚合：buildSummary（VM）、addRecord、月/日键、排序、预算
 │   ├── collect.js         会话事件采集：recordFromEvent / headerFromEvent / ingest / backfill
-│   ├── adapters.js        供应商侦测（五家 API/订阅）+ toSnapshot 边界 + 事件日志映射
+│   ├── adapters.js        供应商侦测（7 家 API/订阅）+ toSnapshot 边界 + 事件日志映射
+│   ├── quota-sources.js   声明式 provider 源表、端点与解析（OpenCode / Command Code）
 │   ├── providers.js       provider registry：别名/展示名/币种/默认模型/前缀/展示名/价格页
 │   ├── pricing.js         价格：内置 catalog + 社区价格表 + OpenRouter 路由价
 │   ├── catalog.json       内置模型价格目录（官方价，随包发布，pricing.js 消费）
@@ -198,12 +202,12 @@ dsh-token-dash/
 3. **余额语义**：余额 = 账户真实余额（adapter 查询）；预算维度用「已用 / 计划余额」表达，**不渲染进度条**（v3.0 起）
 4. **纯 JS 无构建**：源码即产物——GitHub 安装长期可用；npm 发布时 `files` 字段控制包内容
 5. **只读本地数据**（REQ-14）：不统计标题生成、不发起计费请求、凭据经宿主解析不落盘
-6. **Provider 边界收口**：现有五家、目标七家（+OpenCode Go / Command Code）；adapter 输出 `ProviderSnapshot`，VM 输出 `SummaryVM`，UI 只消费 VM；provider 差异留在 descriptor/adapter，不扩散到 VM/UI
+6. **Provider 边界收口**：现有七家（含 OpenCode Go / Command Code）；adapter 输出 `ProviderSnapshot`，VM 输出 `SummaryVM`，UI 只消费 VM；provider 差异留在 descriptor/adapter，不扩散到 VM/UI
 7. **不做 provider 插件系统**：不拆 per-provider 文件、不引入 DI；七家规模用单文件源表 + 三个可选钩子，避免过度抽象
 8. **配置面收口**：`prefs` 只保留 `budgets` / `billingModes` / `refreshMs` / `showBalance`（+ `version`）；legacy `budget`、`showMonthTokens`、`logLevel` 只做读取兼容，不参与计算，保存时自然消失；预算未配置时默认 100（provider 币种，不写盘）
 9. **整页入口走宿主全局面板**：P3 不再塞进浮层，改用 `main` + `sidebar.panellist` 同 key 注册；浮层只保留当前模型，避免同一套用量组件两处维护（v3.0）
 10. **仓库入口是静态链接**：`REPO_URL` 直接新窗口打开，不请求 `/repo`、不展示 star 计数；与用量/预算无关
-11. **取数收敛成源表**：provider 元数据、凭据形态与归一化集中到 `quota-sources.js`，`readProviders` 按表迭代；新增家只加表行与可选钩子，`adapters.js` 不再新增 if 分支（待实施，见后端清单 B8）
+11. **取数收敛成源表**：provider 元数据、凭据形态与归一化集中到 `quota-sources.js`，`readProviders` 按表迭代；新增家只加表行与解析钩子，`adapters.js` 不再新增 provider if 分支
 12. **不做 Cookie / 本机登录态**：百炼 Token Plan、小米 MiMo、Codex `~/.codex/auth.json` 均不接入——凭据会过期或越界读用户目录
 13. **升级不迁移数据**：账本与设置在 `$DSH_HOME/dsh-token-dash/`，与 profile 的 `node_modules` 分离，`dsh plugin add` 不触碰；跨机迁移走 P3「导出 / 导入」，导出只含设置与当月使用，不含配额、余额与日志
 14. **P3 自持滚动与 4px 间距**：`BoardPage` 外层 `board-scroll` 负责纵向滚动，不改宿主 `main`；间距只用 4 / 8 / 12 / 16 / 24 / 32 六档

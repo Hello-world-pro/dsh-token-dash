@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { logAdapterEvents, parseGlmQuota, parseKimiQuota, parseOpenRouterCredits, readProviders, readSubscriptions, toSnapshot } from '../../src/adapters.js'
+import { parseCommandCodeCredits, parseOpenCodeUsage } from '../../src/quota-sources.js'
 
 test('GLM parses TOKENS_LIMIT unit 3/6 and ignores TIME_LIMIT', () => {
   const windows = parseGlmQuota({
@@ -111,9 +112,56 @@ test('readProviders 空结果附带 misses，区分未配置与隐藏', async ()
     'moonshot:none',
     'openrouter:none',
     'qwen:none',
+    'opencode-go:none',
+    'command-code:none',
   ])
   const hidden = await readProviders(ctxWith({ DASHSCOPE_API_KEY: 'sk-test' }), { billingModes: { qwen: 'hide' } })
   assert.equal(hidden.misses.includes('qwen:hidden'), true)
+})
+
+test('OpenCode 与 Command Code 解析窗口/credits', () => {
+  const opencode = parseOpenCodeUsage({
+    data: { usage: { fiveHour: { usedPercent: 12 }, weekly: { used_ratio: 0.34 }, monthly: { used: 58, limit: 100 } } },
+  })
+  assert.deepEqual(opencode.map((item) => [item.key, item.usedPercent]), [['5h', 12], ['week', 34], ['month', 58]])
+  const command = parseCommandCodeCredits({
+    data: { credits: 12.5, windowLimits: { fiveHour: { usedPercent: 96 }, weekly: { used: 61, limit: 100 } } },
+  })
+  assert.deepEqual(command.windows.map((item) => [item.key, item.usedPercent]), [['5h', 96], ['week', 61]])
+  assert.equal(command.balance.amount, 12.5)
+  assert.equal(command.balance.currency, 'CNY')
+})
+
+test('readProviders 接入 OpenCode 与 Command Code，并按源缓存', async () => {
+  let calls = 0
+  const urls = []
+  const restore = mockFetch(async (url) => {
+    calls += 1
+    urls.push(url)
+    if (url.includes('opencode.ai')) {
+      return { ok: true, status: 200, json: async () => ({ data: { usage: { fiveHour: { usedPercent: 12 } } } }) }
+    }
+    return { ok: true, status: 200, json: async () => ({ data: { credits: 12.5, windowLimits: { fiveHour: { usedPercent: 96 } } } }) }
+  })
+  try {
+    const cache = new Map()
+    const prefs = {}
+    const ctx = ctxWith({ OPENCODE_GO_API_KEY: 'sk-test', COMMAND_CODE_API_KEY: 'sk-test', COMMAND_CODE_ORG_ID: 'org-1' })
+    const first = await readProviders(ctx, prefs, cache)
+    const second = await readProviders(ctx, prefs, cache)
+    assert.equal(calls, 2)
+    const opencode = first.find((item) => item.id === 'opencode-go')
+    const command = first.find((item) => item.id === 'command-code')
+    assert.equal(opencode.currency, 'USD')
+    assert.equal(opencode.windows[0].usedPercent, 12)
+    assert.equal(command.currency, 'CNY')
+    assert.equal(command.windows[0].usedPercent, 96)
+    assert.equal(command.balance.amount, 12.5)
+    assert.equal(urls.some((url) => url.includes('orgId=org-1')), true)
+    assert.deepEqual(second.map((item) => item.id), first.map((item) => item.id))
+  } finally {
+    restore()
+  }
 })
 
 test('Qwen 国际站 Key 按 USD，国内站按 CNY', async () => {

@@ -2,6 +2,24 @@
 
 本文件记录每个版本的**新增**与**修改**。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.3.0-local.8] - 2026-11-05
+
+> 本地构建，未发布
+
+### 新增
+
+- 后端 provider 覆盖扩到 7 家：新增 OpenCode Go、Command Code（`command-code` / CNY）
+- `src/quota-sources.js` 声明式源表：endpoint、credential、preflight、parse、fallbackUrl
+- 每源缓存成功 60s / 失败 10s + in-flight 合并；订阅重查覆盖 GLM / Kimi / OpenCode Go / Command Code
+- 非回环请求走 `requestRejection` / 回环三重校验；错误补 `upstream` 标记
+
+### 修改
+
+- `readProviders` 按源表迭代；旧 5 家保留 legacy reader（DeepSeek 钱包、Kimi 双路径）
+- `readSubscriptions` 绕过缓存，Kimi 仍只查 Coding 配额、不触碰余额
+- `providers.js` 注册 2 家与别名；pricingLinks 7 家
+- 单测增至 77：新增 OpenCode / Command Code 解析、缓存复用、7 家 registry
+
 ## [1.3.0-local.7] - 2026-11-05
 
 > 本地构建，未发布

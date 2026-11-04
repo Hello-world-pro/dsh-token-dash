@@ -2,7 +2,8 @@
  * External provider adapters. Endpoints and response semantics are copied from
  * the reference plugins; do not invent fields or percentages.
  */
-import { normalizeProvider, providerCurrency } from './providers.js'
+import { normalizeProvider, providerCurrency, providerLabel } from './providers.js'
+import { PROVIDER_SOURCES } from './quota-sources.js'
 
 const TIMEOUT = 6000
 const GLM_QUOTA = 'https://bigmodel.cn/api/monitor/usage/quota/limit'
@@ -79,6 +80,12 @@ export function parseOpenRouterCredits(body) {
   return { amount: Math.max(0, total - usage), currency: 'USD', status: 'ok', updatedAt: Date.now() }
 }
 
+async function resolveCredential(ctx, credential) {
+  if (credential === undefined || credential === null) return undefined
+  if (credential.type !== 'bearer' && credential.type !== 'oauth-reuse') return undefined
+  return resolveKey(ctx, credential.refs ?? [])
+}
+
 async function resolveKey(ctx, names) {
   const credentials = ctx.get?.('credentials')
   if (credentials === undefined || typeof credentials.resolve !== 'function') return undefined
@@ -108,7 +115,9 @@ async function requestJson(url, headers) {
 
 /** #47：错误分类（http+状态码 / timeout / network）——挂在条目 `_error`/`_quotaError` 上供日志还原原因。 */
 function errorDetail(error) {
-  if (error?.status !== undefined) return { kind: 'http', status: error.status }
+  if (error?.status !== undefined) {
+    return { kind: 'http', status: error.status, ...(error.status >= 500 ? { upstream: true } : {}) }
+  }
   const name = `${error?.name ?? ''} ${error?.message ?? ''}`
   if (name.includes('Timeout') || name.includes('abort') || name.includes('Abort')) return { kind: 'timeout' }
   return { kind: 'network' }
@@ -223,6 +232,101 @@ async function qwen(ctx) {
   return { id: 'qwen', kind: 'api', currency, balance: { amount: null, status: 'unsupported', currency, updatedAt: Date.now() } }
 }
 
+const LEGACY_READERS = { deepseek, glm, kimi, openrouter, qwen }
+const WINDOW_KEYS = new Set(['5h', 'week', 'month'])
+
+function normalizeWindows(windows) {
+  if (!Array.isArray(windows)) return []
+  const out = []
+  const seen = new Set()
+  for (const item of windows) {
+    if (item === null || item === undefined || !WINDOW_KEYS.has(item.key) || seen.has(item.key)) continue
+    const usedPercent = clampPercent(item.usedPercent)
+    if (usedPercent === null) continue
+    seen.add(item.key)
+    out.push({ ...item, usedPercent })
+  }
+  return out
+}
+
+/** 通用 preflight：凭据存在才拼 query；异常返回空串，不阻断主请求。 */
+async function sourceQuery(ctx, source) {
+  if (source.preflight === undefined) return ''
+  try {
+    const hit = await resolveKey(ctx, source.preflight.refs ?? [])
+    if (hit === undefined) return ''
+    return `${source.preflight.param}=${encodeURIComponent(hit.value)}`
+  } catch {
+    return ''
+  }
+}
+
+function withQuery(url, query) {
+  if (query === '') return url
+  return `${url}${url.includes('?') ? '&' : '?'}${query}`
+}
+
+async function readDeclarativeSource(ctx, prefs, source) {
+  const hit = await resolveCredential(ctx, source.credential)
+  if (hit === undefined) return null
+  const base = { id: source.id, name: providerLabel(source.id), kind: source.kind, mode: 'subscription', currency: source.currency }
+  const query = await sourceQuery(ctx, source)
+  let body
+  try {
+    try {
+      body = await requestJson(withQuery(source.quota.url, query), { authorization: `Bearer ${hit.value}` })
+    } catch (error) {
+      if (source.quota.fallbackUrl === undefined || (error.status !== 404 && error.status !== 405)) throw error
+      body = await requestJson(withQuery(source.quota.fallbackUrl, query), { authorization: `Bearer ${hit.value}` })
+    }
+  } catch (error) {
+    return { ...base, windows: [], _quotaError: errorDetail(error) }
+  }
+  const parsed = source.quota.parse(body)
+  const windows = normalizeWindows(Array.isArray(parsed) ? parsed : parsed?.windows)
+  const balance = Array.isArray(parsed) ? undefined : parsed?.balance
+  if (windows.length === 0 && balance === undefined) return { ...base, windows: [], _quotaError: { kind: 'parse' } }
+  return { ...base, windows, ...(balance === undefined ? {} : { balance }) }
+}
+
+async function readSource(ctx, prefs, source) {
+  if (source.legacy !== undefined) {
+    const reader = LEGACY_READERS[source.legacy]
+    return reader(ctx, prefs)
+  }
+  return readDeclarativeSource(ctx, prefs, source)
+}
+
+/** 订阅重查专用：Kimi 只查 Coding 配额，不请求 moonshot 余额。 */
+async function readKimiSubscription(ctx, prefs) {
+  const quota = await kimiCodingQuota(ctx, prefs)
+  if (quota.state === 'ok') return quota.entry
+  if (quota.state === 'fallback') return { id: 'moonshot', kind: 'api', mode: 'unknown', currency: 'CNY', _quotaError: quota.quotaError ?? null }
+  return null
+}
+
+const TTL_OK = 60000
+const TTL_FAIL = 10000
+
+async function readCachedSource(ctx, prefs, source, cache) {
+  const now = Date.now()
+  const cached = cache.get(source.id)
+  const ttl = cached?.ok === true ? TTL_OK : TTL_FAIL
+  if (cached !== undefined && cached.promise === null && now - cached.at < ttl) return cached.data
+  if (cached?.promise !== undefined && cached.promise !== null) return cached.promise
+  const promise = readSource(ctx, prefs, source)
+    .then((data) => {
+      cache.set(source.id, { at: Date.now(), ok: data !== null, data, promise: null })
+      return data
+    })
+    .catch((error) => {
+      cache.set(source.id, { at: Date.now(), ok: false, data: null, promise: null })
+      throw error
+    })
+  cache.set(source.id, { at: cached?.at ?? 0, ok: cached?.ok === true, data: cached?.data ?? null, promise })
+  return promise
+}
+
 function visibleEntry(entry, prefs) {
   return entry !== null && prefs?.billingModes?.[entry.id] !== 'hide'
 }
@@ -254,19 +358,18 @@ export function toSnapshot(entry) {
   }
 }
 
-const ADAPTER_IDS = ['deepseek-official', 'zhipu', 'moonshot', 'openrouter', 'qwen']
-
 /**
  * Query configured providers; each failure is isolated. Balance/credits are always requested
  * (P2 shows them regardless of the P1-only toggle, #31). 空档原因挂在返回数组的 `misses` 上：
  * `<id>:none` 未配置、`:error` 请求失败、`:hidden` 被计费模式隐藏。
+ * 缓存按源保存在调用方传入的 Map 中：成功 60s、失败 10s，并发复用 promise。
  */
-export async function readProviders(ctx, prefs) {
-  const results = await Promise.allSettled([deepseek(ctx), glm(ctx, prefs), kimi(ctx, prefs), openrouter(ctx), qwen(ctx)])
+export async function readProviders(ctx, prefs, cache = new Map()) {
+  const results = await Promise.allSettled(PROVIDER_SOURCES.map((source) => readCachedSource(ctx, prefs, source, cache)))
   const out = []
   const misses = []
   results.forEach((result, index) => {
-    const id = ADAPTER_IDS[index]
+    const id = PROVIDER_SOURCES[index].id
     if (result.status !== 'fulfilled') { misses.push(`${id}:error`); return }
     if (result.value === null) { misses.push(`${id}:none`); return }
     if (visibleEntry(result.value, prefs) !== true) { misses.push(`${id}:hidden`); return }
@@ -279,18 +382,23 @@ export async function readProviders(ctx, prefs) {
 }
 
 /**
- * P3「重新检测」专用：只重查订阅 provider（GLM / Kimi Coding）的配额，不请求任何余额接口。
- * 返回订阅侦测条目；自动模式下配额失败的 Kimi 返回按量条目，无 Key 的 provider 不返回（由调用方从缓存移除）。
+ * P3「重新检测」专用：只重查订阅 provider 的配额，绕过缓存。
+ * 仅返回 subscription 条目；无 Key 的 provider 不返回（由调用方从缓存移除）。
  */
 export async function readSubscriptions(ctx, prefs) {
-  const [glmEntry, kimiQuota] = await Promise.all([
-    glm(ctx, prefs).catch(() => null),
-    kimiCodingQuota(ctx, prefs).catch(() => ({ state: 'no-key' })),
-  ])
-  const kimiEntry = kimiQuota.state === 'ok' ? kimiQuota.entry : kimiQuota.state === 'fallback' ? { id: 'moonshot', kind: 'api', currency: 'CNY' } : null
+  const sources = PROVIDER_SOURCES.filter((source) => source.kind === 'subscription')
+  const results = await Promise.allSettled(sources.map((source) => (
+    source.legacy === 'kimi' ? readKimiSubscription(ctx, prefs) : readSource(ctx, prefs, source)
+  )))
   const out = []
-  if (visibleEntry(glmEntry, prefs)) out.push(toSnapshot(glmEntry))
-  if (visibleEntry(kimiEntry, prefs)) out.push(toSnapshot(kimiEntry))
+  results.forEach((result, index) => {
+    if (result.status !== 'fulfilled' || result.value === null) return
+    // 旧源（GLM / Kimi）配额失败时可能回落 API 条目，保留旧行为；新源只保留订阅条目。
+    const legacy = sources[index].legacy !== undefined
+    if (result.value.kind !== 'subscription' && legacy !== true) return
+    if (visibleEntry(result.value, prefs) !== true) return
+    out.push(toSnapshot(result.value))
+  })
   return out
 }
 
@@ -329,6 +437,15 @@ export function logAdapterEvents(log, providers) {
     }
     if (item.id === 'qwen') {
       info('adapter.qwen', item.currency === 'USD' ? 'currency.usd' : 'detected', {})
+      continue
+    }
+    if (item.id === 'opencode-go' || item.id === 'command-code') {
+      const module = item.id === 'opencode-go' ? 'adapter.opencode' : 'adapter.commandcode'
+      const windows = (item.windows ?? []).length
+      if (windows > 0) info(module, 'quota.ok', { windows })
+      else if (item.quotaError?.kind === 'parse') info(module, 'quota.parse', {})
+      else info(module, 'quota.fail', { windows: 0, ...errorMeta(item.quotaError) })
+      if (item.balance?.status === 'ok') info(module, 'credits.ok', { amount: item.balance.amount })
     }
   }
 }

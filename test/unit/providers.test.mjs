@@ -13,16 +13,22 @@ import {
   providerLabel,
 } from '../../src/providers.js'
 
-test('registry descriptors keep the five-provider contract', () => {
-  assert.deepEqual(pricingLinks().map((item) => item.id), ['deepseek-official', 'zhipu', 'moonshot', 'openrouter', 'qwen'])
-  assert.deepEqual(pricingLinks().map((item) => item.label), ['DeepSeek', '智谱 AI', 'Kimi', 'OpenRouter', '通义千问'])
-  assert.equal(pricingLinks().length, 5)
+test('registry descriptors keep the seven-provider contract', () => {
+  assert.deepEqual(pricingLinks().map((item) => item.id), ['deepseek-official', 'zhipu', 'moonshot', 'openrouter', 'qwen', 'opencode-go', 'command-code'])
+  assert.deepEqual(pricingLinks().map((item) => item.label), ['DeepSeek', '智谱 AI', 'Kimi', 'OpenRouter', '通义千问', 'OpenCode Go', 'Command Code'])
+  assert.equal(pricingLinks().length, 7)
   assert.equal(providerLabel('deepseek-account'), 'DeepSeek')
   assert.equal(providerLabel('zai-coding'), '智谱 AI')
+  assert.equal(providerLabel('opencode'), 'OpenCode Go')
+  assert.equal(providerLabel('commandcode'), 'Command Code')
   assert.equal(providerCurrency('openrouter'), 'USD')
   assert.equal(providerCurrency('qwen'), 'CNY')
+  assert.equal(providerCurrency('opencode-go'), 'USD')
+  assert.equal(providerCurrency('command-code'), 'CNY')
   assert.equal(canBeSubscription('zhipu'), true)
   assert.equal(canBeSubscription('moonshot'), true)
+  assert.equal(canBeSubscription('opencode-go'), true)
+  assert.equal(canBeSubscription('command-code'), true)
   assert.equal(canBeSubscription('openrouter'), false)
   assert.equal(providerDescriptor('unknown'), null)
 })
@@ -34,6 +40,8 @@ test('default models and compat table stay unchanged', () => {
     moonshot: 'kimi-k3',
     openrouter: '-',
     qwen: 'qwen3.8-max',
+    'opencode-go': '-',
+    'command-code': '-',
   })
   for (const [id, model] of Object.entries(DEFAULT_MODELS)) {
     assert.equal(defaultModelFor(id), model)

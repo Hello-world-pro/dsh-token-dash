@@ -10,6 +10,7 @@ import { ingest, backfill } from './src/collect.js'
 import { REFRESH_OPTIONS, createFlusher, dataDir, loadPrefs, loadState, logsDir, recoverState, resolveHome, saveJson, saveMonths } from './src/store.js'
 import { buildExport, mergeImportDays, validateBundle } from './src/backup.js'
 import { logAdapterEvents, readProviders, readSubscriptions } from './src/adapters.js'
+import { PROVIDER_SOURCES } from './src/quota-sources.js'
 import { catalogInfo, loadCommunityPricing, loadRouterPricing } from './src/pricing.js'
 import { clearLog, createLogger, exportLog } from './src/diagnostics.js'
 import { isNewer } from './src/version.js'
@@ -18,7 +19,7 @@ export const name = 'dsh-token-dash'
 
 const ROUTE_PREFIX = '/token-dash/api'
 const CURRENT_VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
-const PROVIDER_TTL = 30000
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
 let updateCache = { at: 0, data: null }
 
 /** Locate the bundled dsh CLI (same layout scripts/e2e.mjs relies on). */
@@ -155,13 +156,34 @@ function normalizePrefs(input, base) {
   return prefs
 }
 
+function isLoopbackRequest(req) {
+  const remote = String(req.socket?.remoteAddress ?? '')
+  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(remote)) return false
+  const host = String(req.headers?.host ?? '').replace(/:\d+$/, '')
+  if (!LOOPBACK_HOSTS.has(host)) return false
+  const origin = req.headers?.origin
+  if (origin === undefined) return true
+  try {
+    const url = new URL(origin)
+    return LOOPBACK_HOSTS.has(url.hostname)
+  } catch {
+    return false
+  }
+}
+
 export function apply(ctx) {
   const dir = dataDir(ctx)
   const logDir = logsDir(ctx)
   const logger = createLogger({ dir: logDir, version: CURRENT_VERSION, dshVersion: '0.2.1-rc.5' })
   let prefs
   let state
-  let providerCache = { at: 0, data: [] }
+  let providerCache = new Map()
+  let providerCacheMeta = { at: 0, hadProviders: false, degraded: false }
+  const cacheData = () => [...providerCache.values()].map((entry) => entry.data).filter((item) => item !== null && item !== undefined)
+  const clearProviderCache = () => {
+    providerCache.clear()
+    providerCacheMeta = { at: 0, hadProviders: false, degraded: false }
+  }
   const ready = Promise.all([loadState(dir, logger), loadPrefs(dir, logger)]).then(([loadedState, loadedPrefs]) => {
     state = loadedState ?? emptyState()
     prefs = loadedPrefs
@@ -249,12 +271,10 @@ export function apply(ctx) {
     const webServer = scoped.webServer
     if (webServer === undefined) return
     const refreshProviderCache = async () => {
-      const data = await readProviders(scoped, prefs)
-      const hadProviders = providerCache.hadProviders === true || data.length > 0
-      // 空快照不写 TTL：宿主服务未就绪时下一次请求立刻重试，避免整分钟空态
-      providerCache = {
-        at: data.length === 0 ? 0 : Date.now(),
-        data,
+      const data = await readProviders(scoped, prefs, providerCache)
+      const hadProviders = providerCacheMeta.hadProviders === true || data.length > 0
+      providerCacheMeta = {
+        at: Date.now(),
         hadProviders,
         degraded: data.length === 0 && hadProviders,
       }
@@ -276,14 +296,27 @@ export function apply(ctx) {
       path: ROUTE_PREFIX,
       handler: async (req, res) => {
         const url = new URL(req.url ?? '/', 'http://127.0.0.1')
+        if (!isLoopbackRequest(req)) {
+          let rejection
+          try {
+            rejection = await scoped.get?.('connection')?.requestRejection?.(req)
+          } catch {
+            rejection = undefined
+          }
+          if (rejection !== undefined && rejection !== null) {
+            return rejection
+          }
+          json(res, 403, { ok: false, reason: 'forbidden' })
+          return
+        }
         try {
           await ready
           if (url.pathname === `${ROUTE_PREFIX}/summary` && req.method === 'GET') {
-            if (Date.now() - providerCache.at > PROVIDER_TTL) await refreshProviderCache()
-            const summary = buildSummary(state, prefs, Date.now(), providerCache.data)
+            if (Date.now() - providerCacheMeta.at > 5000) await refreshProviderCache()
+            const summary = buildSummary(state, prefs, Date.now(), cacheData())
             summary.version = CURRENT_VERSION
             summary.refreshMs = prefs.refreshMs
-            summary.providersDegraded = providerCache.degraded === true
+            summary.providersDegraded = providerCacheMeta.degraded === true
             summary.catalog = catalogInfo()
             logger.info('vm', 'build', { providers: summary.providers.length, api: summary.providers.filter((item) => item.kind === 'api').length, subscription: summary.providers.filter((item) => item.kind === 'subscription').length })
             json(res, 200, { ok: true, data: summary })
@@ -295,8 +328,8 @@ export function apply(ctx) {
               json(res, 400, { ok: false, reason: 'invalid-range' })
               return
             }
-            if (Date.now() - providerCache.at > PROVIDER_TTL) await refreshProviderCache()
-            const usage = buildUsage(state, prefs, range, Date.now(), providerCache.data)
+            if (Date.now() - providerCacheMeta.at > 5000) await refreshProviderCache()
+            const usage = buildUsage(state, prefs, range, Date.now(), cacheData())
             logger.info('vm', 'usage', {
               range,
               models: usage.models.length,
@@ -310,11 +343,13 @@ export function apply(ctx) {
           if (url.pathname === `${ROUTE_PREFIX}/providers/refresh` && req.method === 'POST') {
             // 仅重查订阅 provider 配额（GLM / Kimi Coding），绕过 TTL 缓存；无 Key 的订阅 provider 从缓存移除。
             const subs = await readSubscriptions(scoped, prefs)
-            const map = new Map(providerCache.data.map((item) => [item.id, item]))
-            map.delete('zhipu')
-            map.delete('moonshot')
-            for (const item of subs) map.set(item.id, item)
-            providerCache = { at: Date.now(), data: [...map.values()], hadProviders: true, degraded: false }
+            for (const source of PROVIDER_SOURCES) {
+              if (source.kind === 'subscription') providerCache.delete(source.id)
+            }
+            for (const item of subs) {
+              providerCache.set(item.id, { at: Date.now(), ok: true, data: item, promise: null })
+            }
+            providerCacheMeta = { at: Date.now(), hadProviders: true, degraded: false }
             if (stampProviderKinds(state, subs)) flusher.schedule()
             logAdapterEvents(logger, subs)
             logger.info('provider', 'subscriptions.refreshed', { ids: subs.map((item) => item.id) })
@@ -322,7 +357,7 @@ export function apply(ctx) {
             return
           }
           if (url.pathname === `${ROUTE_PREFIX}/export` && req.method === 'GET') {
-            const data = buildExport(state, prefs, Date.now(), providerCache.data)
+            const data = buildExport(state, prefs, Date.now(), cacheData())
             logger.info('data', 'export', { month: data.month, days: Object.keys(data.days).length, models: data.usage.all.models.length })
             json(res, 200, { ok: true, data })
             return
@@ -343,7 +378,7 @@ export function apply(ctx) {
             prefs = normalizePrefs(bundle.prefs ?? {}, prefs)
             state.days = mergeImportDays(state.days, bundle.month, bundle.days)
             state.providerKinds = { ...(state.providerKinds ?? {}), ...(bundle.providerKinds ?? {}) }
-            providerCache = { at: 0, data: [] }
+            clearProviderCache()
             flusher.schedule()
             logger.info('data', 'import', {
               month: bundle.month,
@@ -420,7 +455,7 @@ export function apply(ctx) {
             const body = JSON.parse((await readBody(req)) || '{}')
             prefs = normalizePrefs(body, prefs)
             await saveJson(dir, 'prefs.json', prefs)
-            providerCache = { at: 0, data: [] }
+            clearProviderCache()
             logger.info('boot', 'prefs.saved', { budgets: Object.keys(prefs.budgets).length, modes: Object.keys(prefs.billingModes).length })
             json(res, 200, { ok: true, data: prefs })
             return
