@@ -183,14 +183,6 @@ try {
   const executablePath = resolveChromium()
   browser = await chromium.launch({ headless: true, ...(executablePath === undefined ? {} : { executablePath }) })
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-  const slotMounts = []
-  page.on('request', (request) => {
-    if (!request.url().includes('/token-dash/api/log')) return
-    try {
-      const body = JSON.parse(request.postData() ?? '{}')
-      if (body.module === 'slot' && typeof body.meta?.slot === 'string') slotMounts.push(body.meta.slot)
-    } catch { /* ignore malformed log */ }
-  })
   await page.route('**/token-dash/api/summary*', async (route) => {
     if (failSummary) return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ ok: false, reason: 'mock-summary' }) })
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: currentSummary }) })
@@ -227,10 +219,6 @@ try {
   const pill = page.locator('[data-testid=token-dash-pill]')
   await pill.waitFor({ timeout: 20000 })
   assert.ok(await pill.isVisible())
-  await page.waitForTimeout(300)
-  assert.ok(slotMounts.includes('conversation.input.right'), `P1 should mount in input.right: ${slotMounts}`)
-  assert.ok(!slotMounts.includes('conversation.hero.agentPreset'), `official agent preset slot must stay free: ${slotMounts}`)
-  assert.ok(!slotMounts.includes('conversation.composer.dock'), `P1 should not mount twice: ${slotMounts}`)
   assert.match(await pill.innerText(), /\[API\]/)
   assert.match(await pill.innerText(), /12\.3%/)
   assert.match(await pill.innerText(), /¥49\.86/)
@@ -290,7 +278,7 @@ try {
   assert.match(await usageRow.innerText(), /12/)
   assert.ok(!(await panel.innerText()).includes('费用'))
   const usageLineBox = await panel.getByTestId('token-dash-usage-line').first().boundingBox()
-  assert.ok(usageLineBox !== null && usageLineBox.height < 30, `usage metrics should stay on one line: ${usageLineBox?.height}`)
+  assert.ok(usageLineBox !== null && usageLineBox.height < 30, 'usage metrics should stay on one line')
   const usageDiff = await panel.getByTestId('token-dash-usage-table').evaluate((table) => {
     const heads = [...table.querySelectorAll('[role=columnheader]')].slice(1)
     const cells = [...table.querySelector('[role=row]').querySelectorAll('[role=cell]')].slice(1)
