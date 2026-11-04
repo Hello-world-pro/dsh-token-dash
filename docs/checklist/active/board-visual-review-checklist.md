@@ -20,8 +20,8 @@
 | D1 | 分析截图存哪 | 脚本默认写 `.tmp/shots/`；`npm run shots -- --publish` 才覆盖 `docs/pic/`，publish 前清理旧图 |
 | D2 | P2 用量表样式 | 表头 12px/500 + `label-tertiary` + 1px 下边线（不做底色块）；行高 28；行间 `color-mix(label-primary 6%)` 细线；单元格左右内边距 4；数值列右对齐 |
 | D3 | P3 两区布局 | **每个 provider 一张卡**（不是一张大卡）：`repeat(auto-fit, minmax(220px, 1fr))` + gap 12；卡顶为供应商名 + 计费 chip；圆角 8 / 1px `border-l3` / padding 14 |
-| D4 | 卡内控件与字号 | 订阅窗口用 **`QuotaGauge`**：环 40 / stroke 4、环心周期 12px、环下百分比 16px / 600、辅助 11px；按量卡环 28 / stroke 3、已用% 16px / 600 |
-| D5 | 按量卡内容 | 字段**换行竖排**：首行「环 + 已用%」，次行「已用 / 预算」，再下 `计划余额` / `真实余额` / `本月已花` 三行 label-value；`✎` 跟在计划余额右侧 |
+| D4 | 卡内控件与字号 | 订阅与按量都复用 **`QuotaGauge`**：环 40 / stroke 4、环心 12px、环下百分比 16px / 600、辅助 11px；**按量卡环心写「已用」**，订阅卡环心写周期 |
+| D5 | 按量卡内容 | 顶部居中一个 `QuotaGauge`（环心「已用」+ 环下百分比）；其下**换行竖排** `已用 / 预算`、`计划余额`、`真实余额`、`本月已花` 四行 label-value；`✎` 跟在计划余额右侧 |
 | D6 | 订阅卡内容 | `5h / 周 / 月` **横向一排、等分**；每列一个 `QuotaGauge`：环心周期 → 环下已用% → 剩余% → 倒计时 → 绝对时间；**按实际窗口数出列，没有「月」就只出两列**（预览与实现一致，不留空列，也不显示 `月 —`） |
 | D7 | `✎` 显示 | 常驻 `opacity .45`，hover / focus 升到 1，点击区 ≥22px（触屏无 hover，不能纯 hover 显示） |
 | D8 | 明细表归属 | 模型名前加 provider 徽标；列距 12；表头「费用」+ `title` |
@@ -89,8 +89,8 @@
 | P2 320px 不出横向滚动、宽度 ≤480 | 待执行 | `scrollWidth === clientWidth` |
 | P3 卡片列数：1000px=4 / 760=3 / 520=2 | 待执行 | 三档截图量列数 |
 | 订阅卡窗口列数 = 实际窗口数（两窗不出「月」列） | 待执行 | Kimi / Command Code 各一张 |
-| 预览状态矩阵覆盖全部状态（5 / 4 / 5） | 待执行 | 目检 `.tmp/preview/gauge.png` |
-| 订阅 gauge 环直径 = 40，环心为周期标签 | 待执行 | 截图量环与中心文字 |
+| 三张状态图覆盖 5 / 6 / 5 态 | 待执行 | 目检 gauge / cards-sub / cards-api |
+| 按量与订阅 Gauge 环直径均 = 40，环心分别为「已用」与周期 | 待执行 | 截图量环与中心文字 |
 | 百分比在环下 16px、剩余/时间 11px | 待执行 | 目检单卡字号层级 |
 | 按量卡字段竖排且 `已用 / 预算` 同行 | 待执行 | 目检单卡 |
 | `npm run shots` 不写 `docs/pic`；`--publish` 才写 | 待执行 | 对比目录文件时间 |
@@ -115,6 +115,7 @@
 | 2026-11-04 | 四轮评审 | 确认 `QuotaGauge`：环 40、环心周期、环下百分比；新增 §十 控件要求；用临时 HTML 生成真实比例预览并目检 |
 | 2026-11-04 | 工具迁移 | 预览与草图工具迁入 `tools/preview/`（spec / render / ascii / templates），临时产物统一 `.tmp/preview/`；AGENTS.md 增加三层约定 |
 | 2026-11-04 | 预览修正 | 两窗订阅不再画空「月」列；补按量卡模拟（环 28、字段竖排、超支负值转红） |
+| 2026-11-04 | 预览拆分 | 三张独立图（gauge / cards-sub / cards-api）；卡片带真实供应商名；按量卡改用同款 Gauge（环 40 + 环心「已用」） |
 | 2026-11-04 | 状态矩阵 | 预览改为「状态穷举」：Gauge 5 / 订阅 4 / 按量 5；新增 `tools/mock/AGENTS.md` 定义假数据覆盖规则 |
 
 ## 九、新样式草图
@@ -149,7 +150,8 @@ deepseek-reasoner         3.2k [3.1k/0/120]      2   42%
 +------------------------------+ +------------------------------+ +------------------------------+
 | DeepSeek              [PAYG] | | OpenRouter            [PAYG] | | Qwen                  [PAYG] |
 |                              | |                              | |                              |
-|   (o) 91.9%                  | |   (o) 38.0%                  | |   (o) 8.0%                   |
+|      (used)                  | |      (used)                  | |      (used)                  |
+|      91.9%                   | |      38.0%                   | |      8.0%                    |
 | used  CNY 91.90/100.00       | | used  USD 19.00/50.00        | | used  CNY 0.40/5.00          |
 | plan  CNY 8.10  edit         | | plan  USD 31.00  edit        | | plan  CNY 4.60  edit         |
 | real  CNY 87.66              | | real  USD 7.66               | | real  --                     |
@@ -179,18 +181,19 @@ deepseek-reasoner         3.2k [3.1k/0/120]      2   42%
 | 每窗列宽 | 3 窗 61 / 2 窗 96 / 1 窗 199 | 同左 | 同左 |
 | 环 40 占卡宽 | 17% | 17% | 17% |
 
-- 卡高：按量约 164px（名称 + 环 28 + 4 行），订阅约 175px（名称 + 环 40 + 5 行），同一行取较高者。
-- `(5h)` = 环 + 环心周期标签；`43%` 在环下 16px；`L58%` = `剩余 58%`，时间列 11px。
+- 卡高：按量约 220px（名称 + Gauge + 4 行），订阅约 175px（名称 + 环 40 + 5 行），同一行取较高者。
+- `(used)` / `(5h)` = 环 + 环心标签；百分比在环下 16px；`L58%` = `剩余 58%`，时间列 11px。
 
 ### 9.3 单卡放大（内部比例）
 
-**按量卡 309 × 164（3 家时）**
+**按量卡 309 × 220（3 家时）**
 
 ```text
 +--------------------------------------------------------------+
 | DeepSeek                                              [PAYG] |
 |                                                              |
-|   (o) 91.9%                                                  |
+|        (used)                                                |
+|        91.9%                                                 |
 | used   CNY 91.90 / 100.00                                    |
 | plan   CNY 8.10    edit                                      |
 | real   CNY 87.66                                             |
@@ -211,12 +214,12 @@ deepseek-reasoner         3.2k [3.1k/0/120]      2   42%
 +----------------------------------------------+
 ```
 
-- 卡内首行固定「供应商名 + 计费 chip」；按量卡第二行留 8px 再放环。
-- 订阅卡每列一个 `QuotaGauge`：环 40、环心周期、环下百分比 16px、辅助 11px。
+- 卡内首行固定「供应商名 + 计费 chip」；按量卡在名称下居中放一个 `QuotaGauge`（环心「已用」），再排四行字段。
+- 两类卡共用同一 `QuotaGauge`：环 40、环心标签 12px、环下百分比 16px；订阅卡额外带剩余% 与两行时间。
 - 窗口按实际数量等分：3 窗 61px、2 窗 96px、1 窗 199px；缺窗不出列。
 - provider 完全没有窗口时整卡不出现（沿用「只列能取到窗口的 provider」）。
 
-## 十、QuotaGauge 控件要求（P3 订阅专用）
+## 十、QuotaGauge 控件要求（P3 按量卡 + 订阅卡共用）
 
 > 与 P1 明确分开：现有 `ProgressRing` 只画几何，P1 继续「环 + 右侧数字」内联；P3 新增组合层 `QuotaGauge`，单独承接「环心标签 + 环下数值」排版，不复用 P1 样式。
 
@@ -224,7 +227,7 @@ deepseek-reasoner         3.2k [3.1k/0/120]      2   42%
 
 ```js
 QuotaGauge({
-  label,          // '5h' / '周' / '月'，渲染在环心
+  label,          // 环心文案：订阅 '5h' / '周' / '月'，按量 '已用'
   percent,        // 0–100；null → 空环 + '—'
   state,          // 'normal' | 'critical' | 'empty'（调用方按 ≥90 判定）
   remaining,      // 已格式化，如 '剩余 58%'
@@ -264,9 +267,10 @@ QuotaGauge({
 
 ### 10.4 卡内约束
 
-- 卡 229px → 内容 199px；窗口列宽 3 窗 61 / 2 窗 96 / 1 窗 199。
+- 订阅卡 229px → 内容 199px；窗口列宽 3 窗 61 / 2 窗 96 / 1 窗 199。
 - 环 40 在 61px 列内左右各留约 10px；`42.5%` 16px 约 42px，不换行。
 - 窗口数 = `provider.windows.length`（1–3），不补空列；卡内顺序为「名称行 → 10px → 窗口行」。
+- 按量卡 309px（3 家时 → 一行 3 张）：名称行 → 居中 Gauge → 四行 label-value；环心「已用」，卡高约 220px。
 
 ### 10.5 无障碍
 
@@ -276,15 +280,17 @@ QuotaGauge({
 
 ### 10.6 落点
 
-- `client.js` 新增 `QuotaGauge`，放在 `ProgressRing` 之后；`QuotaCell` 改为调用它。
+- `client.js` 新增 `QuotaGauge`，放在 `ProgressRing` 之后；`QuotaCell`（订阅）与 `BudgetTable` 的已用列（按量）都调用它。
 - P2 的 `WindowRow` 继续用 `ProgressRing` 内联（P2 不放环心标签）。
-- E2E：`token-dash-quota-gauge-<providerId>-<key>`，断言环 40、中心文字为周期、百分比在环下。
+- E2E：`token-dash-quota-gauge-<providerId>-<key>`，断言环 40、中心文字为周期或「已用」、百分比在环下。
 
 ### 10.7 预览方式（本轮已验证）
 
-- 预览：`npm run preview gauge` → `.tmp/preview/gauge.png`（真实 229px 卡 + 40px 环，2x）；模板在 [`tools/preview/templates/gauge.html`](../../../tools/preview/templates/gauge.html)。
-- 预览是**状态矩阵**：QuotaGauge 5 态（normal 42.5 / 边界 89.9·90 / critical 96 / empty）、订阅卡 4 态（1 窗 / 2 窗无月 / 3 窗 / 含空窗）、按量卡 5 态（normal / warn / over / 预算未设置 / 余额不支持）。
+- 三张独立状态图（各 2x，按内容高度裁剪）：
+  - `npm run preview gauge` → `.tmp/preview/gauge.png`：QuotaGauge 5 态（42.5 / 边界 89.9·90 / 96 / empty）。
+  - `npm run preview cards-sub` → `.tmp/preview/cards-sub.png`：订阅卡 6 态（三窗 ×2 / 两窗无月 / 两窗 critical / 单窗 / 含空窗），卡顶为真实供应商名。
+  - `npm run preview cards-api` → `.tmp/preview/cards-api.png`：按量卡 5 态（normal / warn / over / 预算未设置 / 余额不支持）。
 - 状态覆盖口径见 [`tools/mock/AGENTS.md`](../../../tools/mock/AGENTS.md) §2：组件有 N 种状态就出 N 个样本，不合并。
-- 尺寸来源：[`tools/preview/spec.mjs`](../../../tools/preview/spec.mjs)；改环径 / 字号只改这一处，预览与草图同步。
+- 尺寸来源：[`tools/preview/spec.mjs`](../../../tools/preview/spec.mjs)；模板在 [`tools/preview/templates/`](../../../tools/preview/templates/)，公共样式在 `_base.css`。
 - 只有会被 README / 设计文档引用的图才 `npm run preview:publish <name>`；分析图一律留在 `.tmp/preview/`。
 - 定稿后把尺寸 / 状态写回本清单与 `ui-design.md`。

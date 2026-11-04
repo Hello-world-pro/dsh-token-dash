@@ -48,7 +48,8 @@ const SUB_INNER = SUB_CARD_CHARS - 2
 const apiCard = (name, percent, used, plan, real, month) => box(API_CARD_CHARS, [
   ` ${name}`.padEnd(API_CARD_CHARS - 2 - 7) + '[PAYG]',
   '',
-  `   (o) ${percent}`,
+  '      (used)',
+  `      ${percent}`,
   ` used  ${used}`,
   ` plan  ${plan}  edit`,
   ` real  ${real}`,
@@ -100,7 +101,8 @@ const subRow = rowOf([
 const apiZoom = box(64, [
   ' DeepSeek'.padEnd(64 - 2 - 7) + '[PAYG]',
   '',
-  '   (o) 91.9%',
+  '        (used)',
+  '        91.9%',
   ' used   CNY 91.90 / 100.00',
   ' plan   CNY 8.10    edit',
   ' real   CNY 87.66',
@@ -121,7 +123,7 @@ const main = () => {
   console.log(apiRow.join('\n'))
   console.log('\n== 订阅套餐 · 4 家 → 一行 4 张 ==')
   console.log(subRow.join('\n'))
-  console.log('\n== 单卡放大：按量 309 × 164 ==')
+  console.log('\n== 单卡放大：按量 309 × 220 ==')
   console.log(apiZoom.join('\n'))
   console.log('\n== 单卡放大：订阅 229 × 175（三窗） ==')
   console.log(subZoom.join('\n'))

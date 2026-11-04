@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>按量卡状态全量</title>
+<style>
+  :root { /*__SPEC_CSS__*/ }
+  /*__BASE_CSS__*/
+</style>
+</head>
+<body>
+<div class="page">
+  <section>
+    <h2>按量卡状态全量：normal / warn / over / 预算未设置 / 余额不支持</h2>
+    <div class="grid api" id="cards"></div>
+  </section>
+</div>
+
+<script>
+  window.__SPEC__ = /*__SPEC_JSON__*/
+</script>
+<script>
+  const A = window.__SPEC__.apiGauge
+
+  const ringSvg = (percent, state) => {
+    const r = (A.ring - A.stroke) / 2
+    const c = 2 * Math.PI * r
+    const center = A.ring / 2
+    const arc = state === 'critical' ? 'var(--error)' : 'var(--text)'
+    const filled = state === 'empty' ? 0 : Math.max(0, Math.min(100, percent))
+    return `
+      <svg viewBox="0 0 ${A.ring} ${A.ring}" aria-hidden="true">
+        <circle cx="${center}" cy="${center}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${A.stroke}" />
+        ${state === 'empty' ? '' : `<circle cx="${center}" cy="${center}" r="${r}" fill="none"
+          stroke="${arc}" stroke-width="${A.stroke}" stroke-linecap="round"
+          transform="rotate(-90 ${center} ${center})"
+          stroke-dasharray="${(c * filled / 100).toFixed(2)} ${c.toFixed(2)}" />`}
+      </svg>`
+  }
+
+  const apiGauge = (percent, state) => {
+    const empty = state === 'empty' || percent === null
+    return `
+      <div class="gauge">
+        <div class="ring">
+          ${ringSvg(percent, empty ? 'empty' : state)}
+          <span class="ring-label">${A.label}</span>
+        </div>
+        <div class="pct ${empty ? 'empty' : state}">${empty ? '—' : percent.toFixed(1) + '%'}</div>
+      </div>`
+  }
+
+  const kv = (label, value, over = false) => `
+    <div class="kv"><span class="k">${label}</span><span class="v${over ? ' over' : ''}">${value}</span></div>`
+
+  const apiCard = (name, percent, state, used, plan, real, month) => `
+    <div class="card">
+      <div class="head"><span class="name">${name}</span><span class="chip">[ 按量 API ]</span></div>
+      <div class="api-gauge">${apiGauge(percent, state)}</div>
+      ${kv('已用 / 预算', used)}
+      ${kv('计划余额', plan, plan.startsWith('-'))}
+      ${kv('真实余额', real)}
+      ${kv('本月已花', month)}
+    </div>`
+
+  const cell = (node, cap) => `<div class="cell">${node}<span class="cap">${cap}</span></div>`
+
+  document.getElementById('cards').innerHTML = [
+    cell(apiCard('OpenRouter', 38, 'normal', '$19.00 / $50.00', '$31.00', '$7.66', '$22.80'), 'normal 38%'),
+    cell(apiCard('DeepSeek', 91.9, 'warn', '¥91.90 / ¥100.00', '¥8.10', '¥87.66', '¥91.90'), 'warn 80–100'),
+    cell(apiCard('通义千问', 128.6, 'critical', '¥6.43 / ¥5.00', '-¥1.43', '—', '¥6.43'), 'over ≥100 · 计划余额为负'),
+    cell(apiCard('Kimi API', null, 'empty', '—', '—', '¥12.00', '¥3.20'), '预算未设置'),
+    cell(apiCard('GLM API', 12, 'normal', '¥6.00 / ¥50.00', '¥44.00', '—', '¥6.00'), '余额不支持'),
+  ].join('')
+</script>
+</body>
+</html>

@@ -34,10 +34,11 @@ export const SPEC = {
     gap: 4,
     percentOffset: 3, // 环与百分比之间的额外间距
   },
-  /** 按量卡内的环：无环心标签，环与百分比同行 */
+  /** 按量卡内的环：与订阅同款（环心标签 + 环下百分比），只是中心文案不同 */
   apiGauge: {
-    ring: 28,
-    stroke: 3,
+    ring: 40,
+    stroke: 4,
+    label: '已用',
   },
   /** P2 用量表 */
   table: {

@@ -2,79 +2,10 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>P3 卡片状态矩阵预览</title>
+<title>QuotaGauge 状态全量</title>
 <style>
-  :root {
-    /*__SPEC_CSS__*/
-    --bg: #1c1c1e;
-    --card-bg: #242426;
-    --border: rgba(235, 235, 235, .18);
-    --text: #eeeeee;
-    --muted: rgba(235, 235, 235, .65);
-    --weak: rgba(235, 235, 235, .45);
-    --accent: #6ea8ff;
-    --warn: #d8a03a;
-    --error: #e05a5a;
-    --track: rgba(235, 235, 235, .22);
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; padding: 24px; background: var(--bg); color: var(--text);
-    font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
-    font-variant-numeric: tabular-nums;
-  }
-  h2 { font-size: 13px; font-weight: 600; margin: 0 0 12px; color: var(--muted); }
-  section { margin-bottom: 28px; }
-
-  .page { width: var(--content-width); }
-  .grid { display: grid; gap: var(--layout-gap); align-items: start; }
-  .grid.api { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .grid.sub { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .cell { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-  .cap { font-size: 11px; color: var(--weak); padding-left: 2px; }
-
-  .card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: var(--card-radius);
-    padding: var(--card-padding);
-  }
-  .head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-  .name { font-size: var(--card-header-font); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .chip { font-size: var(--card-chip-font); color: var(--muted); white-space: nowrap; }
-
-  /* 按量卡 */
-  .api-top { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
-  .api-ring { width: var(--api-ring); height: var(--api-ring); flex: none; }
-  .api-ring svg { display: block; width: 100%; height: 100%; }
-  .api-pct { font-size: var(--gauge-percent); font-weight: 600; line-height: 20px; }
-  .api-pct.normal { color: var(--accent); }
-  .api-pct.warn { color: var(--warn); }
-  .api-pct.critical { color: var(--error); }
-  .api-pct.empty { color: var(--weak); }
-  .kv { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; line-height: 18px; margin-top: 4px; }
-  .kv .k { color: var(--weak); }
-  .kv .v { white-space: nowrap; }
-  .kv .v.over { color: var(--error); }
-  .edit { border: 0; background: none; color: var(--muted); opacity: .55; font-size: 13px; padding: 0 0 0 2px; vertical-align: -1px; cursor: default; }
-
-  /* 订阅卡 */
-  .windows { display: grid; gap: var(--layout-gap); margin-top: 10px; }
-  .gauge { display: flex; flex-direction: column; align-items: center; gap: var(--gauge-gap); min-width: 0; }
-  .ring { position: relative; width: var(--gauge-ring); height: var(--gauge-ring); flex: none; }
-  .ring svg { display: block; width: 100%; height: 100%; }
-  .ring-label {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font-size: var(--gauge-label); font-weight: 500; color: var(--weak); letter-spacing: .2px;
-  }
-  .pct { font-size: var(--gauge-percent); font-weight: 600; line-height: 20px; margin-top: var(--gauge-percent-offset); }
-  .pct.normal { color: var(--accent); }
-  .pct.critical { color: var(--error); }
-  .pct.empty { color: var(--weak); }
-  .line { font-size: var(--gauge-meta); color: var(--weak); line-height: 15px; white-space: nowrap; }
-
-  .state-row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
-  .state-cell { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  :root { /*__SPEC_CSS__*/ }
+  /*__BASE_CSS__*/
 </style>
 </head>
 <body>
@@ -83,16 +14,6 @@
     <h2>QuotaGauge 状态全量：normal 42.5 / 边界 89.9 · 90 / critical 96 / empty</h2>
     <div class="state-row" id="states"></div>
   </section>
-
-  <section>
-    <h2>订阅卡状态全量：单窗 / 两窗（无月）/ 三窗 / 含空窗</h2>
-    <div class="grid sub" id="subs"></div>
-  </section>
-
-  <section>
-    <h2>按量卡状态全量：normal / warn / over / 未设置预算 / 余额不支持</h2>
-    <div class="grid api" id="apis"></div>
-  </section>
 </div>
 
 <script>
@@ -100,19 +21,18 @@
 </script>
 <script>
   const G = window.__SPEC__.gauge
-  const A = window.__SPEC__.apiGauge
 
-  const ringSvg = (size, stroke, percent, state) => {
-    const r = (size - stroke) / 2
+  const ringSvg = (percent, state) => {
+    const r = (G.ring - G.stroke) / 2
     const c = 2 * Math.PI * r
-    const center = size / 2
+    const center = G.ring / 2
     const arc = state === 'critical' ? 'var(--error)' : 'var(--text)'
     const filled = state === 'empty' ? 0 : Math.max(0, Math.min(100, percent))
     return `
-      <svg viewBox="0 0 ${size} ${size}" aria-hidden="true">
-        <circle cx="${center}" cy="${center}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${stroke}" />
+      <svg viewBox="0 0 ${G.ring} ${G.ring}" aria-hidden="true">
+        <circle cx="${center}" cy="${center}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${G.stroke}" />
         ${state === 'empty' ? '' : `<circle cx="${center}" cy="${center}" r="${r}" fill="none"
-          stroke="${arc}" stroke-width="${stroke}" stroke-linecap="round"
+          stroke="${arc}" stroke-width="${G.stroke}" stroke-linecap="round"
           transform="rotate(-90 ${center} ${center})"
           stroke-dasharray="${(c * filled / 100).toFixed(2)} ${c.toFixed(2)}" />`}
       </svg>`
@@ -123,7 +43,7 @@
     return `
       <div class="gauge">
         <div class="ring">
-          ${ringSvg(G.ring, G.stroke, percent, empty ? 'empty' : state)}
+          ${ringSvg(percent, empty ? 'empty' : state)}
           <span class="ring-label">${label}</span>
         </div>
         <div class="pct ${empty ? 'empty' : state}">${empty ? '—' : percent.toFixed(1) + '%'}</div>
@@ -133,34 +53,7 @@
       </div>`
   }
 
-  const subCard = (name, windows) => `
-    <div class="card">
-      <div class="head"><span class="name">${name}</span><span class="chip">[ 订阅 ]</span></div>
-      <div class="windows" style="grid-template-columns: repeat(${windows.length}, minmax(0, 1fr))">
-        ${windows.map((win) => gauge(win.label, win.percent, win.state)).join('')}
-      </div>
-    </div>`
-
-  const kv = (label, value, over = false) => `
-    <div class="kv"><span class="k">${label}</span><span class="v${over ? ' over' : ''}">${value}</span></div>`
-
-  const apiCard = (name, percent, state, used, plan, real, month) => {
-    const empty = percent === null
-    return `
-      <div class="card">
-        <div class="head"><span class="name">${name}</span><span class="chip">[ 按量 API ]</span></div>
-        <div class="api-top">
-          <span class="api-ring">${ringSvg(A.ring, A.stroke, percent, empty ? 'empty' : state)}</span>
-          <span class="api-pct ${empty ? 'empty' : state}">${empty ? '—' : percent.toFixed(1) + '%'}</span>
-        </div>
-        ${kv('已用 / 预算', used)}
-        ${kv('计划余额', plan, plan.startsWith('-'))}
-        ${kv('真实余额', real)}
-        ${kv('本月已花', month)}
-      </div>`
-  }
-
-  const cell = (node, cap) => `<div class="cell">${node}<span class="cap">${cap}</span></div>`
+  const cell = (node, cap) => `<div class="state-cell">${node}<span class="cap">${cap}</span></div>`
 
   document.getElementById('states').innerHTML = [
     ['normal 42.5', gauge('5h', 42.5, 'normal')],
@@ -168,35 +61,7 @@
     ['边界 90（critical）', gauge('5h', 90, 'critical')],
     ['critical 96', gauge('5h', 96, 'critical')],
     ['empty（percent = null）', gauge('月', null, 'empty')],
-  ].map(([cap, node]) => `<div class="state-cell">${node}<span class="cap">${cap}</span></div>`).join('')
-
-  document.getElementById('subs').innerHTML = [
-    cell(subCard('单窗 · 月', [
-      { label: '月', percent: 58, state: 'normal' },
-    ]), '1 窗'),
-    cell(subCard('两窗 · 无月', [
-      { label: '5h', percent: 96, state: 'critical' },
-      { label: '周', percent: 12, state: 'normal' },
-    ]), '2 窗，不渲染「月」列'),
-    cell(subCard('三窗', [
-      { label: '5h', percent: 42.5, state: 'normal' },
-      { label: '周', percent: 18.2, state: 'normal' },
-      { label: '月', percent: 3, state: 'normal' },
-    ]), '3 窗'),
-    cell(subCard('含空窗', [
-      { label: '5h', percent: 12, state: 'normal' },
-      { label: '周', percent: null, state: 'empty' },
-      { label: '月', percent: 58, state: 'normal' },
-    ]), '窗口存在但无数据'),
-  ].join('')
-
-  document.getElementById('apis').innerHTML = [
-    cell(apiCard('OpenRouter', 38, 'normal', '$19.00 / $50.00', '$31.00', '$7.66', '$22.80'), 'normal 38%'),
-    cell(apiCard('DeepSeek', 91.9, 'warn', '¥91.90 / ¥100.00', '¥8.10', '¥87.66', '¥91.90'), 'warn 80–100'),
-    cell(apiCard('通义千问', 128.6, 'critical', '¥6.43 / ¥5.00', '-¥1.43', '—', '¥6.43'), 'over ≥100，计划余额为负'),
-    cell(apiCard('Kimi API', null, 'empty', '—', '—', '¥12.00', '¥3.20'), '预算未设置'),
-    cell(apiCard('GLM API', 12, 'normal', '¥6.00 / ¥50.00', '¥44.00', '—', '¥6.00'), '余额不支持'),
-  ].join('')
+  ].map(([cap, node]) => cell(node, cap)).join('')
 </script>
 </body>
 </html>

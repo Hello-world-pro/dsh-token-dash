@@ -24,11 +24,16 @@ tools/preview/
   render.mjs            # 模板 + spec → 截图
   ascii.mjs             # ASCII 草图
   templates/
-    gauge.html          # P3 状态矩阵（Gauge 5 态 + 订阅 4 态 + 按量 5 态）
+    _base.css           # 公共样式（卡片、Gauge、kv 行）
+    gauge.html          # Gauge 5 态
+    cards-sub.html      # 订阅卡 6 态（带供应商名）
+    cards-api.html      # 按量卡 5 态
 ```
 
 ```bash
-npm run preview gauge          # → .tmp/preview/gauge.png（2x，1000 视口）
+npm run preview gauge          # → .tmp/preview/gauge.png（2x，按内容高度裁剪）
+npm run preview cards-sub      # → .tmp/preview/cards-sub.png
+npm run preview cards-api      # → .tmp/preview/cards-api.png
 npm run preview gauge -- --scale 3
 npm run preview:publish gauge  # → docs/pic/gauge.png（仅 README/设计文档定稿）
 npm run sketch                 # 打印 ASCII 草图

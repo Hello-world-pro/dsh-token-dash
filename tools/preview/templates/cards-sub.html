@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>订阅卡状态全量</title>
+<style>
+  :root { /*__SPEC_CSS__*/ }
+  /*__BASE_CSS__*/
+</style>
+</head>
+<body>
+<div class="page">
+  <section>
+    <h2>订阅卡状态全量：三窗 / 两窗（无「月」）/ 单窗 / 含空窗</h2>
+    <div class="grid sub" id="cards"></div>
+  </section>
+</div>
+
+<script>
+  window.__SPEC__ = /*__SPEC_JSON__*/
+</script>
+<script>
+  const G = window.__SPEC__.gauge
+
+  const ringSvg = (percent, state) => {
+    const r = (G.ring - G.stroke) / 2
+    const c = 2 * Math.PI * r
+    const center = G.ring / 2
+    const arc = state === 'critical' ? 'var(--error)' : 'var(--text)'
+    const filled = state === 'empty' ? 0 : Math.max(0, Math.min(100, percent))
+    return `
+      <svg viewBox="0 0 ${G.ring} ${G.ring}" aria-hidden="true">
+        <circle cx="${center}" cy="${center}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${G.stroke}" />
+        ${state === 'empty' ? '' : `<circle cx="${center}" cy="${center}" r="${r}" fill="none"
+          stroke="${arc}" stroke-width="${G.stroke}" stroke-linecap="round"
+          transform="rotate(-90 ${center} ${center})"
+          stroke-dasharray="${(c * filled / 100).toFixed(2)} ${c.toFixed(2)}" />`}
+      </svg>`
+  }
+
+  const gauge = (label, percent, state) => {
+    const empty = state === 'empty' || percent === null
+    return `
+      <div class="gauge">
+        <div class="ring">
+          ${ringSvg(percent, empty ? 'empty' : state)}
+          <span class="ring-label">${label}</span>
+        </div>
+        <div class="pct ${empty ? 'empty' : state}">${empty ? '—' : percent.toFixed(1) + '%'}</div>
+        <div class="line">${empty ? '—' : `剩余 ${Math.round(100 - percent)}%`}</div>
+        <div class="line">${empty ? '—' : '3 小时后'}</div>
+        <div class="line">${empty ? '—' : '22:51'}</div>
+      </div>`
+  }
+
+  const subCard = (name, windows) => `
+    <div class="card">
+      <div class="head"><span class="name">${name}</span><span class="chip">[ 订阅 ]</span></div>
+      <div class="windows" style="grid-template-columns: repeat(${windows.length}, minmax(0, 1fr))">
+        ${windows.map((win) => gauge(win.label, win.percent, win.state)).join('')}
+      </div>
+    </div>`
+
+  const cell = (node, cap) => `<div class="cell">${node}<span class="cap">${cap}</span></div>`
+
+  document.getElementById('cards').innerHTML = [
+    cell(subCard('GLM Coding', [
+      { label: '5h', percent: 42.5, state: 'normal' },
+      { label: '周', percent: 18.2, state: 'normal' },
+      { label: '月', percent: 3, state: 'normal' },
+    ]), '三窗'),
+    cell(subCard('Kimi Coding', [
+      { label: '5h', percent: 96, state: 'critical' },
+      { label: '周', percent: 12, state: 'normal' },
+    ]), '两窗 · 无「月」列'),
+    cell(subCard('OpenCode Go', [
+      { label: '5h', percent: 12, state: 'normal' },
+      { label: '周', percent: 34, state: 'normal' },
+      { label: '月', percent: 58, state: 'normal' },
+    ]), '三窗'),
+    cell(subCard('Command Code', [
+      { label: '5h', percent: 96, state: 'critical' },
+      { label: '周', percent: 61, state: 'normal' },
+    ]), '两窗 · 含 critical'),
+    cell(subCard('Kimi Coding · 仅月窗', [
+      { label: '月', percent: 58, state: 'normal' },
+    ]), '单窗'),
+    cell(subCard('OpenCode Go · 周无数据', [
+      { label: '5h', percent: 12, state: 'normal' },
+      { label: '周', percent: null, state: 'empty' },
+      { label: '月', percent: 58, state: 'normal' },
+    ]), '含空窗'),
+  ].join('')
+</script>
+</body>
+</html>

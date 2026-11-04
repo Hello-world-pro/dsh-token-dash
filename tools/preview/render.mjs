@@ -54,8 +54,12 @@ const css = [
 const templatePath = resolve('tools/preview/templates', `${template}.html`)
 if (!existsSync(templatePath)) throw new Error(`template not found: ${templatePath}`)
 
+const baseCssPath = resolve('tools/preview/templates/_base.css')
+const baseCss = existsSync(baseCssPath) ? readFileSync(baseCssPath, 'utf8') : ''
+
 const html = readFileSync(templatePath, 'utf8')
   .replace('/*__SPEC_CSS__*/', css)
+  .replace('/*__BASE_CSS__*/', baseCss)
   .replace('/*__SPEC_JSON__*/', JSON.stringify({ ...SPEC, resolvedCardWidth: card, columns }))
 
 const tmpDir = resolve('.tmp/preview')
@@ -81,6 +85,14 @@ const browser = await chromium.launch(executablePath === undefined ? {} : { exec
 const page = await browser.newPage({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: scale })
 await page.goto(pathToFileURL(htmlPath).href, { waitUntil: 'load' })
 await page.waitForTimeout(300)
+// 按内容高度收紧视口，避免预览图底部大片空白
+const contentHeight = await page.evaluate(() => {
+  const pageNode = document.querySelector('.page')
+  const bottom = pageNode === null ? 0 : pageNode.getBoundingClientRect().bottom
+  return Math.ceil(bottom + 24)
+})
+await page.setViewportSize({ width: 1000, height: Math.max(200, contentHeight) })
+await page.waitForTimeout(100)
 const pngPath = join(tmpDir, `${template}.png`)
 await page.screenshot({ path: pngPath, fullPage: true })
 await browser.close()
