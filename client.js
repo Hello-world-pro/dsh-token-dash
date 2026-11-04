@@ -55,10 +55,10 @@ window.__ModuleLoader__.load({
       '未定价': 'Unpriced', '请求': 'Req', '命中': 'Hit',
       '按量计价（按供应商）': 'Pay-as-you-go (by provider)',
       '订阅套餐（按供应商）': 'Subscription plans (by provider)',
-      '名称': 'Name', '已用': 'Used', '计划余额': 'Planned left', '真实余额': 'Real balance',
+      '名称': 'Name', '已用': 'Used', '已用 / 预算': 'Used / budget', '计划余额': 'Planned left', '真实余额': 'Real balance',
       '剩余 {value}': '{value} left', '本月已花': 'Spent this month',
       '今日': 'Today', '总费用': 'Total cost', '重试': 'Retry',
-      '模型': 'Model', '共 {n} 个模型': 'Total {n} models', '范围与明细': 'Range & details', '输入': 'In', '缓存': 'Cache', '输出': 'Out', '费用': 'Cost',
+      '模型': 'Model', '共 {n} 个模型': 'Total {n} models', '窗': 'windows', '数据来源': 'Data source', '数据来自本机会话记录，费用与 Tokens 均在本地估算': 'Estimated locally from local session records', '范围与明细': 'Range & details', '输入': 'In', '缓存': 'Cache', '输出': 'Out', '费用': 'Cost',
       '费用（API 计价估算）': 'Cost (API estimate)',
       '重新检测订阅配额': 'Recheck subscription quota',
       '未检测到已配置供应商': 'No configured provider detected',
@@ -390,9 +390,10 @@ window.__ModuleLoader__.load({
       card: { background: T.section, borderRadius: 10, padding: 10, marginTop: 10, display: 'grid', gap: 8 },
       link: { color: T.text, textDecoration: 'underline', cursor: 'pointer' },
       status: { minHeight: 15, fontSize: 10.5, color: T.muted, textAlign: 'right' },
-      summaryRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 12px', minHeight: 24, fontSize: 12 },
-      summaryCell: { display: 'inline-flex', alignItems: 'baseline', gap: 4, minWidth: 0, whiteSpace: 'nowrap' },
-      summaryLabel: { color: T.weak, fontSize: 12 },
+      summaryRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 16px', minHeight: 24, fontSize: 12 },
+      summaryCell: { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, whiteSpace: 'nowrap' },
+      summaryLabel: { color: T.muted, fontSize: 11 },
+      summaryValue: { fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
       providerLine: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0, minHeight: 24 },
       providerChip: { color: T.muted, fontSize: 12, whiteSpace: 'nowrap' },
       windowRow: { display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', columnGap: 8, alignItems: 'center', minHeight: 24, fontSize: 13 },
@@ -477,6 +478,8 @@ window.__ModuleLoader__.load({
         display: 'grid', gap: 10, alignContent: 'start', minWidth: 0,
       },
       quotaWindows: { display: 'grid', gap: 12, minWidth: 0 },
+      cardCaption: { color: T.weak, fontSize: 11, textAlign: 'center', marginTop: 2, whiteSpace: 'nowrap' },
+      rangeCapsule: { width: 220, maxWidth: '100%', flex: '0 0 auto' },
     }
     styles.button['--td-accent'] = T.accent
     styles.iconButton = { ...styles.button, ...styles.iconButton, minHeight: 22, boxSizing: 'border-box' }
@@ -486,6 +489,7 @@ window.__ModuleLoader__.load({
       background: 'rgba(255,255,255,.08)',
     }
     styles.ghost = { ...styles.button, color: T.muted, borderColor: 'transparent', background: 'transparent' }
+    styles.outline = { ...styles.button, color: T.text, borderColor: T.border, background: 'transparent' }
 
     function Icon({ name, size = 14, style }) {
       const props = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true, style }
@@ -771,7 +775,7 @@ window.__ModuleLoader__.load({
     const DETAIL_COLS = 'minmax(0,1fr) auto auto auto auto auto auto auto'
 
     /** P3 明细表：八列，费用只对 API 计价行展示。 */
-    function DetailTable({ rows }) {
+    function DetailTable({ rows, providerNames = {} }) {
       if (rows.length === 0) return h('div', { style: styles.empty }, tr('范围内暂无消耗'))
       const headCell = (text, align = 'right') => h('span', {
         role: 'columnheader',
@@ -790,7 +794,11 @@ window.__ModuleLoader__.load({
           'data-testid': `token-dash-detail-row-${row.providerId}-${row.modelId}`,
           style: { display: 'contents' },
         },
-          h('span', { role: 'cell', style: { ...styles.cellName, ...cell }, title: row.displayName ?? row.modelId }, row.displayName ?? row.modelId),
+          h('span', {
+            role: 'cell',
+            style: { ...styles.cellName, ...cell },
+            title: [row.displayName ?? row.modelId, providerNames[row.providerId]].filter(Boolean).join(' · '),
+          }, [row.displayName ?? row.modelId, providerNames[row.providerId]].filter(Boolean).join(' · ')),
           h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right', fontWeight: 600 } }, fmtTokens(row.tokens?.total ?? 0)),
           h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right' } }, fmtTokens(row.tokens?.input ?? 0)),
           h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right' } }, fmtTokens(row.tokens?.cache ?? 0)),
@@ -1141,7 +1149,7 @@ window.__ModuleLoader__.load({
           current.kind === 'subscription'
             ? h(P2Windows, { provider: current })
             : h(P2Summary, { provider: current, summary }),
-          h('div', { style: { marginTop: 10 } }, h(Segmented, {
+          h('div', { style: { marginTop: 10, ...styles.rangeCapsule } }, h(Segmented, {
             value: range, onChange: setRange, label: tr('时间范围'),
             options: RANGES.map(([value, label]) => ({ value, label: tr(label) })),
           })),
@@ -1154,8 +1162,8 @@ window.__ModuleLoader__.load({
               updated === null ? '' : tr('更新于 {time}', { time: updated })),
             canOpen
               ? h('button', {
-                type: 'button', 'data-td-btn': true, 'data-testid': 'token-dash-open-board',
-                style: styles.button, onClick: openBoardPage,
+                type: 'button', 'data-testid': 'token-dash-open-board',
+                style: styles.outline, onClick: openBoardPage,
               }, tr('全量看板'))
               : null))
       }
@@ -1198,19 +1206,21 @@ window.__ModuleLoader__.load({
               testid: 'token-dash-summary-ring',
             })),
           h('span', { 'data-testid': 'token-dash-summary-used', style: styles.summaryCell },
-            hasBudget ? `${fmtMoney(budget.used, provider.currency)} / ${fmtMoney(budget.amount, provider.currency)}` : '—'),
+            h('span', { style: styles.summaryLabel }, tr('已用 / 预算')),
+            h('span', { style: styles.summaryValue },
+              hasBudget ? `${fmtMoney(budget.used, provider.currency)} / ${fmtMoney(budget.amount, provider.currency)}` : '—')),
           h('span', {
             'data-testid': 'token-dash-summary-balance', style: styles.summaryCell,
             title: tr('账户真实余额，不受预算影响'),
           },
             h('span', { style: styles.summaryLabel }, tr('真实余额')),
-            h('span', { style: styles.num }, balance ?? '—')),
+            h('span', { style: styles.summaryValue }, balance ?? '—')),
           h('span', {
             'data-testid': 'token-dash-summary-month', style: styles.summaryCell,
             title: tr('本月累计消耗，等于已用/预算 的分子'),
           },
             h('span', { style: styles.summaryLabel }, tr('本月已花')),
-            h('span', { style: styles.num }, fmtMoney(provider.usage?.monthCost, provider.currency)))))
+            h('span', { style: styles.summaryValue }, fmtMoney(provider.usage?.monthCost, provider.currency)))))
     }
 
     /** P2 订阅窗口行：两段数字 + 倒计时 + 绝对时间（无「重置」后缀）。 */
@@ -1542,7 +1552,9 @@ window.__ModuleLoader__.load({
             h('div', { style: styles.kvRow },
               h('span', { style: styles.kvLabel }, tr('本月已花')),
               h('span', { 'data-testid': `token-dash-budget-month-${provider.id}`, style: styles.kvValue },
-                fmtMoney(provider.usage?.monthCost, provider.currency))))
+                fmtMoney(provider.usage?.monthCost, provider.currency))),
+            h('div', { style: styles.cardCaption },
+              `${hasBudget ? stateOf(percent, API_CRITICAL) : 'unset'} · ${hasBudget ? fmtRatio(budget.percent) : '—'}`))
         }))
     }
 
@@ -1583,7 +1595,8 @@ window.__ModuleLoader__.load({
                 style: { ...styles.quotaWindows, gridTemplateColumns: `repeat(${windows.length}, minmax(0,1fr))` },
               }, windows.map((plan) => h(QuotaCell, {
                 key: plan.key, providerId: provider.id, plan, windowKey: plan.key,
-              }))))
+              }))),
+            h('div', { style: styles.cardCaption }, `${windows.length} ${tr('窗')}`))
         }))
     }
 
@@ -1706,10 +1719,19 @@ window.__ModuleLoader__.load({
             h('div', { style: styles.boardTitle }, tr('Token 看板')),
             h('div', { style: styles.boardMeta },
               `${tr('数据来自本机会话记录')}${updated === null ? '' : ` · ${tr('更新于 {time}', { time: updated })}`}`)),
-          h('a', {
-            href: REPO_URL, target: '_blank', rel: 'noopener',
-            'data-testid': 'token-dash-repo', title: tr('查看仓库'), style: styles.repoChip,
-          }, '★')),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+            h('a', {
+              href: REPO_URL, target: '_blank', rel: 'noopener',
+              'data-testid': 'token-dash-repo', title: tr('查看仓库'), style: styles.repoChip,
+            }, '★'),
+            h(IconButton, {
+              label: tr('刷新'), testid: 'token-dash-board-head-refresh',
+              disabled: refreshing, onClick: () => { void refresh() },
+            }, h(Icon, { name: refreshing ? 'loader' : 'refresh', size: 12 })),
+            h(InfoTip, {
+              label: tr('数据来源'),
+              text: tr('数据来自本机会话记录，费用与 Tokens 均在本地估算'),
+            }, h(Icon, { name: 'info', size: 12 })))),
         error ? h('div', { style: styles.errorStrip, role: 'alert' },
           h('span', null, tr('刷新失败，保留上次数据')),
           h('button', { type: 'button', style: styles.button, onClick: () => { void refresh() } }, tr('重试'))) : null,
@@ -1741,7 +1763,10 @@ window.__ModuleLoader__.load({
               h('span', null, tr('范围数据加载失败')),
               h('button', { type: 'button', style: styles.button, onClick: () => { void loadUsage() } }, tr('重试'))) : null,
             h(RangeCards, { usage }),
-            h('div', { style: styles.detailWrap }, h(DetailTable, { rows: models })))),
+            h('div', { style: styles.detailWrap }, h(DetailTable, {
+              rows: models,
+              providerNames: Object.fromEntries(providers.map((provider) => [provider.id, provider.name])),
+            })))),
         h('div', { 'data-testid': 'token-dash-settings-capsule', style: styles.capsule },
           h('div', { style: styles.boardSectionHead }, h('b', { style: styles.sectionTitle }, tr('设置与数据管理'))),
           h(SettingsRows, { summary, prefs, onSave: savePrefs, onRefresh: refresh, onRefreshSubs: refreshSubs })))

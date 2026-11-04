@@ -167,4 +167,15 @@ flowchart LR
 
 ## 九、自测反馈台
 
-（暂无）
+### Issue #1 · P2/P3 与目标模板的 6 处结构差异（[已修复]）
+
+- 现象：
+  1. P2 主区未按「标签在上、值在下」四列排布，`已用/预算` 与环同行；
+  2. P2 范围胶囊铺满整行，模板为紧凑 220px；
+  3. P2「全量看板」为蓝色描边，模板为中性描边；
+  4. P3 页头缺 ⟳ 刷新与 ⓘ 说明；
+  5. P3 卡片缺状态 caption（`normal · 38.0%` / `3 窗`）；
+  6. P3 明细模型列缺 `· 供应商`。
+- 根因：`P2Summary` 沿用旧四列、`Segmented` 默认撑满、按钮复用 accent；`BoardPage` 头部与卡片未补设计稿的辅助信息。
+- 修复：`P2Summary` 改四列 label/value；范围胶囊限宽 220；按钮改 `styles.outline`；页头补 `IconButton` + `InfoTip`；卡片补 11px caption；`DetailTable` 接收 `providerNames`。
+- 验证：`npm test` 75 通过 / 1 跳过；`npm run e2e` 通过（新增标签列、胶囊宽度、页头刷新、明细 provider 后缀断言）；P2/P3 截图与模板逐项对齐。

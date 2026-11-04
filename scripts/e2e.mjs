@@ -251,6 +251,9 @@ try {
   assert.match(await summaryRow.innerText(), /¥49\.86/)
   assert.match(await summaryRow.innerText(), /¥12\.34/)
   assert.equal(await panel.getByTestId('token-dash-summary-ring').locator('svg').count(), 1)
+  assert.match(await summaryRow.innerText(), /已用 \/ 预算/)
+  const rangeBox = await panel.locator('[role=tablist]').first().boundingBox()
+  assert.ok(rangeBox !== null && rangeBox.width <= 240, `range capsule width ${rangeBox?.width} should be compact`)
 
   // Usage table: four columns, Tokens bracket, no cost column.
   assert.match(await panel.innerText(), /DeepSeek-V4\.1-Flash/)
@@ -380,6 +383,8 @@ try {
   assert.ok(detailBox !== null && costBox !== null && detailBox.y > costBox.y + costBox.height, 'detail table should be below summary band')
   assert.match(await detailTable.innerText(), /费用/)
   assert.equal(await board.locator('[data-testid^=token-dash-detail-row-]').count(), models.length)
+  assert.equal(await board.getByTestId('token-dash-board-head-refresh').count(), 1)
+  assert.match(await board.locator('[data-testid^=token-dash-detail-row-]').first().innerText(), /·/)
   // Settings capsule: three rows and expected controls.
   assert.equal(await board.getByTestId('token-dash-settings-row-1').count(), 1)
   assert.equal(await board.getByTestId('token-dash-settings-row-2').count(), 1)
