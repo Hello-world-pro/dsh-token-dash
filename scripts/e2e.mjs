@@ -482,7 +482,7 @@ try {
   )
   assert.equal(detailCols.font, '13px', 'numeric cell font should be 13px')
   // Settings capsule: three rows and expected controls.
-  const rangeSection = board.locator('section').last()
+  const rangeSection = board.locator('section').filter({ hasText: '范围与明细' })
   const [rangeSectionBox, capsuleBox] = await Promise.all([
     rangeSection.boundingBox(),
     board.getByTestId('token-dash-settings-capsule').boundingBox(),
@@ -494,14 +494,16 @@ try {
   )
   assert.equal(await board.getByTestId('token-dash-settings-title').count(), 1)
   assert.match(await board.getByTestId('token-dash-settings-title').innerText(), /设置与数据管理/)
-  const [settingsTitleBox, settingsRow1Box] = await Promise.all([
+  const [settingsTitleBox, settingsRow1Box, settingsCapsuleBox] = await Promise.all([
     board.getByTestId('token-dash-settings-title').boundingBox(),
     board.getByTestId('token-dash-settings-row-1').boundingBox(),
+    board.getByTestId('token-dash-settings-capsule').boundingBox(),
   ])
   assert.ok(
-    settingsTitleBox !== null && settingsRow1Box !== null
-      && settingsTitleBox.y + settingsTitleBox.height <= settingsRow1Box.y + 1,
-    'settings title should be the first row',
+    settingsTitleBox !== null && settingsRow1Box !== null && settingsCapsuleBox !== null
+      && settingsTitleBox.y + settingsTitleBox.height <= settingsCapsuleBox.y + 1
+      && settingsCapsuleBox.y <= settingsRow1Box.y,
+    'settings title should sit outside and above the capsule',
   )
   assert.equal(await board.getByTestId('token-dash-settings-row-1').count(), 1)
   assert.equal(await board.getByTestId('token-dash-settings-row-2').count(), 1)
