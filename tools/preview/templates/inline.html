@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>InlineGauge 状态全量</title>
+<style>
+  :root { /*__SPEC_CSS__*/ }
+  /*__BASE_CSS__*/
+  .inline-row { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+  .inline-gauge { display: inline-flex; align-items: center; gap: var(--inline-gap); }
+  .inline-pct { font-size: var(--inline-font); font-weight: 600; line-height: 20px; font-variant-numeric: tabular-nums; }
+  .inline-pct.normal { color: var(--ok); }
+  .inline-pct.warn { color: var(--warn); }
+  .inline-pct.critical { color: var(--error); }
+  .inline-pct.empty { color: var(--weak); }
+  .compose { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .compose .tag { color: var(--weak); }
+</style>
+</head>
+<body>
+<div class="page">
+  <section>
+    <h2>InlineGauge · P1 尺寸 14 / stroke 2</h2>
+    <p class="legend">环只画几何，数字由外层给；状态色与环一致。empty 时环只留轨道、数字为 —。</p>
+    <div class="inline-row" id="p1"></div>
+  </section>
+
+  <section>
+    <h2>InlineGauge · P2 尺寸 20 / stroke 2.5</h2>
+    <div class="inline-row" id="p2"></div>
+  </section>
+
+  <section>
+    <h2>组合示例（P1）</h2>
+    <div class="compose"><span class="tag">[API]</span><span>预算</span><span id="api-inline"></span></div>
+    <div class="compose"><span class="tag">[订阅]</span><span>GLM</span><span>5h</span><span id="sub-inline-5h"></span><span>周</span><span id="sub-inline-week"></span></div>
+  </section>
+</div>
+
+<script>
+  window.__SPEC__ = /*__SPEC_JSON__*/
+</script>
+<script>
+/*__RING_JS__*/
+</script>
+<script>
+  const { p1, p2, criticalApi } = window.__SPEC__.ring
+
+  const cell = (html, cap) => `<div class="state-cell">${html}<span class="cap">${cap}</span></div>`
+
+  const inlineGauge = (size, stroke, percent, critical) => {
+    const state = percent === null ? 'empty' : ringStateOf(percent, critical)
+    const text = percent === null ? '—' : `${percent.toFixed(1)}%`
+    return `<span class="inline-gauge">${ringSvg(size, stroke, percent, state)}<span class="inline-pct ${state}">${text}</span></span>`
+  }
+
+  const sample = (size, stroke, percent, critical, cap) => cell(
+    inlineGauge(size, stroke, percent, critical),
+    cap,
+  )
+
+  const states = (size, stroke) => [
+    sample(size, stroke, 12.3, criticalApi, 'normal 12.3%'),
+    sample(size, stroke, 85, criticalApi, 'warn 85.0%'),
+    sample(size, stroke, 128.6, criticalApi, 'critical 128.6%'),
+    sample(size, stroke, null, criticalApi, 'empty（--）'),
+  ].join('')
+
+  document.getElementById('p1').innerHTML = states(p1.size, p1.stroke)
+  document.getElementById('p2').innerHTML = states(p2.size, p2.stroke)
+
+  document.getElementById('api-inline').innerHTML = inlineGauge(p1.size, p1.stroke, 12.3, criticalApi)
+  document.getElementById('sub-inline-5h').innerHTML = inlineGauge(p1.size, p1.stroke, 42.5, 90)
+  document.getElementById('sub-inline-week').innerHTML = inlineGauge(p1.size, p1.stroke, 18.2, 90)
+</script>
+</body>
+</html>

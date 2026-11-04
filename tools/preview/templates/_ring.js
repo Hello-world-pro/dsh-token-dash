@@ -20,7 +20,7 @@ function ringSvg(size, stroke, percent, state) {
     : Math.max(0, Math.min(100, percent))
   const showArc = filled > 0
   return `
-    <svg viewBox="0 0 ${size} ${size}" aria-hidden="true">
+    <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">
       <circle cx="${center}" cy="${center}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${stroke}" />
       ${showArc ? `<circle cx="${center}" cy="${center}" r="${r}" fill="none"
         stroke="${arc}" stroke-width="${stroke}" stroke-linecap="round"

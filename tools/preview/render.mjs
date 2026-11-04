@@ -49,6 +49,8 @@ const css = [
   `--gauge-percent-offset: ${SPEC.gauge.percentOffset}px;`,
   `--api-ring: ${SPEC.apiGauge.ring}px;`,
   `--api-stroke: ${SPEC.apiGauge.stroke}px;`,
+  `--inline-font: ${SPEC.inlineGauge.font}px;`,
+  `--inline-gap: ${SPEC.inlineGauge.gap}px;`,
 ].join('\n    ')
 
 // 支持 `drafts/<name>`：探索稿放 drafts/，定稿移 templates/；输出统一加 draft- 前缀避免撞名

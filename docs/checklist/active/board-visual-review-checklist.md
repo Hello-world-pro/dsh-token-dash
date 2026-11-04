@@ -93,7 +93,7 @@
 | P2 320px 不出横向滚动、宽度 ≤480 | 待执行 | `scrollWidth === clientWidth` |
 | P3 卡片列数：1000px=4 / 760=3 / 520=2 | 待执行 | 三档截图量列数 |
 | 订阅卡窗口列数 = 实际窗口数（两窗不出「月」列） | 待执行 | Kimi / Command Code 各一张 |
-| 状态图覆盖 6 / 6 / 5 态 | 待执行 | 目检 ring / cards-sub / cards-api |
+| 状态图覆盖 6 / 4 / 6 / 5 态 | 待执行 | 目检 ring / inline / cards-sub / cards-api |
 | 按量与订阅 Gauge 环直径均 = 40，环心分别为「已用」与周期 | 待执行 | 截图量环与中心文字 |
 | 百分比在环下 16px、剩余/时间 11px | 待执行 | 目检单卡字号层级 |
 | 按量卡左 Gauge、右预算输入框；改预算后环与计划余额即时更新 | 待执行 | 预览中改值目检 |
@@ -128,19 +128,32 @@
 | 2026-11-04 | 三色语义 | 环与数字同色：normal 低饱和绿（`--td-state-ok`）/ warn 黄 / critical 红；语义固定、色值走 token；ui-design §2.5.1/§2.6/§3 与预览同步 |
 | 2026-11-04 | 金额决策 | D12：金额改前景色 + 600、负数红，green 只表示正常状态；`ui-design.md` 与 `client.js` 的改动延到模板定稿后统一做（本轮仅文档） |
 | 2026-11-04 | 预览精简 | 删除 `gauge.html` / `gauge.png`（与 `ring` + `cards-sub` 重复）；状态图收敛为 ring / cards-sub / cards-api 三张；README、清单与 mock 规则同步 |
+| 2026-11-04 | 组件分层 | 环不加数字槽位：`ProgressRing`（几何）+ `PercentValue`（文本/颜色）+ `InlineGauge`（P1/P2）+ `QuotaGauge`（P3）；新增 `inline.html` 与 4 态预览 |
 | 2026-11-04 | 状态矩阵 | 预览改为「状态穷举」：Gauge 5 / 订阅 4 / 按量 5；新增 `tools/mock/AGENTS.md` 定义假数据覆盖规则 |
 
-## 九、QuotaGauge 控件要求（P3 按量卡 + 订阅卡共用）
+## 九、环与组合层控件要求（P1 / P2 / P3 共用）
 
-> 与 P1 明确分开：现有 `ProgressRing` 只画几何，P1 继续「环 + 右侧数字」内联；P3 新增组合层 `QuotaGauge`，单独承接「环心标签 + 环下数值」排版，不复用 P1 样式。
+> 环只画几何，数字与文案由组合层承担；**不给 `ProgressRing` 加数字槽位**，布局差异由两个组合层分别表达。
 
-### 9.1 签名
+### 9.1 组件分层与签名
+
+| 组件 | 职责 | 不负责 |
+|---|---|---|
+| `ProgressRing` | 弧长、描边、尺寸：`{ percent, state, size, stroke }` | 任何文字 |
+| `PercentValue` | `0.425 → 42.5%`、`null → —`、按状态上色：`{ percent, state }` | 位置与间距 |
+| `InlineGauge` | 环 + 右侧数字（P1 / P2）：`{ percent, state, size, stroke, text? }` | 拼词条（`text` 由调用方给） |
+| `QuotaGauge` | 环心标签 + 环下数字 + 三行辅助（P3） | 解析数值 |
+
+- 公共件：`stateOf(percent, critical)` 判状态、`percentText(percent)` 格式化；P1 / P2 / P3 共用，不各写一份。
+- `InlineGauge` 不传 `text` 时内部用 `PercentValue`；需要 `--` 或自定义文案时再传。
+
+#### QuotaGauge（P3）
 
 ```js
 QuotaGauge({
   label,          // 环心文案：订阅 '5h' / '周' / '月'，按量 '已用'
   percent,        // 0–100；null → 空环 + '—'
-  state,          // 'normal' | 'critical' | 'empty'（调用方按 ≥90 判定）
+  state,          // 'normal' | 'warn' | 'critical' | 'empty'
   remaining,      // 已格式化，如 '剩余 58%'
   relative,       // '3 小时后'
   absolute,       // '22:51'
@@ -149,7 +162,19 @@ QuotaGauge({
 })
 ```
 
-### 9.2 结构与尺寸
+#### InlineGauge（P1 / P2）
+
+```js
+InlineGauge({
+  percent,        // 0–100；null → 空环 + '—'
+  state,          // 'normal' | 'warn' | 'critical' | 'empty'
+  size = 14,      // P1 14 / P2 20
+  stroke = 2,     // P1 2 / P2 2.5
+  text,           // 可选；默认 percentText(percent)
+})
+```
+
+### 9.2 QuotaGauge 结构与尺寸
 
 ```text
 ┌ 环 40 × 40（stroke 4，中间透明）
@@ -163,6 +188,7 @@ QuotaGauge({
 ```
 
 - 容器 `display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0`。
+- `InlineGauge`：`display:inline-flex; align-items:center; gap:4px`，环 14/2 或 20/2.5，数字 12px / 600，与环同色。
 - 文本 `white-space:nowrap`；列宽 61px 时 `剩余 58%` 与 `22:51` 均不换行。
 - **环绘制与 P1 / P2 共用同一套几何**（P1 14/2、P2 20/2.5、P3 40/4，阈值 warn 80 / API 100 / 订阅 90）；`QuotaGauge` 只是「环 + 环心 + 下方数字」的组合层，不再写第二套弧算法。
 - `percent = 0` 与 `empty` 都不画弧（round linecap 会在 0 处留一个点），只保留轨道。
@@ -192,19 +218,22 @@ QuotaGauge({
 ### 9.5 无障碍
 
 - 外层 `role="group"`，`aria-label` 形如 `5h 已用 42.5%，剩余 58%，3 小时后重置`；SVG `aria-hidden`。
+- `InlineGauge` 同理：环 `aria-hidden`，可读文本由 `PercentValue` 承担（`[API] 预算 12.3%`）。
 - 空态 `aria-label` 形如 `5h 暂无数据`。
 - 百分比不是唯一载体：剩余% 与时间同时可读。
 
 ### 9.6 落点
 
-- `client.js` 新增 `QuotaGauge`，放在 `ProgressRing` 之后；`QuotaCell`（订阅）与 `BudgetTable` 的已用列（按量）都调用它。
-- P2 的 `WindowRow` 继续用 `ProgressRing` 内联（P2 不放环心标签）。
-- E2E：`token-dash-quota-gauge-<providerId>-<key>`，断言环 40、中心文字为周期或「已用」、百分比在环下。
+- `client.js` 新增 `PercentValue`、`InlineGauge`、`QuotaGauge`，都放在 `ProgressRing` 之后；`stateOf` / `percentText` 与它们同层。
+- `Pill`（P1 预算与订阅窗口）与 `WindowRow`（P2）改用 `InlineGauge`，不再手写「环 + span」。
+- `QuotaCell`（订阅）与 `BudgetTable` 的已用列（按量）调用 `QuotaGauge`。
+- E2E：`token-dash-quota-gauge-<providerId>-<key>`，断言环 40、中心文字为周期或「已用」、百分比在环下；P1/P2 断言 `InlineGauge` 的内联结构（环与数字同一行）。
 
 ### 9.7 预览方式（本轮已验证）
 
-- 三张独立状态图（各 2x，按内容高度裁剪）：
+- 四张独立状态图（各 2x，按内容高度裁剪）：
   - `npm run preview ring` → `.tmp/preview/ring.png`：环的全量状态（6 态矩阵 + API/订阅 3 组阈值边界 + P1/P2/P3 三档尺寸 + 无标签/周期/「已用」三种环心）。
+  - `npm run preview inline` → `.tmp/preview/inline.png`：InlineGauge 4 态 × P1/P2 两档尺寸，附「预算」「订阅窗口」组合示例。
   - `npm run preview cards-sub` → `.tmp/preview/cards-sub.png`：订阅卡 6 态（三窗 ×2 / 两窗无月 / 两窗 critical / 单窗 / 含空窗），卡顶为真实供应商名。环 + 三行辅助信息的组合只在这里看，不再单独出 Gauge 状态图。
   - `npm run preview cards-api` → `.tmp/preview/cards-api.png`：按量卡 5 态（normal / warn / over / 预算未设置 / 余额不支持）；右侧预算输入框可改，环与计划余额即时重算，卡下 caption 跟随状态。
 - 状态覆盖口径见 [`tools/mock/AGENTS.md`](../../../tools/mock/AGENTS.md) §2：组件有 N 种状态就出 N 个样本，不合并。
