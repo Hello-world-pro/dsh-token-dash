@@ -1,8 +1,8 @@
 # Token 看板 UI 设计
 
 > 唯一 UI 设计真源：视觉、信息层级、文案与交互以本文件为准。<br>
-> **当前版本：v3.1（2026-11-04 组件与字号定稿）**——新增 §2.5 公共组件（ProgressRing / ResetClock / TokenTable）与 §2.6 字号 token；P2 主区四列、用量表按「单位 / `[` 交界」对齐。<br>
-> 底框层级：`Panel → Section → Tile`，最多两层；分区不靠色相，状态色只给预算/金额/错误。<br>
+> **当前版本：v3.2（2026-11-04 卡片化与三色环定稿）**——四组件分层（ProgressRing / PercentValue / InlineRing / QuotaGauge）；P3 两区改为每 provider 一张卡，新增摘要带、明细底框与三行设置胶囊；P2 支持按量 / 订阅两形态；环改低饱和绿 / 黄 / 红三色语义。<br>
+> 底框层级：`Panel → Section`；P3 用「卡片网格 + 摘要底框」，分区不靠色相，状态色只给环、百分比与超支。<br>
 > 架构与数据流见 [design.md](design.md)；本轮迭代的需求与实施细节见 [UI 迭代计划](plan/archived/feature_ui_refresh.md)。
 
 ## 变更记录（里程碑）
@@ -11,8 +11,9 @@
 
 | 日期 | 版本 | 变更 | 状态 |
 |---|---|---|---|
-| 2026-11-04 | v3.1 | **组件与字号定稿**：新增 §2.5（ProgressRing 14/20、ResetClock 拆 relative+absolute、TokenTable 全自适应 + `[` 交界基线）与 §2.6（`--td-fs-*` / `--td-lh-*` 六个 token） | 待实施 |
-| 2026-11-04 | v3.0 | **结构重构**：P3 改左侧常驻 + 中栏整页（`main` + `sidebar.panellist`）；P2 只留当前模型、宽度自适应、去进度条与设置开关；P1 订阅段加环；关闭入口加 Esc | 待实施 |
+| 2026-11-04 | **v3.2** | **卡片化与三色环**：四组件分层；P3 每 provider 一卡（按量竖排 / 订阅窗口一排）、摘要带、明细底框、三行胶囊；P2 两形态；环改绿 / 黄 / 红；响应式 4/3/2 列 | 待实施 |
+| 2026-11-04 | v3.1 | **组件与字号定稿**：新增 §2.5（ProgressRing 14/20、ResetClock 拆 relative+absolute、TokenTable 全自适应 + `[` 交界基线）与 §2.6（`--td-fs-*` / `--td-lh-*` 六个 token） | 已实现（1.2.0-local.2） |
+| 2026-11-04 | v3.0 | **结构重构**：P3 改左侧常驻 + 中栏整页（`main` + `sidebar.panellist`）；P2 只留当前模型、宽度自适应、去进度条与设置开关；P1 订阅段加环；关闭入口加 Esc | 已实现（1.2.0-local.2） |
 | 2026-11-03 | v2.40 | **面板宽度调整**：320→360 CSS px；M 级 Tokens/请求/命中单行完整显示；窄视口仍按 `100vw - 16px` 收缩 | 已实现，待桌面验证 |
 | 2026-11-02 | v2.39 | **按代码校准**：预算名称行四列 `1fr / 34px / 1fr / 72px`、tile 与明细字号、名称 12px、范围不持久化、tooltip 文案 | 已实现 |
 | 2026-11-02 | v2.31 ~ v2.38 | **预算与订阅行排版**：名称行四列 + 满宽 4px 条；余额与费用左缘对齐；订阅窗口 5h/周 定宽成列、右侧贴边；P3 订阅行只留名称 + 重置；`ResetLabel` 三档单位；标题去掉「(已检测 N)」；两格卡删「按币种」、金额改主蓝、副行只留三数字 | 已实现 |
@@ -36,10 +37,10 @@
 | 信息 | P1 | P2 浮层 | P3 整页 |
 |---|---|---|---|
 | 当前 provider 名称 | 否（只有模式徽标） | 是（顶行） | 是（每行一个） |
-| 预算 % / 已用总额 | 环 + % | 环 + % + 已用/预算 | 月度预算 · 已用 · 计划余额 · 真实余额 |
+| 预算 % / 已用总额 | 环 + % | 环 + % + 已用/预算 | 卡片：月度预算输入 · 计划余额 · 真实余额 · 本月已花 |
 | 本月已花 / 今日 | 今日 | 本月已花 | 否（按量列已用金额） |
 | 账户余额 | 是（开关控制） | 是（第三列「真实余额」） | 是（按量表「真实余额」） |
-| 范围费用 / Tokens | 否 | 两格卡 + 四列用量表 | 两格卡 + 八列明细表 |
+| 范围费用 / Tokens | 否 | 摘要带 + 四列用量表 | 摘要带 + 八列明细表 |
 | 按模型明细 | 否 | 四列（模型/Tokens/请求/命中，无费用） | 八列（含费用（API 计价估算）） |
 | 订阅窗口 | 是（当前） | 当前 provider 的 1–3 窗 | 全部订阅 provider |
 
@@ -47,12 +48,12 @@
 
 | 项 | 规格 |
 |---|---|
-| 面板宽 | P2 **内容自适应** `fit-content`（280–480），贴 pill 上方 8px、右缘不足向左翻转、最大高 `min(70vh, pillTop-16)`；P3 用宿主中栏整宽（1280 视口下实测 1000px） |
-| 字号阶梯 | 见 §2.6：P1 `--td-fs-pill`（12px，对齐底栏胶囊）；P2 / P3 `--td-fs-body`（13px，对齐消息正文）；括号 12px；仅「总费用 / 真实 Tokens」17px / 600 |
-| 主色 | `var(--dsw-alias-state-business-primary, #6ea8ff)` |
-| 警告 / 超支 | `--dsw-alias-state-warn-primary` / `--dsw-alias-state-error-primary`；tile 金额强调 `var(--td-accent)`（主蓝）；回退 `#f0a020` / `#e05a5a` |
-| 文字色 | 标题/数值 `--dsw-alias-label-primary`；副行/标签 `--dsw-alias-label-secondary`；弱提示 `--dsw-alias-label-tertiary`；不再用 opacity 模拟 muted |
-| 色彩纪律 | 蓝用于按钮、选中、焦点和 MiniBar；**进度环三态：低饱和绿（正常）/ 黄（接近阈值）/ 红（超支）**；amber 警告、green 金额、红超支；**卡片/分区仍灰阶**；分区不靠色相区分 |
+| 面板宽 | P2 **内容自适应** `fit-content`（280–480），贴 pill 上方 8px、右缘不足向左翻转、最大高 `min(70vh, pillTop-16)`；P3 内容宽 `100% / max-width 952`（随中栏收缩） |
+| 字号阶梯 | 见 §2.6：P1 `--td-fs-pill`（12px）；P2 / P3 正文 13px；括号 12px；P3 摘要带「总费用 / 真实 Tokens」**26px / 600** |
+| 主色 | `var(--dsw-alias-state-business-primary, #6ea8ff)`；仅用于按钮、选中、焦点、链接 |
+| 警告 / 超支 | 环与百分比：warn `--dsw-alias-state-warn-primary`、critical `--dsw-alias-state-error-primary`；金额用前景色，负数 / 超支红 |
+| 文字色 | 标题/数值 `--dsw-alias-label-primary`；副行/标签/环心 `label-secondary`（约 68%）；弱提示 `label-tertiary`；不用 opacity 模拟 muted |
+| 色彩纪律 | 蓝只给交互；**环三态：低饱和绿（正常）/ 黄（接近阈值）/ 红（超支）**，环与数字同色；**green 只表示正常状态，不再表示金额**；卡片/分区仍灰阶 |
 | 按钮 | 默认 DSH 蓝：`--td-accent: var(--dsw-alias-state-business-primary, #6ea8ff)`；背景 `color-mix(in srgb, var(--td-accent) 16%, transparent)`、边框 32%、文字/图标 accent；hover 背景 24% / 边框 48%；active 28% / 64%；头部图标按钮、日志、订阅刷新、检查更新都同款；`segmented` 选中项例外 |
 | 控件尺寸 | 全部 `box-sizing:border-box`；header 图标按钮 **22×22**（图标 12–13px）、圆角 6；文字按钮 `height:22`；行内 `ⓘ` 用 20×20 命中区但无按钮底；禁止只设 `width/height` 而保留 `minHeight` 覆盖 |
 | 按钮状态 | disabled：`opacity:.5` + `cursor:not-allowed`，不改色；loading：图标旋转，按钮禁用；不新增第二种填充色 |
@@ -60,11 +61,11 @@
 | 输入 | 背景 `color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent)`；边框 `--dsw-alias-border-l3`；focus 边框 `--dsw-alias-state-business-primary`；错误边框 `--dsw-alias-state-error-primary` |
 | 危险操作 | 仅“清空日志/删除类”用 error 色；当前 v2 不做清空，不引入红色主按钮 |
 | segmented 主题 | 轨道 `var(--dsw-alias-bg-module-platform, rgba(127,127,127,.10))`；选中 `var(--dsw-alias-button-elevated-fill, #fff)` + `box-shadow: var(--dsw-shadow-lv1, 0 2px 4px rgba(0,0,0,.08))`；选中文字 `--dsw-alias-label-primary`；未选中 `--dsw-alias-label-secondary`，hover `--dsw-alias-interactive-bg-hover`；暗色由宿主 `body[data-ds-dark-theme]` 自动切换，不硬编码白底 |
-| 底框层级 | P2 为 `Panel → Section`；**P3 无 Panel**，`Section` 直接铺在中栏。Section 圆角 10、padding 12、区间 gap 16；两格卡用 Tile（圆角 8、1px `border-l3`、padding 12、elevated 背景）；亮/暗自动跟随 token |
-| 描边纪律 | Section 不描边；行内靠间距/1px 弱分隔；描边只给输入框、胶囊、focus；禁止“底框 + 外框”重复包裹 |
-| 环 ProgressRing | 见 §2.5.1：描边 donut，P1 14×14、P2 20×20，弧按状态取 `label-primary` / `error`。MiniBar 组件保留但看板不再使用 |
-| 状态表达 | API 预算 80–100% 只染数字 amber、≥100% 环与数字同红；订阅 ≥90% 环与数字同红；空环 = 未设置 |
-| 布局网格 | P2 主区四列 `auto 1fr 1fr 1fr`（环 / 已用·预算 / 真实余额 / 本月已花）；订阅行同构（环 / 剩余 / 倒计时 / 绝对时间）；P3 用表格，列宽自适应 |
+| 底框层级 | P2 为 `Panel → Section`；P3 为「卡片网格 + 摘要底框（范围 + 摘要带 + 明细）+ 设置胶囊」。卡片圆角 8 / 1px `border-l3` / padding 14；底框圆角 10 / padding 12–14；亮暗跟随 token |
+| 描边纪律 | 卡片与底框不重复包裹；行内靠间距 / 1px 弱分隔；描边只给卡片、输入框、胶囊、focus |
+| 环 | 见 §2.5.1：描边 donut，P1 14/2、P2 20/2.5、P3 40/4；弧与数字同色（绿 / 黄 / 红）；MiniBar 保留但看板不再使用 |
+| 状态表达 | 环与百分比同色：80–100% 黄、API ≥100% / 订阅 ≥90% 红；空环 = 未设置；金额不用状态色，超支负数红 |
+| 布局网格 | P2 主区四列 `auto 1fr 1fr 1fr`（环 / 已用·预算 / 真实余额 / 本月已花），订阅为三窗两行；P3 两区均为 `auto-fit` 卡片网格，明细 8 列 |
 | 行高 / 间距 | 信息行 py 6px；组间 gap 10px；区内行间 gap 2px；面板 padding 12 |
 | 分隔线 | 1px `--dsw-alias-border-l2`、左右缩进 8px、上下 margin 6px |
 | tooltip | 独立 `Tooltip` 固定浮层（跳出面板 `overflow`），背景 `--dsw-alias-tooltip-bg`、文字 `--dsw-alias-toast-label`、11px；`width:max-content`、`maxWidth:min(220px, 100vw-16px)`；默认向上，水平中心对齐触发按钮；上方空间不足才向下翻转；左右钳制；滚动/resize 关闭 |
@@ -90,7 +91,7 @@
 | 几何 | `viewBox="0 0 ${size} ${size}"`、`r = (size - stroke) / 2`、`strokeDasharray = C*p/100 C`、`rotate(-90 size/2 size/2)`、`strokeLinecap="round"`；`percent = 0` 与 `empty` 都不画弧 |
 | 形态 | **描边 donut，中间透明**，不是实心饼 |
 | 颜色 | 轨道 `--dsw-alias-border-l3`；**弧与数字同色**：normal 低饱和绿（`--td-state-ok`，回退 `--dsw-alias-state-success-primary`）、warn 黄（`--dsw-alias-state-warn-primary`）、critical 红（`--dsw-alias-state-error-primary`）、empty 不画弧 + 数字 `label-tertiary`；语义固定，色值走 token、不写死 hex |
-| 阈值 | 由调用方给：订阅 `≥90` → critical；API 预算 `≥100` → critical（80–100 只染数字，不染环） |
+| 阈值 | 由调用方给：订阅 `≥90` → critical；API 预算 `≥100` → critical；80–100 为 warn，**环与数字同时变黄** |
 | 无障碍 | 装饰用法 `aria-hidden`，数值由相邻文本承担；独立使用时 `role="progressbar"` |
 
 - 全量状态（6 态、3 组阈值边界、3 档尺寸、3 种环心）见 [`tools/preview/templates/ring.html`](../tools/preview/templates/ring.html)。
@@ -115,6 +116,34 @@
 | 行数 | 最多 5 行，超出内部滚动；空态 `范围内暂无消耗`，不渲染表头 |
 | 费用 | 不含；P3 在末尾追加一列「费用（API 计价估算）」 |
 
+### 2.5.4 PercentValue
+
+| 项 | 规格 |
+|---|---|
+| 输入 | `{ percent, state }`；`percent` 0–100 或 `null` |
+| 输出 | `42.5%` / `—`，`tabular-nums` |
+| 颜色 | 与环同色：normal `--td-state-ok`、warn `state-warn-primary`、critical `state-error-primary`、empty `label-tertiary` |
+| 职责 | 只负责格式化与颜色；位置、字号、间距由外层决定 |
+
+### 2.5.5 InlineRing
+
+| 项 | 规格 |
+|---|---|
+| 结构 | `ProgressRing` + `PercentValue` 同一行，`inline-flex`，gap 4 |
+| 尺寸 | P1 14/2 + 12px；P2 20/2.5 + 12px |
+| 参数 | `{ percent, state, size, stroke, text? }`；`text` 省略时用 `PercentValue` |
+| 职责 | 内联排版；不拼词条，`text` 由调用方给 |
+| 用途 | P1 预算 / 订阅窗口；P2 订阅窗口 |
+
+### 2.5.6 QuotaGauge
+
+| 项 | 规格 |
+|---|---|
+| 结构 | 环 40/4 → 环心标签 12px → 3px → 百分比 16px / 600 → 4px → 三行辅助 11px |
+| 参数 | `{ label, percent, state, remaining, relative, absolute, size = 40, stroke = 4 }` |
+| 颜色 | 环与百分比同色（绿 / 黄 / 红）；环心与辅助用 `label-secondary`，不参与告警色 |
+| 用途 | P3 按量卡（环心「已用」）与订阅卡（环心周期） |
+
 ## 2.6 字号与数字
 
 | token | 默认值 | 用于 |
@@ -126,7 +155,7 @@
 | `--td-lh-body` | `calc(24px + var(--dsh-content-font-delta, 0px))` → **24px** | P2 / P3 正文 |
 | `--td-lh-tight` | **20px** | P2 表格行、底部状态行 |
 
-- 唯一字号例外：P3「总费用」「真实 Tokens」两个 KPI 用 **17px / 600**。
+- 唯一字号例外：P3 摘要带「总费用」「真实 Tokens」用 **26px / 600**，多币种同字号、10px 间距。
 - 数字一律 `font-variant-numeric: tabular-nums`；金额 `¥12.68`，`/` 两侧各 1 空格；空值统一 `—`。
 - 禁止写死 px 字号、禁止用 `opacity` 模拟弱化、禁止等宽字体族。
 
@@ -140,9 +169,10 @@ API    [API] 预算 ◔ 25.4% · 今日 ¥11.37 · 余额 ¥8.74 ⌃
 
 - 两处槽位：首页工作区行；会话活动行左侧。都不撑开输入框。
 - 两态：API / 订阅；判定不了默认 `[API]`；无任何 provider 时 `[API] ◌ --`，不隐藏 Pill。
-- 环：所有百分比前都带**描边环**（14×14、`r=5.5`、`stroke 2`、`rotate(-90 7 7)`），弧为前景色（暗色≈白 / 亮色≈黑），不写死 `#fff`。
+- 环：所有百分比前都带**描边环**（`InlineRing` 14/2、`r=6`、`rotate(-90 7 7)`），环与数字同色，不写死 `#fff`。
 - 常态：环与数字同为**低饱和绿**（`--td-state-ok`，回退 `--dsw-alias-state-success-primary`），不用业务蓝。
 - 临界：订阅 ≥90%、API 预算 ≥100% 时环与数字同红；API 80–100% 环与数字同黄；未设置画空环。
+- 展开箭头用内联 SVG（12px），不用 `⌃` 文本字形。
 - API 段：预算环 + 百分比 · 今日 · 余额；金额按 provider 币种。
 - 订阅段：`名称 + 短标签(5h/周/月) + 环 + 百分比`，最多 3 窗；**不显示重置时间**（重置只在 P2 / P3）。
 - 取值三级兜底：会话内 `modelSelection` 投影 `next ?? lastUsed` → 首页默认模型 → 账本 `currentProviderId`；都不命中时 `[API] ◌ --`，Pill 不隐藏。
@@ -169,33 +199,35 @@ DeepSeek-V4.1-F…    12.5k [12.3k/0/195]      1      0%
 更新于 12:30                              [ 全量看板 ]
 ```
 
-订阅 provider 时，中间区换成窗口行（最多 3 行）：`5h ◔ 42% 剩余 58% 3 小时后 11-03 20:15`。
+订阅 provider 时，中间区换成窗口行：`5h / 周 / 月` 三列等分，每列两行——`周期 + 环 + 百分比` / `剩余 N% · X 后`；无「月」不出第三列。
 
 ### 4.2 尺寸与定位
 
-- 宽 **`fit-content`**，`min 280` / `max min(480px, 100vw - 16px)`，由最宽一行决定；不再固定 360。
+- 宽 **`fit-content`**，`min 280` / `max min(480px, 100vw - 16px)`，由摘要行 / 窗口行与数值列决定；模型名 `max-width: 190px` + 省略号，不驱动宽度。
 - 高 `max(200, min(70vh, pillTop - 16))`；贴 pill 上方 8px；宽度变化 120ms 过渡 + `ResizeObserver` 重定位。
 - 取消「用量 / 设置」双 tab；取消预算进度条；取消刷新间隔 / 余额开关。
 
 ### 4.3 主区四列
 
 - `grid-template-columns: auto 1fr 1fr 1fr`，`column-gap: 8px`：环+百分比 / 已用·预算 / 真实余额 / 本月已花。
-- 字号 13px；数值 600、标签 400、标签色 `label-tertiary`。
+- 字号 13px；数值 600、标签 400、标签色 `label-secondary`（与卡片字段标签一致）。
 - `title`：余额=「账户真实余额，不受预算影响」；已花=「本月累计消耗，等于已用/预算 的分子」。
 - 可用宽度 <320px 时末列整体换行，不截断金额。
 
 ### 4.4 订阅行
 
-- 四段均分：`标签 + 环(20) + 百分比` / `剩余 N%` / 倒计时 / 绝对时间。
-- 时间两段统一由 `resetParts(ts)` 产出，不会互相矛盾；缺失窗口 `◌ —` + 三段 `—`。
-- ≥90% 时环与数字同红（与 P1 同规则）。
+- 三列等分（1–3 窗），每列两行：`标签 + InlineRing(20/2.5) + 百分比` / `剩余 N% · X 后`（11px secondary）。
+- 时间由 `resetParts(ts)` 产出；缺失窗口整列不渲染，不显示 `月 —`。
+- 环与数字同色：≥90% 红、80–100% 黄（与 P1 同规则）。
+- 原型：[`tools/preview/templates/page-p2.html`](../tools/preview/templates/page-p2.html)（订阅浮层）。
 
 ### 4.5 范围与用量表
 
 - 范围胶囊：当天 / 近7天 / 近30天 / 全部，默认「当天」，只影响下方表格。
 - 表格四列：模型 / Tokens / 请求 / 命中，**不含费用**；最多 5 行，超出内部滚动。
+- 表头 12px/500 + `label-tertiary` + 1px 下边线（不做底色块）；行高 28；行间 `color-mix(label-primary 6%)` 细线；单元格左右内边距 4；数值列右对齐。
 - Tokens 形如 `12.5k [12.3k/0/195]`：左段右对齐、右段左对齐，以「单位 / `[`」交界为对齐线。
-- 空态：`范围内暂无消耗`；切换范围保留旧数据直到新数据到达。
+- 补 `role="table" / row / columnheader / cell`；空态 `范围内暂无消耗`，切换范围保留旧数据。
 
 ### 4.6 底部
 
@@ -233,50 +265,60 @@ DeepSeek-V4.1-F…    12.5k [12.3k/0/195]      1      0%
 Token 看板                                              ★ 1.2k
 数据来自本机会话记录 · 更新于 12:30
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-按量计价（按供应商）   名称 / 月度预算 / 已用 / 计划余额 / 真实余额
-订阅套餐（按供应商）   名称 / 5h / 周 / 月（每窗两行）
-时间范围（胶囊）+ 两格卡 + 模型明细表
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-设置与数据管理         刷新 / 账户余额 / 日志与数据 / 价格表与版本
+按量计价（按供应商）   卡片网格：名称 + QuotaGauge + 预算输入 + 三行
+订阅套餐（按供应商）   卡片网格：名称 + 5h/周/月 窗口一排
+┌ 范围与明细 ─────────────────────────────────────────────┐
+│ 时间范围 + 共 N 个模型 · 更新于                          │
+│ 摘要带（总费用 / 真实 Tokens）                            │
+│ 模型 / Tokens / 输入 / 缓存 / 输出 / 请求 / 命中 / 费用   │
+└──────────────────────────────────────────────────────────┘
+设置与数据管理         刷新 / 日志 / 版本 三行
 ```
+
+原型：[`page-p3.html`](../tools/preview/templates/page-p3.html)。
 
 ### 5.3 按量计价（按供应商）
 
-- **每个 provider 一张卡**：`repeat(auto-fit, minmax(220px, 1fr))` + gap 12；卡内 padding 14、圆角 8、1px `border-l3`。
-- 卡顶：供应商名 + `[ 按量 API ]`；上部左右分栏：左 `QuotaGauge(40)`（环心「已用」、环下百分比），右「月度预算」输入框（常显，币种前缀 + 数字，空 = 未设置）。
+- **每个 provider 一张卡**：flex 布局，卡宽上限 260（3 家一行 3 张、末行居中），gap 12；卡内 padding 14、圆角 8、1px `border-l3`。
+- 卡顶：供应商名 + `[ 按量 API ]`；卡内**竖排居中**：`QuotaGauge(40)`（环心「已用」）→ 环下百分比 → `月度预算` 标签 → 输入框。
 - 卡内三行：计划余额（预算 − 已用，可为负）/ 真实余额 / 本月已花；不再单列「已用 / 预算」。
-- 改预算后环、状态、计划余额即时重算：80–100 只染数字，≥100 环与数字转红。
-- 只列 `billingMode === 'api'`；计费模式只读（自动侦测）；`billingModes = hide` 的 provider 不出现。
-- 原型：[`tools/preview/templates/cards-api.html`](../tools/preview/templates/cards-api.html)。
+- 改预算后环、状态、计划余额即时重算：80–100% 环与数字同黄，≥100% 同红；金额不用状态色，负值红。
+- 只列 `billingMode === 'api'`；计费模式只读；`billingModes = hide` 的 provider 不出现。
+- 原型：[`cards-api.html`](../tools/preview/templates/cards-api.html)。
 
 ### 5.4 订阅套餐（按供应商）
 
-- **每个 provider 一张卡**（与 5.3 同一套网格与卡片容器）；卡顶：供应商名 + `[ 订阅 ]`。
-- 卡内 `5h / 周 / 月` 一排等分，每列一个 `QuotaGauge(40)`：环心周期 → 环下已用% → 剩余% → 倒计时 → 绝对时间。
+- **每个 provider 一张卡**：`repeat(auto-fit, minmax(220px, 1fr))`，1000 宽 4 张 229 / 760 三张 / 520 两张；卡顶：供应商名 + `[ 订阅 ]`。
+- 卡内 `5h / 周 / 月` 一排等分，每列一个 `QuotaGauge(40)`：环心周期 → 环下已用% → 剩余% → 倒计时 → 绝对时间；辅助三行 11px `label-secondary`。
 - 按实际窗口数出列（1–3）：没有「月」就只出两列，不显示 `月 —`；完全没有窗口的 provider 整卡不出现。
-- 原型：[`tools/preview/templates/cards-sub.html`](../tools/preview/templates/cards-sub.html)。
+- 环与数字同色：≥90% 红、80–100% 黄；环心与辅助不参与告警色。
+- 原型：[`cards-sub.html`](../tools/preview/templates/cards-sub.html)。
 
 ### 5.5 范围与明细
 
-- 时间范围胶囊，默认「全部」；影响两格卡与明细表。
-- 明细表的 Tokens 列沿用 §2.5.3 的「单位 / `[` 交界」对齐基线。
-- 两格卡各自用卡片容器（圆角 8 / 1px `border-l3` / padding 12 / elevated 背景），并排 gap 12，与表格间距 16。
-- 明细表：模型 / Tokens / 输入 / 缓存 / 输出 / 请求 / 命中 / 费用（API 计价估算）；只列范围内有消耗的模型。
+- 时间范围胶囊、摘要带、模型明细共用一个底框（1px / 圆角 10 / padding 12–14），框内 10px 分区 + 1px 分隔线。
+- 顶部行：范围胶囊与「共 N 个模型 · 更新于」同行、**整行左对齐**（16px 间距）。
+- 摘要带：整宽、左右两半 + 1px 竖线；总费用与多币种 26px / 600（10px 间距）、真实 Tokens 26px / 600 + 11px 拆分；两半内容水平居中，单币种金额居中。
+- 明细表：模型 / Tokens / 输入 / 缓存 / 输出 / 请求 / 命中 / 费用（API 计价估算），8 列；Tokens 沿用「单位 / `[` 交界」基线；窄屏内部横向滚动（`min-width: 720px`）。
+- 只列范围内有消耗的模型；模型名前加 provider 徽标，列距 12。
 
 ### 5.6 预算编辑
 
-- 按量卡右侧**常显输入框**（`月度预算` 标签 + 币种前缀 + 数字，空 = 未设置），不再用 `✎` 入口。
+- 按量卡**数字下方**常显输入框（`月度预算` 标签 + 币种前缀 + 数字，空 = 未设置），不再用 `✎` 入口。
 - Enter / 失焦提交，Esc 回原值；提交后环、状态、计划余额即时重算。
 - 只改预算数字；允许空（= 未设置）或 ≥0 十进制，拒绝负数 / 科学计数法 / 货币符号。
 - 交互原型：[`tools/preview/templates/cards-api.html`](../tools/preview/templates/cards-api.html)。
 
 ### 5.7 设置与数据管理
 
-| 行 | 内容 |
-|---|---|
-| 1 | `⟳` 立即刷新 + 刷新间隔 segmented；账户余额 toggle |
-| 2 | 打开日志文件夹 / 导出日志 / 导出数据 / 导入数据 |
-| 3 | 价格表时间 · 版本 · 来源；`⤓` 检查更新 |
+| 行 | 标签 | 内容 |
+|---|---|---|
+| 1 | 刷新 | `⟳ 立即刷新`（主按钮）+ 刷新间隔 segmented；右端账户余额 toggle |
+| 2 | 日志 | 打开日志文件夹 / 导出日志 / 导出数据 / 导入数据（ghost 按钮） |
+| 3 | 版本 | `vX.Y.Z · 价格表 YYYY-MM-DD`；右端 `⤓ 检查更新`（ghost） |
+
+- 行标签固定 40px，三行控件左对齐成列；行间 1px 6% 分隔线。
+- 主按钮仅「立即刷新」（浅底 + 边框），其余 ghost（透明底 / 透明边框），避免按钮同权。
 
 ### 5.8 锚定
 
@@ -299,7 +341,7 @@ Token 看板                                              ★ 1.2k
 ## 6. 交互与可访问性
 
 - Pill：`role=button`、`tabIndex=0`、Enter/Space、`aria-expanded`、完整 aria-label。
-- Panel：`role=dialog`；tab 用 `role=tablist/tab`，范围选择器用 `role=tablist`；键盘可完成全部切换。
+- Panel：`role=dialog`；范围选择器用 `role=tablist`（roving tabindex）；P2 无 tab。
 - Segmented：每项 `role=tab`、`aria-selected`，roving tabindex；←/→/Home/End 移动，Enter/Space 选择。
 - Toggle：`role=switch`、`aria-checked`；Space/Enter 切换；关闭后不改变焦点位置。
 - 关闭入口有三个：右上角 `×`、点击面板外部、`Esc`；P3 为整页，用侧栏切回会话即离开；关闭后尽力归还焦点。
@@ -357,9 +399,10 @@ Token 看板                                              ★ 1.2k
 
 ## 8. 响应式与溢出
 
-- P2 宽 `fit-content`（280–480），贴近窗口右缘时向左翻转；P3 用宿主中栏整宽（1280 视口下实测 1000px）；都不产生页面横向滚动。
-- P2 最大高 `max(200, min(70vh, pillTop-16))`；P3 由宿主中栏滚动（实测 `overflow:hidden` 容器内 sticky 生效）。
-- provider / 模型名称单行截断 `text-overflow:ellipsis`；金额、百分比、币种不截断。
+- P2 宽 `fit-content`（280–480），贴近窗口右缘时向左翻转；320px 视口铺满可用宽度、不横向滚动。
+- P3 内容宽 `100% / max-width 952`，页面不产生横向滚动；卡片列数 1000=4 / 760=3 / 520=2，明细表窄屏内部滚动（`min-width: 720px`）。
+- P2 最大高 `max(200, min(70vh, pillTop-16))`；P3 由宿主中栏滚动。
+- provider / 模型名称单行截断 `text-overflow:ellipsis`（P2 模型列上限 190px）；金额、百分比、币种不截断。
 - 价格链接已从 P3 移除（只保留价格表时间与来源）；查价走 P2 的 `ⓘ`。
 - tooltip 最大宽 220px；默认向上，上方空间不足时向下翻转；右侧不足时向左对齐，不超出面板。
 - 长错误文案最多 2 行；超出截断，完整内容放 title/aria-label。
