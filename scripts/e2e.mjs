@@ -4,9 +4,10 @@
  */
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
+import { zstdCompressSync } from 'node:zlib'
 
 const root = resolve('.')
 const PKG_VERSION = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
@@ -145,6 +146,12 @@ try {
   mkdirSync(join(tmpRoot, 'e2e'), { recursive: true })
   const dataDir = join(home, 'dsh-token-dash')
   mkdirSync(dataDir, { recursive: true })
+  const fixtureLines = readFileSync(join(root, 'test', 'fixtures', 'e2e-session.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean)
+  const fixtureHeader = JSON.parse(fixtureLines[0])
+  const fixtureKey = `--${fixtureHeader.cwd.replace(':', '').replaceAll('\\', '-')}--`
+  const fixtureDir = join(home, 'sessions', fixtureKey, fixtureHeader.id)
+  mkdirSync(fixtureDir, { recursive: true })
+  writeFileSync(join(fixtureDir, 'session.v4.jsonl.zstd'), Buffer.concat(fixtureLines.map((line) => zstdCompressSync(Buffer.from(`${line}\n`)))))
   server = startWeb(env)
   const { base, token } = await server.ready
   console.log(`[e2e] web ${base}`)
@@ -183,6 +190,14 @@ try {
   const executablePath = resolveChromium()
   browser = await chromium.launch({ headless: true, ...(executablePath === undefined ? {} : { executablePath }) })
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+  const slotMounts = []
+  page.on('request', (request) => {
+    if (!request.url().includes('/token-dash/api/log')) return
+    try {
+      const body = JSON.parse(request.postData() ?? '{}')
+      if (body.module === 'slot' && typeof body.meta?.slot === 'string') slotMounts.push(body.meta.slot)
+    } catch { /* ignore malformed log */ }
+  })
   await page.route('**/token-dash/api/summary*', async (route) => {
     if (failSummary) return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ ok: false, reason: 'mock-summary' }) })
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: currentSummary }) })
@@ -217,8 +232,23 @@ try {
   await page.waitForTimeout(200)
 
   const pill = page.locator('[data-testid=token-dash-pill]')
+  assert.equal(await pill.count(), 0, 'blank session should not show P1')
+  assert.match(await page.locator('body').innerText(), /标准模式/)
+  const fixtureTitle = (await page.getByText('E2E Fixture', { exact: true }).count()) > 0 ? 'E2E Fixture' : '未命名'
+  await page.getByText(fixtureTitle, { exact: true }).first().evaluate((node) => node.click()).catch(() => {})
+  await page.waitForTimeout(800)
   await pill.waitFor({ timeout: 20000 })
   assert.ok(await pill.isVisible())
+  await page.waitForTimeout(300)
+  assert.ok(slotMounts.includes('conversation.composer.dock'), `P1 should mount in composer.dock: ${slotMounts}`)
+  assert.ok(!slotMounts.includes('conversation.hero.agentPreset'), `official agent preset slot must stay free: ${slotMounts}`)
+  const dockBox = await page.locator('[data-composer-dock]').first().boundingBox()
+  const pillBox = await pill.boundingBox()
+  assert.ok(dockBox !== null && pillBox !== null, 'dock and pill boxes should exist')
+  assert.ok(
+    pillBox.x + pillBox.width >= dockBox.x + dockBox.width - 24,
+    `P1 should align to the bottom bar right edge: pill=${pillBox.x + pillBox.width}, dock=${dockBox.x + dockBox.width}`,
+  )
   assert.match(await pill.innerText(), /\[API\]/)
   assert.match(await pill.innerText(), /12\.3%/)
   assert.match(await pill.innerText(), /¥49\.86/)

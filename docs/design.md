@@ -92,6 +92,7 @@ SummaryVM（core.js → client 的唯一 DTO）
 - **VM**：纯聚合，不做 IO；通过 `providerRegistry` 查元数据，不直接 import provider 数据表；输出 `windows` 和 `pricingLinks`。`windows` 长度 0–3，缺窗不补占位对象。
 - **UI**：只读 `SummaryVM`；按 `kind` / `status` / `currency` 渲染，不出现 provider id、价格页 URL、默认模型等 provider 知识。
 - **页面入口**：P3 走宿主「全局面板」机制——`slots.inject('main')` 注册整页（`key = token-dash`），`sidebar.panellist` 注册同 `id` 的左侧常驻行；`layout` 通过 `inject` 注入，浮层底部「全量看板」与侧栏入口调用 `selectPanel('token-dash')`（点击时再校验 `hasMainPanel`）。
+- **P1 槽位**：只挂 `conversation.composer.dock`（输入框底栏右侧，Pill 根节点 `order:10`）；不占用 `conversation.hero.agentPreset`，官方 Agent 模式按钮不被替换。
 - **兼容**：VM 可读取旧 `plans` 输入，但输出只保留 `windows`；`DEFAULT_MODELS` 保留为派生导出，供旧调用方过渡。
 
 ## Provider 源表（v3.4）
@@ -174,7 +175,7 @@ dsh-token-dash/
 | 页面 | `Pill` / `Panel` / `BoardPage` | 布局、取数、交互 | 重画弧或格式化百分比 |
 
 - 公共函数：`stateOf(percent, critical)` 判状态、`percentText(percent)` 格式化；三页共用。
-- 设计契约与状态矩阵见 [`ui-design.md`](ui-design.md) §2.5 与 [`ring.html`](../tools/preview/templates/ring.html)；实现方案见 [`feature_board_cards_redesign.md`](plan/archived/dsh/feature_board_cards_redesign.md)（已归档）。
+- 设计契约与状态矩阵见 [`ui-design.md`](ui-design.md) §2.5 与 [`ring.html`](../tools/preview/templates/ring.html)；实现方案见 [`feature_board_cards_redesign.md`](plan/active/dsh/feature_board_cards_redesign.md)。
 
 ## 模块职责速查
 

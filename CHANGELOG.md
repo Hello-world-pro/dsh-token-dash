@@ -21,6 +21,7 @@
 - P1 的预算与订阅窗口改用内联环；浮层不再承载设置项，设置集中到整页底部胶囊。
 - 供应商取数改为按源表迭代：每源成功缓存 60s / 失败 10s + 并发合并；订阅重查覆盖 GLM、Kimi、OpenCode Go、Command Code。
 - 7 家 provider registry 与价格链接同步；非回环请求走安全门；错误分类补 `upstream` 标记。
+- P1 在输入框底栏内右移（`composer.dock` 的 Pill 根节点 `order:10`），并移除 hero 槽位注入，官方 Agent 模式按钮恢复。
 
 ## [1.3.0] - 2026-11-05
 
