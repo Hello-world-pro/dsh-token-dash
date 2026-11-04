@@ -24,6 +24,8 @@ tools/preview/
   render.mjs            # 模板 + spec → 截图（支持 drafts/<name>）
   templates/
     _base.css           # 公共样式（卡片、Gauge、kv 行）
+    _ring.js            # 环的统一绘制与状态判定（四个模板共用）
+    ring.html           # 环全量状态：矩阵 / 阈值边界 / 尺寸档位 / 环心标签
     gauge.html          # Gauge 5 态
     cards-sub.html      # 订阅卡 6 态（带供应商名）
     cards-api.html      # 按量卡 5 态（预算可编辑）
@@ -31,6 +33,7 @@ tools/preview/
 ```
 
 ```bash
+npm run preview ring             # → .tmp/preview/ring.png（环的全量状态）
 npm run preview gauge            # → .tmp/preview/gauge.png（2x，按内容高度裁剪）
 npm run preview cards-sub
 npm run preview cards-api
@@ -45,6 +48,7 @@ npm run preview:publish gauge    # → docs/pic/gauge.png（仅定稿）
 
 | 模板 | 对应设计章节 | 状态 | 覆盖 |
 |---|---|---|---|
+| `ring.html` | `ui-design.md` §2.5.1 ProgressRing | final | 6 态 + 3 组边界 + 3 档尺寸 + 3 种环心 |
 | `gauge.html` | `ui-design.md` §2.5 公共组件 | final | 5 态 |
 | `cards-sub.html` | §5.4 订阅套餐 | final | 6 态 |
 | `cards-api.html` | §5.3 按量计价 | final | 5 态 |

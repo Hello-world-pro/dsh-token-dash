@@ -20,6 +20,9 @@
   window.__SPEC__ = /*__SPEC_JSON__*/
 </script>
 <script>
+/*__RING_JS__*/
+</script>
+<script>
   const A = window.__SPEC__.apiGauge
 
   const cards = [
@@ -30,30 +33,7 @@
     { name: 'GLM API', cur: '¥', used: 6, budget: '50.00', real: '—', month: '¥6.00' },
   ]
 
-  const ringSvg = (percent, state) => {
-    const r = (A.ring - A.stroke) / 2
-    const c = 2 * Math.PI * r
-    const center = A.ring / 2
-    const arc = state === 'critical' ? 'var(--error)' : 'var(--text)'
-    const filled = state === 'empty' ? 0 : Math.max(0, Math.min(100, percent))
-    return `
-      <svg viewBox="0 0 ${A.ring} ${A.ring}" aria-hidden="true">
-        <circle cx="${center}" cy="${center}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${A.stroke}" />
-        ${state === 'empty' ? '' : `<circle cx="${center}" cy="${center}" r="${r}" fill="none"
-          stroke="${arc}" stroke-width="${A.stroke}" stroke-linecap="round"
-          transform="rotate(-90 ${center} ${center})"
-          stroke-dasharray="${(c * filled / 100).toFixed(2)} ${c.toFixed(2)}" />`}
-      </svg>`
-  }
-
   const money = (cur, value) => value < 0 ? `-${cur}${Math.abs(value).toFixed(2)}` : `${cur}${value.toFixed(2)}`
-
-  const stateOf = (percent) => {
-    if (percent === null) return 'empty'
-    if (percent >= 100) return 'critical'
-    if (percent >= 80) return 'warn'
-    return 'normal'
-  }
 
   const cardHtml = (data, index) => `
     <div class="cell">
@@ -61,7 +41,7 @@
         <div class="head"><span class="name">${data.name}</span><span class="chip">[ 按量 API ]</span></div>
         <div class="api-body">
           <div class="gauge">
-            <div class="ring">${ringSvg(null, 'empty')}<span class="ring-label">${A.label}</span></div>
+            <div class="ring">${ringSvg(A.ring, A.stroke, null, 'empty')}<span class="ring-label">${A.label}</span></div>
             <div class="pct empty" data-role="pct">—</div>
           </div>
           <label class="budget">
@@ -85,9 +65,9 @@
     const raw = card.querySelector('[data-role=budget]').value.replace(/[^\d.]/g, '')
     const budget = raw === '' ? null : Number(raw)
     const percent = budget === null || budget <= 0 ? null : (data.used / budget) * 100
-    const state = stateOf(percent)
+    const state = ringStateOf(percent, window.__SPEC__.ring.criticalApi)
 
-    card.querySelector('.ring').innerHTML = `${ringSvg(percent, state)}<span class="ring-label">${A.label}</span>`
+    card.querySelector('.ring').innerHTML = `${ringSvg(A.ring, A.stroke, percent, state)}<span class="ring-label">${A.label}</span>`
     const pct = card.querySelector('[data-role=pct]')
     pct.className = `pct ${state}`
     pct.textContent = percent === null ? '—' : `${percent.toFixed(1)}%`

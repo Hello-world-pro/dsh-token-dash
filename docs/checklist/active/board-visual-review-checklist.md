@@ -118,6 +118,7 @@
 | 2026-11-04 | 预览拆分 | 三张独立图（gauge / cards-sub / cards-api）；卡片带真实供应商名；按量卡改用同款 Gauge（环 40 + 环心「已用」） |
 | 2026-11-04 | 预算入口 | 按量卡去掉「已用 / 预算」行与 `✎`，改左环右输入框；改预算实时重算环、状态与计划余额；删除 ASCII 草图章节与对应生成脚本 |
 | 2026-11-04 | 目录规范 | 新增 `tools/preview/drafts/` 与四层约定（templates / drafts / .tmp / docs.pic）；手写 HTML 禁入 `.tmp`；`ui-design` §5.3/§5.4/§5.6 按原型回写 |
+| 2026-11-04 | 环状态图 | 抽出 `_ring.js` 统一四份模板的环绘制；新增 `ring.html`（6 态 + 3 组边界 + 3 档尺寸 + 3 种环心）；0% 不再画点 |
 | 2026-11-04 | 状态矩阵 | 预览改为「状态穷举」：Gauge 5 / 订阅 4 / 按量 5；新增 `tools/mock/AGENTS.md` 定义假数据覆盖规则 |
 
 ## 九、QuotaGauge 控件要求（P3 按量卡 + 订阅卡共用）
@@ -154,13 +155,15 @@ QuotaGauge({
 
 - 容器 `display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0`。
 - 文本 `white-space:nowrap`；列宽 61px 时 `剩余 58%` 与 `22:51` 均不换行。
+- **环绘制与 P1 / P2 共用同一套几何**（P1 14/2、P2 20/2.5、P3 40/4，阈值 warn 80 / API 100 / 订阅 90）；`QuotaGauge` 只是「环 + 环心 + 下方数字」的组合层，不再写第二套弧算法。
+- `percent = 0` 与 `empty` 都不画弧（round linecap 会在 0 处留一个点），只保留轨道。
 
 ### 9.3 状态与配色
 
 | 状态 | 弧 | 百分比 | 环心标签 | 辅助行 |
 |---|---|---|---|---|
 | normal | `label-primary` | `business-primary` 蓝 | tertiary（**不随状态变色**） | tertiary |
-| critical（≥90） | `state-error-primary` | 红 | 同上 | tertiary |
+| critical（订阅 ≥90 / API ≥100） | `state-error-primary` | 红 | 同上 | tertiary |
 | empty | 不画弧（仅轨道） | `—` | 同上 | `—` 或整块只留百分比 |
 
 - 轨道 `border-l3`；零 hex；中心标签不参与告警色，避免整块糊红。
@@ -187,7 +190,8 @@ QuotaGauge({
 
 ### 9.7 预览方式（本轮已验证）
 
-- 三张独立状态图（各 2x，按内容高度裁剪）：
+- 四张独立状态图（各 2x，按内容高度裁剪）：
+  - `npm run preview ring` → `.tmp/preview/ring.png`：环的全量状态（6 态矩阵 + API/订阅 3 组阈值边界 + P1/P2/P3 三档尺寸 + 无标签/周期/「已用」三种环心）。
   - `npm run preview gauge` → `.tmp/preview/gauge.png`：QuotaGauge 5 态（42.5 / 边界 89.9·90 / 96 / empty）。
   - `npm run preview cards-sub` → `.tmp/preview/cards-sub.png`：订阅卡 6 态（三窗 ×2 / 两窗无月 / 两窗 critical / 单窗 / 含空窗），卡顶为真实供应商名。
   - `npm run preview cards-api` → `.tmp/preview/cards-api.png`：按量卡 5 态（normal / warn / over / 预算未设置 / 余额不支持）；右侧预算输入框可改，环与计划余额即时重算，卡下 caption 跟随状态。

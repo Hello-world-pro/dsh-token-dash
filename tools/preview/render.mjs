@@ -64,9 +64,13 @@ if (templatePath === undefined) throw new Error(`template not found: ${name}.htm
 const baseCssPath = resolve('tools/preview/templates/_base.css')
 const baseCss = existsSync(baseCssPath) ? readFileSync(baseCssPath, 'utf8') : ''
 
+const ringJsPath = resolve('tools/preview/templates/_ring.js')
+const ringJs = existsSync(ringJsPath) ? readFileSync(ringJsPath, 'utf8') : ''
+
 const html = readFileSync(templatePath, 'utf8')
   .replace('/*__SPEC_CSS__*/', css)
   .replace('/*__BASE_CSS__*/', baseCss)
+  .replace('/*__RING_JS__*/', ringJs)
   .replace('/*__SPEC_JSON__*/', JSON.stringify({ ...SPEC, resolvedCardWidth: card, columns }))
 
 const tmpDir = resolve('.tmp/preview')

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>环 · 全量状态</title>
+<style>
+  :root { /*__SPEC_CSS__*/ }
+  /*__BASE_CSS__*/
+  .ring-box { position: relative; width: var(--size); height: var(--size); flex: none; }
+  .ring-box svg { display: block; width: 100%; height: 100%; }
+  .matrix { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .pair { display: flex; gap: 28px; margin-bottom: 18px; flex-wrap: wrap; }
+  .pair-cap { font-size: 11px; color: var(--weak); margin: 0 0 8px; }
+  .size-row { display: flex; gap: 40px; align-items: flex-end; }
+  .size-row .state-cell { min-height: 64px; justify-content: flex-end; }
+  .legend { font-size: 11px; color: var(--weak); margin: 0 0 12px; line-height: 18px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <section>
+    <h2>环 · 状态矩阵（P3 40 / stroke 4）</h2>
+    <p class="legend">弧色：normal / warn = 前景色；critical = error；empty = 仅轨道。数字：normal 蓝 / warn amber / critical 红 / empty 弱。warn 只染数字，不动弧。</p>
+    <div class="matrix" id="states"></div>
+  </section>
+
+  <section>
+    <h2>阈值边界（成对）</h2>
+    <p class="pair-cap">API 预算：79.9 → 80 只染数字；99.9 → 100 环与数字转红</p>
+    <div class="pair" id="api-pair"></div>
+    <p class="pair-cap">订阅窗口：89.9 → 90 环与数字同时转红</p>
+    <div class="pair" id="sub-pair"></div>
+  </section>
+
+  <section>
+    <h2>尺寸档位（同一 42.5%）</h2>
+    <div class="size-row" id="sizes"></div>
+  </section>
+
+  <section>
+    <h2>环心标签（P3 40）</h2>
+    <p class="legend">P1 / P2 内联不写环心；P3 订阅写周期，按量写「已用」。</p>
+    <div class="matrix" id="labels"></div>
+  </section>
+</div>
+
+<script>
+  window.__SPEC__ = /*__SPEC_JSON__*/
+</script>
+<script>
+/*__RING_JS__*/
+</script>
+<script>
+  const { p1, p2, p3, warn, criticalApi, criticalSub } = window.__SPEC__.ring
+
+  const ringBox = (size, stroke, percent, state, label = '') => `
+    <div class="ring-box" style="--size:${size}px">
+      ${ringSvg(size, stroke, percent, state)}
+      ${label === '' ? '' : `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--weak)">${label}</span>`}
+    </div>`
+
+  const pctHtml = (percent, state) => `
+    <div class="pct ${state}">${percent === null ? '—' : `${percent.toFixed(1)}%`}</div>`
+
+  const cell = (html, cap) => `<div class="state-cell">${html}<span class="cap">${cap}</span></div>`
+
+  const sample = (percent, critical, cap, size = p3.size, stroke = p3.stroke, label = '') => {
+    const state = ringStateOf(percent, critical)
+    return cell(
+      `<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        ${ringBox(size, stroke, percent, state, label)}
+        ${pctHtml(percent, state)}
+      </div>`,
+      cap,
+    )
+  }
+
+  document.getElementById('states').innerHTML = [
+    sample(null, criticalSub, 'empty · percent = null'),
+    sample(0, criticalSub, '0% · 空弧但保留轨道'),
+    sample(42.5, criticalSub, 'normal 42.5%'),
+    sample(85, criticalSub, 'warn 85% · 只染数字'),
+    sample(96, criticalSub, 'critical 96% · 订阅阈值'),
+    sample(128.6, criticalApi, 'over 128.6% · 弧满转红'),
+  ].join('')
+
+  document.getElementById('api-pair').innerHTML = [
+    sample(79.9, criticalApi, '79.9% · normal（蓝）'),
+    sample(80, criticalApi, '80.0% · warn（amber）'),
+    sample(99.9, criticalApi, '99.9% · warn（amber）'),
+    sample(100, criticalApi, '100.0% · critical（红）'),
+  ].join('')
+
+  document.getElementById('sub-pair').innerHTML = [
+    sample(89.9, criticalSub, '89.9% · normal（蓝）'),
+    sample(90, criticalSub, '90.0% · critical（红）'),
+  ].join('')
+
+  document.getElementById('sizes').innerHTML = [
+    cell(ringBox(p1.size, p1.stroke, 42.5, 'normal'), `P1 ${p1.size}/${p1.stroke} · 底栏内联`),
+    cell(ringBox(p2.size, p2.stroke, 42.5, 'normal'), `P2 ${p2.size}/${p2.stroke} · 浮层内联`),
+    cell(ringBox(p3.size, p3.stroke, 42.5, 'normal'), `P3 ${p3.size}/${p3.stroke} · 卡片 Gauge`),
+  ].join('')
+
+  document.getElementById('labels').innerHTML = [
+    sample(42.5, criticalSub, '无环心 · P1 / P2'),
+    sample(42.5, criticalSub, '环心 5h · 订阅', p3.size, p3.stroke, '5h'),
+    sample(42.5, criticalSub, '环心 已用 · 按量', p3.size, p3.stroke, '已用'),
+  ].join('')
+</script>
+</body>
+</html>

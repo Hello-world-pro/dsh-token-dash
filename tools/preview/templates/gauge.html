@@ -20,30 +20,17 @@
   window.__SPEC__ = /*__SPEC_JSON__*/
 </script>
 <script>
+/*__RING_JS__*/
+</script>
+<script>
   const G = window.__SPEC__.gauge
-
-  const ringSvg = (percent, state) => {
-    const r = (G.ring - G.stroke) / 2
-    const c = 2 * Math.PI * r
-    const center = G.ring / 2
-    const arc = state === 'critical' ? 'var(--error)' : 'var(--text)'
-    const filled = state === 'empty' ? 0 : Math.max(0, Math.min(100, percent))
-    return `
-      <svg viewBox="0 0 ${G.ring} ${G.ring}" aria-hidden="true">
-        <circle cx="${center}" cy="${center}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${G.stroke}" />
-        ${state === 'empty' ? '' : `<circle cx="${center}" cy="${center}" r="${r}" fill="none"
-          stroke="${arc}" stroke-width="${G.stroke}" stroke-linecap="round"
-          transform="rotate(-90 ${center} ${center})"
-          stroke-dasharray="${(c * filled / 100).toFixed(2)} ${c.toFixed(2)}" />`}
-      </svg>`
-  }
 
   const gauge = (label, percent, state) => {
     const empty = state === 'empty' || percent === null
     return `
       <div class="gauge">
         <div class="ring">
-          ${ringSvg(percent, empty ? 'empty' : state)}
+          ${ringSvg(G.ring, G.stroke, percent, empty ? 'empty' : state)}
           <span class="ring-label">${label}</span>
         </div>
         <div class="pct ${empty ? 'empty' : state}">${empty ? '—' : percent.toFixed(1) + '%'}</div>

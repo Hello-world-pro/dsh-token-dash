@@ -86,12 +86,14 @@
 
 | 项 | 规格 |
 |---|---|
-| 用途 | P1 预算与订阅窗口（14×14 / stroke 2）、P2 订阅窗口（20×20 / stroke 2.5）、P3 表格（14×14） |
-| 几何 | `viewBox="0 0 14 14"`、`r = (size - stroke) / 2`、`strokeDasharray = C*p/100 C`、`rotate(-90 7 7)`、`strokeLinecap="round"` |
+| 用途 | P1 预算与订阅窗口（14/2）、P2 订阅窗口（20/2.5）、P3 卡片 Gauge（40/4，按量与订阅共用同一个组件） |
+| 几何 | `viewBox="0 0 ${size} ${size}"`、`r = (size - stroke) / 2`、`strokeDasharray = C*p/100 C`、`rotate(-90 size/2 size/2)`、`strokeLinecap="round"`；`percent = 0` 与 `empty` 都不画弧 |
 | 形态 | **描边 donut，中间透明**，不是实心饼 |
 | 颜色 | 轨道 `--dsw-alias-border-l3`；弧 `normal → --dsw-alias-label-primary`、`critical → --dsw-alias-state-error-primary`、`empty` 不画弧 |
 | 阈值 | 由调用方给：订阅 `≥90` → critical；API 预算 `≥100` → critical（80–100 只染数字，不染环） |
 | 无障碍 | 装饰用法 `aria-hidden`，数值由相邻文本承担；独立使用时 `role="progressbar"` |
+
+- 全量状态（6 态、3 组阈值边界、3 档尺寸、3 种环心）见 [`tools/preview/templates/ring.html`](../tools/preview/templates/ring.html)。
 
 ### 2.5.2 ResetClock
 
