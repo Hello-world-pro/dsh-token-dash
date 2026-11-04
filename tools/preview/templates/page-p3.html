@@ -68,7 +68,7 @@
   }
   .panel-box .range { margin-bottom: 0; }
   .table-wrap { overflow-x: auto; border-top: 1px solid var(--border); padding-top: var(--space-3); }
-  .table { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(7, minmax(52px, auto)); gap: 0 var(--space-2); font-size: 12px; min-width: 720px; }
+  .table { display: grid; grid-template-columns: minmax(0, 240px) repeat(7, minmax(56px, 1fr)); gap: 0 var(--space-2); font-size: 13px; min-width: 720px; }
   .table .h { font-size: 11px; color: var(--muted); padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }
   .table .c { padding: var(--space-1) 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -80,10 +80,9 @@
   }
   .capsule .row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; }
   .capsule .row + .row { border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent); }
-  .capsule .row-refresh { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .capsule .row-refresh { display: flex; align-items: center; justify-content: space-between; }
   .capsule .group { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
   .capsule .group-left { justify-self: start; }
-  .capsule .group-center { justify-self: center; }
   .capsule .group-right { justify-self: end; }
   .capsule .row-k { width: 40px; flex: none; font-size: 11px; color: var(--weak); }
   .capsule .row-label { font-size: 11px; color: var(--muted); }
@@ -158,10 +157,6 @@
   <div class="capsule">
     <div class="row row-refresh">
       <div class="group group-left">
-        <span class="row-k">刷新</span>
-        <button class="btn primary" type="button">⟳ 立即刷新</button>
-      </div>
-      <div class="group group-center">
         <span class="row-label">刷新间隔</span>
         <span class="seg"><span class="on">30 秒</span><span>1 分钟</span><span>5 分钟</span></span>
       </div>
