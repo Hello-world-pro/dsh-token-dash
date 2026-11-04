@@ -5,7 +5,7 @@
 > 更新时间：2026-11-05（两轮迭代：位置事实 + 最小改动）<br>
 > 基线：`8c0c0a9` / 2.0.0 P2 三组摘要<br>
 > 关联逻辑根：`dsh-token-dash`（`client.js`）<br>
-> 关联资料：[GitHub issue #1](https://github.com/spartawhy117/dsh-token-dash/issues/1)、[`ui-design.md`](../../../ui-design.md) v3.6、看板 plan [`feature_board_cards_redesign.md`](feature_board_cards_redesign.md)
+> 关联资料：[GitHub issue #1](https://github.com/spartawhy117/dsh-token-dash/issues/1)、[`ui-design.md`](../../../ui-design.md) v3.7、看板 plan [`feature_board_cards_redesign.md`](feature_board_cards_redesign.md)
 
 ## 一、最终需求与范围
 
@@ -178,3 +178,53 @@ slots.inject 保留：
 - 会话页：断言 P1 挂 `composer.dock`、无 `hero.agentPreset`、P1 右缘距 dock 右缘 ≤ 24px；
 - `npm test` 80 通过；`npm run e2e` UI assertions passed；
 - P2 面板在既有 fixture 会话中正常打开。
+
+### Issue #6 · P2 真实余额右对齐（[已修复]）
+
+**现象**
+
+P2 按量摘要目前是：环 / 已用·预算 / 真实余额；真实余额仍在第三列左对齐，第四列留空，右侧出现一块空白。用户要求「真实余额右对齐」。
+
+**代码事实**
+
+`client.js` · `P2Summary` 的余额节点：
+
+```js
+h('span', {
+  'data-testid': 'token-dash-summary-balance',
+  style: styles.summaryCell,
+  title: tr('账户真实余额，不受预算影响'),
+}, ...)
+```
+
+`styles.summaryCell` 没有对齐设置；`summaryRow` 是 4 列网格，余额只占第 3 列，第 4 列空。
+
+**规则**
+
+- 环 / 已用·预算前两组位置不动；
+- 真实余额跨第 3–4 列：`gridColumn: '3 / 5'`；
+- `justifySelf: 'end'`、`alignItems: 'flex-end'`、`textAlign: 'right'`；
+- 标签 11px 与值 12px 都贴右缘，值仍用 tabular-nums；
+- 面板固定 380、内容宽 346 不变；不新增第四组，不改 VM / 接口。
+
+**文档 / 预览**
+
+| 范围 | 改动 |
+|---|---|
+| `docs/ui-design.md` §4.1 / §4.3 | 余额改为右对齐；第 4 列作为余额右对齐区 |
+| `tools/preview/templates/page-p2.html` | `.summary .cell` 余额右对齐，截图目检 |
+| `README` 截图 | `npm run shots` 重出 `panel-api.png` |
+| `CHANGELOG.md` | 2.0.0 补余额右对齐 |
+
+**测试**
+
+- 删除旧断言「balance cell should keep the trailing slot empty」；
+- 新增：`balanceBox.right >= panelBox.right - 18`；
+- 保留：摘要 3 组、无本月已花、已用/预算仍在中间；
+- `npm test` 80 通过；`npm run e2e` 通过。
+
+**版本**
+
+- 2.0.0 候选；完成后重新 `npm run pack` 并覆盖安装；不 tag、不 npm publish。
+
+- 验证（2026-11-05）：`npm test` 80 通过；`npm run e2e` 通过，余额右缘距面板右缘 ≤18px；`page-p2` 预览与 `panel-api.png` 已重出。

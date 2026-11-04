@@ -292,8 +292,8 @@ try {
   const balanceBox = await panel.getByTestId('token-dash-summary-balance').boundingBox()
   assert.ok(
     balanceBox !== null && panelBox !== null
-      && balanceBox.x + balanceBox.width < panelBox.x + panelBox.width - 80,
-    'balance cell should keep the trailing slot empty',
+      && balanceBox.x + balanceBox.width >= panelBox.x + panelBox.width - 18,
+    `balance cell should align to the panel right: ${balanceBox?.x + balanceBox?.width} / ${panelBox?.x + panelBox?.width}`,
   )
   assert.equal(
     await panel.evaluate((node) => getComputedStyle(node).paddingTop), '16px',

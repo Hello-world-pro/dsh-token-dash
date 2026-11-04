@@ -48,6 +48,7 @@
   }
   .summary .ring-cell { justify-self: start; }
   .summary .cell { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+  .summary .balance { grid-column: 3 / 5; justify-self: end; align-items: flex-end; text-align: right; }
   .summary .k { font-size: 11px; color: var(--muted); }
   .summary .v { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
@@ -89,7 +90,7 @@
       <div class="summary">
         <span id="used-inline" class="ring-cell"></span>
         <span class="cell"><span class="k">已用 / 预算</span><span class="v">¥91.90 / ¥100.00</span></span>
-        <span class="cell"><span class="k">真实余额</span><span class="v">¥87.66</span></span>
+        <span class="cell balance"><span class="k">真实余额</span><span class="v">¥87.66</span></span>
       </div>
 
       <div class="range"><span>当天</span><span>近7天</span><span>近30天</span><span class="on">全部</span></div>

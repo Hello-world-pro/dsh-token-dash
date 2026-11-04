@@ -1238,7 +1238,14 @@ window.__ModuleLoader__.load({
             h('span', { style: styles.summaryValue },
               hasBudget ? `${fmtMoney(budget.used, provider.currency)} / ${fmtMoney(budget.amount, provider.currency)}` : '—')),
           h('span', {
-            'data-testid': 'token-dash-summary-balance', style: styles.summaryCell,
+            'data-testid': 'token-dash-summary-balance',
+            style: {
+              ...styles.summaryCell,
+              gridColumn: '3 / 5',
+              justifySelf: 'end',
+              alignItems: 'flex-end',
+              textAlign: 'right',
+            },
             title: tr('账户真实余额，不受预算影响'),
           },
             h('span', { style: styles.summaryLabel }, tr('真实余额')),

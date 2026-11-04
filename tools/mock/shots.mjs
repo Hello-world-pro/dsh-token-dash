@@ -6,9 +6,10 @@
  *       settings.png（P3 整页）、pill-api.png / pill-sub.png
  */
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
+import { zstdCompressSync } from 'node:zlib'
 import { prefs, summary, summarySubThreeWindows, summarySubTwoWindows, usageFor } from './fixtures.mjs'
 
 const root = resolve('.')
@@ -67,6 +68,12 @@ let server
 let browser
 try {
   execFileSync(exe, ['--expose-internals', cliJs, 'plugin', '--profile', 'web', 'add', `link:${root}`], { env, encoding: 'utf8' })
+  const fixtureLines = readFileSync(join(root, 'test', 'fixtures', 'e2e-session.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean)
+  const fixtureHeader = JSON.parse(fixtureLines[0])
+  const fixtureKey = `--${fixtureHeader.cwd.replace(':', '').replaceAll('\\', '-')}--`
+  const fixtureDir = join(home, 'sessions', fixtureKey, fixtureHeader.id)
+  mkdirSync(fixtureDir, { recursive: true })
+  writeFileSync(join(fixtureDir, 'session.v4.jsonl.zstd'), Buffer.concat(fixtureLines.map((line) => zstdCompressSync(Buffer.from(`${line}\n`)))))
   server = startWeb()
   const { base, token } = await server.ready
   console.log(`[shots] web ${base}`)
@@ -80,7 +87,7 @@ try {
 
   const executablePath = resolveChromium()
   browser = await chromium.launch({ headless: true, ...(executablePath === undefined ? {} : { executablePath }) })
-  const page = await browser.newPage({ viewport: { width: 900, height: 1100 }, deviceScaleFactor: 2 })
+  const page = await browser.newPage({ viewport: { width: 1280, height: 1100 }, deviceScaleFactor: 2 })
 
   let activeSummary = summary
   await page.route('**/token-dash/api/summary*', (route) => route.fulfill({
@@ -112,6 +119,9 @@ try {
   await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', '1'))
   await page.waitForTimeout(300)
 
+  await page.waitForTimeout(1200)
+  await page.getByText('未命名', { exact: true }).first().evaluate((node) => node.click()).catch(() => {})
+  await page.waitForTimeout(1200)
   const pill = page.locator('[data-testid=token-dash-pill]')
   await pill.waitFor({ timeout: 20000 })
   const jsClick = (locator) => locator.evaluate((node) => node.click())
@@ -186,6 +196,8 @@ try {
       document.body.setAttribute('data-ds-dark-theme', '1')
       for (const node of document.querySelectorAll('[role=dialog],[role=presentation]')) node.remove()
     })
+    await page.getByText('未命名', { exact: true }).first().evaluate((node) => node.click()).catch(() => {})
+    await page.waitForTimeout(800)
     const target = page.locator('[data-testid=token-dash-pill]')
     await target.waitFor({ timeout: 15000 })
     await jsClick(target)
