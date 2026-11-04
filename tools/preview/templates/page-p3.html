@@ -9,9 +9,10 @@
   body { padding: 32px 24px; }
   .page { width: 100%; max-width: var(--content-width); margin: 0 auto; }
 
-  .board-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-  .board-head h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
-  .board-head .meta { font-size: 12px; color: var(--muted); }
+  .board-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
+  .board-head .title-row { display: flex; align-items: baseline; gap: 16px; flex: 1 1 auto; min-width: 0; }
+  .board-head h1 { font-size: 18px; margin: 0; font-weight: 600; white-space: nowrap; }
+  .board-head .meta { font-size: 12px; color: var(--muted); white-space: nowrap; }
   .actions { display: flex; gap: 6px; align-items: center; }
   .actions .btn {
     width: 22px; height: 22px; padding: 0; justify-content: center;
@@ -53,6 +54,9 @@
   .summary-half .s { font-size: 11px; color: var(--weak); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   @media (max-width: 560px) {
+    .board-head { align-items: flex-start; }
+    .title-row { flex-wrap: wrap; gap: 4px 12px; }
+    .board-head .meta { white-space: normal; }
     .box-head { gap: 8px; }
     .summary-band { grid-template-columns: 1fr; }
     .summary-half + .summary-half { border-left: 0; border-top: 1px solid var(--border); }
@@ -97,14 +101,13 @@
 <body>
 <div class="page">
   <header class="board-head">
-    <div>
+    <div class="title-row">
       <h1>Token 看板</h1>
-      <div class="meta">数据来自本机会话记录 · 更新于 12:30</div>
+      <span class="meta">数据来自本机会话记录 · 更新于 12:30</span>
     </div>
     <div class="actions">
       <a class="btn" href="#" title="GitHub">★</a>
       <button class="btn" type="button" title="刷新">⟳</button>
-      <button class="btn" type="button" title="说明">ⓘ</button>
     </div>
   </header>
 
