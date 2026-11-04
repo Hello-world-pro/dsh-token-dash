@@ -167,7 +167,9 @@ flowchart LR
 
 ## 九、自测反馈台
 
-### Issue #2 · 统一 4px 间距规范（[待实施]）
+**处理顺序**：#1 间距（地基，先改）→ #2 表格（小，依赖列距 8）→ #3 P3 页头/胶囊（大，最后）。#2 / #3 不重复定义间距，统一引用 #1 的六档。
+
+### Issue #1 · 统一 4px 间距规范（[待实施]）
 
 > 只固化规范与修改范围；本轮不动 `client.js`、不跑 e2e。
 
@@ -180,7 +182,7 @@ flowchart LR
 | `--space-3` | 12 | 卡片网格、区块内部 gap、明细上边距 |
 | `--space-4` | 16 | 卡片 / 底框 padding、页头左右组间距 |
 | `--space-5` | 24 | 区块间距、页面上下留白 |
-| `--space-6` | 32 | 页面上下 padding（P3） |
+| `--space-6` | 32 | 页面上下 padding、胶囊底部留白 |
 
 - 只用这六档；1px 只给描边与分隔线；禁止 6 / 10 / 14 / 18 等中间值。
 - 不改字号、圆角、组件尺寸，只改 padding / margin / gap。
@@ -195,8 +197,10 @@ flowchart LR
 
 | 范围 | 内容 |
 |---|---|
-| `client.js` | 所有 `padding / margin / gap` 映射到六档：P2 面板 16、摘要 12/4、范围条 4、表格 8；P3 区块 24、卡片/底框 16、卡片间 12、胶囊行 12 |
-| `e2e` | 增加关键间距断言：面板 padding 16、卡片 padding 16、区块间距 24、表格列距 8 |
+| `client.js` · P2 | 面板 padding 12→16、gap 10→12；`summaryRow` gap 12、`summaryCell` gap 4；范围条 `marginTop` 10→0（由面板 gap 提供） |
+| `client.js` · P3 | `boardSection` 内部 gap 10→12；`apiCard` padding 14→16、卡内行 6→8；`rangeBox` padding 16、gap 12；摘要半格 16 / gap 8；胶囊 padding 4/16、行 padding 8、行 gap 12 |
+| `client.js` · 共用 | 所有 `padding / margin / gap` 映射到六档；表格列距归 #2，胶囊底部归 #3 |
+| `e2e` | 面板 padding 16、卡片 padding 16、区块间距 24、摘要 gap 8、胶囊行 gap 12 |
 | `ui-design` | §2.7 保持；实施后把 P1 / P2 的间距描述补进对应章节 |
 | 模板 | 已迁移，无需再改；`cards-*` 通过 `_base.css` 自动生效 |
 
@@ -206,38 +210,20 @@ flowchart LR
 - e2e 通过，且 P2 / P3 截图与模板一致；
 - 不改交互、不改数据口径。
 
-### Issue #3 · P3 页头与设置胶囊定稿（[待实施]）
+### Issue #2 · 表格数值列右对齐（[待实施]）
 
-> 模板已完成；`client.js` 待同步。间距遵循 Issue #2。
+> 依赖 #1 的 `--space-2` 列距 8；改动小，排在 #1 后。
 
-**规则**
+**现状**
 
-- 页头：`Token 看板` 与「数据来自本机会话记录 · 更新于」同一行，左区 `flex:1`；右侧只留 ★ / ⟳ 两个按钮，44 × 26、蓝字 + 16% 蓝底 + 32% 蓝边。
-- 胶囊三行：刷新 / 日志 / 版本；行标签 40px，行间 1px 分隔线。
-- 第一行三组：刷新（左）/ 刷新间隔（中，segmented）/ 账户余额（右，toggle），`1fr auto 1fr` 网格。
-- 胶囊按钮统一蓝色：主按钮 16% 蓝底 + 32% 蓝边；日志与检查更新 ghost 蓝字。
-- 胶囊底部留 `--space-6`（32）空白，页面不贴底。
-
-**修改范围**
-
-| 范围 | 内容 |
-|---|---|
-| `client.js` · `BoardPage` | 页头标题与 meta 同行；移除说明按钮；刷新按钮尺寸对齐模板 |
-| `client.js` · `SettingsRows` | 第一行改三组；按钮改蓝；版本行图标化 |
-| `client.js` · `styles.capsule` | 补 `marginBottom: 32` |
-| `e2e` | 页头仅 2 个按钮、宽度 44；胶囊三组 x 坐标（左/中/右） |
-| `ui-design` | §5.1 页头、§5.7 胶囊 |
-
-**验收**：模板与实现截图一致；e2e 通过。
-
-### Issue #4 · 表格数值列右对齐（[待实施]）
-
-> 模板已完成；`client.js` 待核对。间距遵循 Issue #2。
+- P3 `DetailTable`：非模型单元格已 `textAlign: 'right'`，Tokens 也已右对齐；列距 12。
+- P2 `TokenTable`：Tokens 用 `justifySelf: 'end'`，表头右对齐；列距 6；模型列 150。
+- 模板：P3 除模型列外全部 `num`，列距 8；P2 `.c.num/.h.num` 显式右对齐。
 
 **规则**
 
 - 第一列模型左对齐；其余列（Tokens / 输入 / 缓存 / 输出 / 请求 / 命中 / 费用）的表头与数值全部右对齐到列右缘。
-- P3 的 Tokens 值同样右对齐，不再因 `index > 1` 漏掉。
+- P3 的 Tokens 值与表头同一条右边线。
 - P2 四列同规则：模型左，Tokens / 请求 / 命中右。
 - 列距 8；长模型名截断不换行。
 
@@ -245,10 +231,38 @@ flowchart LR
 
 | 范围 | 内容 |
 |---|---|
-| `client.js` · `DetailTable` | 除模型列外统一 `textAlign: right`；确认 Tokens 单元格 |
-| `client.js` · `TokenTable` | Tokens 数值与表头右缘对齐 |
-| `client.js` · 表格样式 | 列距 8；不因数值右对齐产生横向溢出 |
-| `e2e` | 断言各列表头与首行数值右边缘差 ≤1px |
+| `client.js` · `DetailTable` | `columnGap` 12→8；确认所有非模型单元格右对齐 |
+| `client.js` · `TokenTable` | `columnGap` 6→8；Tokens 单元格补 `textAlign: 'right'`（保留 `justifySelf`） |
+| `e2e` | 断言各列表头与首行数值右边缘差 ≤1px；Tokens 单独断言 |
 | `ui-design` | §4.5 P2、§5.5 P3 明细 |
 
 **验收**：P2 / P3 表头与数值右缘对齐；无横向滚动（952 内容宽）；e2e 通过。
+
+### Issue #3 · P3 页头与设置胶囊定稿（[待实施]）
+
+> 模板已完成；`client.js` 待同步。间距遵循 #1。
+
+**现状**
+
+- `BoardPage` 页头：meta 在标题下方；右侧 ★ + ⟳ + ⓘ 三个按钮，`repoChip` 中性描边、`IconButton` 22px。
+- `SettingsRows` 第一行：`刷新 + 间隔 + 账户余额` 同一 flex 行；主按钮中性、ghost 灰字；胶囊无底部留白。
+
+**规则**
+
+- 页头：`Token 看板` 与「数据来自本机会话记录 · 更新于」同一行，左区 `flex:1`；右侧只留 ★ / ⟳ 两个按钮，44 × 26、蓝字 + 16% 蓝底 + 32% 蓝边。
+- 胶囊三行：刷新 / 日志 / 版本；行标签 40px，行间 1px 分隔线。
+- 第一行三组：刷新（左）/ 刷新间隔（中，segmented）/ 账户余额（右，toggle），`1fr auto 1fr` 网格。
+- 胶囊按钮统一蓝色：主按钮 16% 蓝底 + 32% 蓝边；日志与检查更新 ghost 蓝字。
+- 胶囊底部留 `--space-6`（32），页面不贴底。
+
+**修改范围**
+
+| 范围 | 内容 |
+|---|---|
+| `client.js` · `BoardPage` | 标题与 meta 同行；移除说明按钮；`repoChip` 与刷新按钮改 44 × 26 蓝色 |
+| `client.js` · `SettingsRows` | 第一行改三组；日志/版本 ghost 改蓝；版本行保持图标更新 |
+| `client.js` · `styles` | `capsule.marginBottom: 32`；新增三组网格与蓝色按钮样式 |
+| `e2e` | 页头仅 2 个按钮、宽 44；胶囊三组 x 坐标（左/中/右）；底部间距 ≥24 |
+| `ui-design` | §5.1 页头、§5.7 胶囊 |
+
+**验收**：模板与实现截图一致；e2e 通过。
