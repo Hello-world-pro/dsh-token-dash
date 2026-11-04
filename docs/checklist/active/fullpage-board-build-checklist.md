@@ -2,7 +2,7 @@
 
 > 状态：施工完成（S0–S6 全部落地，测试通过；用户 2026-11-04 指令「按 feature 文档严格执行修改」）<br>
 > 上游方案：[`feature_fullpage_board.md`](../../plan/active/dsh/feature_fullpage_board.md)（第 2 版）<br>
-> 关联契约：[`ui-design.md`](../../ui-design.md) v3.1、[`ui-reference-checklist.md`](ui-reference-checklist.md)、[`backend-capability-checklist.md`](backend-capability-checklist.md)<br>
+> 关联契约：[`ui-design.md`](../../ui-design.md) v3.1、归档清单 [`ui-reference-checklist.md`](../archived/ui-reference-checklist.md)、[`backend-capability-checklist.md`](../archived/backend-capability-checklist.md)<br>
 > 目标版本：`1.2.0-local.2`（本地构建，不 tag、不发布）
 
 ## 一、阶段与改动映射

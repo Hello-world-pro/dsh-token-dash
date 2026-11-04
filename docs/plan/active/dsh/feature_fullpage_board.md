@@ -4,7 +4,7 @@
 > 创建时间：2026-11-04<br>
 > 更新时间：2026-11-04（施工完成 + 精简；star chip 改纯跳转）<br>
 > 关联逻辑根：`dsh-token-dash`（`client.js`）<br>
-> 关联资料：[`ui-design.md`](../../../ui-design.md)（v3.1）、[`ui-reference-checklist.md`](../../../checklist/active/ui-reference-checklist.md)、[`backend-capability-checklist.md`](../../../checklist/active/backend-capability-checklist.md)、施工稿 [`fullpage-board-build-checklist.md`](../../../checklist/active/fullpage-board-build-checklist.md)
+> 关联资料：[`ui-design.md`](../../../ui-design.md)（v3.1）、归档清单 [`ui-reference-checklist.md`](../../../checklist/archived/ui-reference-checklist.md)、[`backend-capability-checklist.md`](../../../checklist/archived/backend-capability-checklist.md)、施工稿 [`fullpage-board-build-checklist.md`](../../../checklist/active/fullpage-board-build-checklist.md)、后续走查 [`board-visual-review-checklist.md`](../../../checklist/active/board-visual-review-checklist.md)
 
 ## 〇、关键事实
 

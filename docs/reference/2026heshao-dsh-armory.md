@@ -2,7 +2,7 @@
 
 > 仓库：`https://github.com/2026heshao/dsh-armory`（v2.4.8）<br>
 > 本地：`reference/third-party/dsh-armory`（已 gitignore）<br>
-> 用途：第三方实现现状描述，**不含我方改造结论**；采纳项见 [UI 参考 checklist](../checklist/active/ui-reference-checklist.md) 与 [后端能力 checklist](../checklist/active/backend-capability-checklist.md)。<br>
+> 用途：第三方实现现状描述，**不含我方改造结论**；采纳项见 [UI 参考 checklist](../checklist/archived/ui-reference-checklist.md) 与 [后端能力 checklist](../checklist/archived/backend-capability-checklist.md)。<br>
 > 记录日期：2026-11-03
 
 ## 定位
