@@ -61,7 +61,7 @@
 | 输入 | 背景 `color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent)`；边框 `--dsw-alias-border-l3`；focus 边框 `--dsw-alias-state-business-primary`；错误边框 `--dsw-alias-state-error-primary` |
 | 危险操作 | 仅“清空日志/删除类”用 error 色；当前 v2 不做清空，不引入红色主按钮 |
 | segmented 主题 | 轨道 `var(--dsw-alias-bg-module-platform, rgba(127,127,127,.10))`；选中 `var(--dsw-alias-button-elevated-fill, #fff)` + `box-shadow: var(--dsw-shadow-lv1, 0 2px 4px rgba(0,0,0,.08))`；选中文字 `--dsw-alias-label-primary`；未选中 `--dsw-alias-label-secondary`，hover `--dsw-alias-interactive-bg-hover`；暗色由宿主 `body[data-ds-dark-theme]` 自动切换，不硬编码白底 |
-| 底框层级 | P2 为 `Panel → Section`；P3 为「卡片网格 + 摘要底框（范围 + 摘要带 + 明细）+ 设置胶囊」。卡片圆角 8 / 1px `border-l3` / padding 14；底框圆角 10 / padding 12–14；亮暗跟随 token |
+| 底框层级 | P2 为 `Panel → Section`；P3 为「卡片网格 + 摘要底框（范围 + 摘要带 + 明细）+ 设置胶囊」。卡片圆角 8 / 1px `border-l3` / padding 16；底框圆角 10 / padding 16；亮暗跟随 token |
 | 描边纪律 | 卡片与底框不重复包裹；行内靠间距 / 1px 弱分隔；描边只给卡片、输入框、胶囊、focus |
 | 环 | 见 §2.5.1：描边 donut，P1 14/2、P2 20/2.5、P3 40/4；弧与数字同色（绿 / 黄 / 红）；MiniBar 保留但看板不再使用 |
 | 状态表达 | 环与百分比同色：80–100% 黄、API ≥100% / 订阅 ≥90% 红；空环 = 未设置；金额不用状态色，超支负数红 |
@@ -242,7 +242,7 @@ DeepSeek-V4.1-F…    12.5k [12.3k/0/195]     1      0%
 
 - 范围胶囊：当天 / 近7天 / 近30天 / 全部，默认「当天」，**撑满内容宽、四段等分**，只影响下方表格。
 - 表格四列：模型 / Tokens / 请求 / 命中，**不含费用**；最多 5 行，超出内部滚动。
-- 模型列 `max-width: 150px` + 省略号；列距 6；Tokens 括号 11px。
+- 模型列 `max-width: 150px` + 省略号；列距 8；Tokens 括号 11px。
 - 表头 12px/500 + `label-tertiary` + 1px 下边线（不做底色块）；行高 28；行间 `color-mix(label-primary 6%)` 细线；单元格左右内边距 4；数值列右对齐。
 - Tokens 形如 `12.5k [12.3k/0/195]`：左段右对齐、右段左对齐，以「单位 / `[`」交界为对齐线。
 - 补 `role="table" / row / columnheader / cell`；空态 `范围内暂无消耗`，切换范围保留旧数据。

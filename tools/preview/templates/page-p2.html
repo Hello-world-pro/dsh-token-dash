@@ -6,20 +6,20 @@
 <style>
   :root { /*__SPEC_CSS__*/ }
   /*__BASE_CSS__*/
-  body { padding: 32px 24px; }
+  body { padding: var(--space-6) var(--space-5); }
   .page { width: 100%; max-width: var(--content-width); margin: 0 auto; }
 
-  .stage { display: flex; flex-direction: column; gap: 18px; align-items: flex-start; }
+  .stage { display: flex; flex-direction: column; gap: var(--space-5); align-items: flex-start; }
   .stage-note { font-size: 11px; color: var(--weak); margin: 0; }
 
   .panel {
     width: 380px; max-width: calc(100vw - 16px);
     border: 1px solid var(--border); border-radius: 12px;
-    background: var(--card-bg); padding: 12px; display: flex; flex-direction: column; gap: 10px;
+    background: var(--card-bg); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3);
   }
   .ph { display: flex; align-items: center; justify-content: space-between; }
   .ph .t { font-size: 13px; font-weight: 600; }
-  .ph .acts { display: flex; gap: 4px; }
+  .ph .acts { display: flex; gap: var(--space-1); }
   .ph .acts span {
     width: 22px; height: 22px; box-sizing: border-box; border-radius: 6px;
     display: inline-flex; align-items: center; justify-content: center;
@@ -33,7 +33,7 @@
   .sub-head .chip { font-size: 11px; color: var(--muted); }
 
   .windows { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .win { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .win { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
   .win:nth-child(1) { justify-self: start; align-items: flex-start; text-align: left; }
   .win:nth-child(2) { justify-self: center; align-items: center; text-align: center; }
   .win:nth-child(3) { justify-self: end; align-items: flex-end; text-align: right; }
@@ -44,10 +44,10 @@
   /* 摘要一行四列，两端与中间均匀分布 */
   .summary {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 12px;
+    gap: var(--space-3);
   }
   .summary .ring-cell { flex: 0 0 auto; }
-  .summary .cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .summary .cell { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
   .summary .cell:last-child { align-items: flex-end; text-align: right; }
   .summary .k { font-size: 11px; color: var(--muted); }
   .summary .v { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -55,13 +55,13 @@
   .inline { display: inline-flex; align-items: center; gap: 4px; }
   .inline b { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
-  .range { display: flex; gap: 2px; border: 1px solid var(--border); border-radius: 999px; padding: 2px; width: 100%; box-sizing: border-box; }
-  .range span { flex: 1; text-align: center; font-size: 12px; padding: 2px 0; border-radius: 999px; color: var(--muted); }
+  .range { display: flex; gap: 2px; border: 1px solid var(--border); border-radius: 999px; padding: var(--space-1); width: 100%; box-sizing: border-box; }
+  .range span { flex: 1; text-align: center; font-size: 12px; padding: var(--space-1) 0; border-radius: 999px; color: var(--muted); }
   .range .on { background: rgba(255, 255, 255, .10); color: var(--text); }
 
-  .table { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 0 6px; font-size: 12px; width: 100%; }
+  .table { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 0 var(--space-2); font-size: 12px; width: 100%; }
   .table .c:first-of-type { max-width: 150px; }
-  .table .h { font-size: 11px; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .table .h { font-size: 11px; color: var(--muted); padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }
   .table .c { padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
   .tokens { display: inline-flex; gap: 4px; justify-content: flex-end; white-space: nowrap; }
@@ -69,7 +69,7 @@
 
   .foot { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); }
   .foot .btn {
-    height: 22px; padding: 0 8px; border-radius: 6px;
+    height: 24px; padding: 0 var(--space-3); border-radius: 6px;
     border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
     background: color-mix(in srgb, var(--accent) 16%, transparent);
     color: var(--accent); font-size: 11px;
