@@ -47,6 +47,8 @@ const css = [
   `--gauge-meta: ${SPEC.gauge.meta}px;`,
   `--gauge-gap: ${SPEC.gauge.gap}px;`,
   `--gauge-percent-offset: ${SPEC.gauge.percentOffset}px;`,
+  `--api-ring: ${SPEC.apiGauge.ring}px;`,
+  `--api-stroke: ${SPEC.apiGauge.stroke}px;`,
 ].join('\n    ')
 
 const templatePath = resolve('tools/preview/templates', `${template}.html`)
