@@ -9,7 +9,7 @@ import { buildSummary, buildUsage, emptyState, localMonthKey, num, repriceState,
 import { ingest, backfill } from './src/collect.js'
 import { REFRESH_OPTIONS, createFlusher, dataDir, loadPrefs, loadState, logsDir, recoverState, resolveHome, saveJson, saveMonths } from './src/store.js'
 import { buildExport, mergeImportDays, validateBundle } from './src/backup.js'
-import { logAdapterEvents, readProviders, readSubscriptions } from './src/adapters.js'
+import { logAdapterEvents, logAdapterFailures, readProviders, readSubscriptions } from './src/adapters.js'
 import { PROVIDER_SOURCES } from './src/quota-sources.js'
 import { catalogInfo, loadCommunityPricing, loadRouterPricing } from './src/pricing.js'
 import { clearLog, createLogger, exportLog } from './src/diagnostics.js'
@@ -286,6 +286,8 @@ export function apply(ctx) {
         })
       }
       logAdapterEvents(logger, data)
+      logAdapterFailures(logger, data.failures)
+      logger.debug('provider', 'cache.state', { entries: providerCache.size, providers: data.length, misses: (data.misses ?? []).length })
       if (stampProviderKinds(state, data)) {
         logger.info('provider', 'kind.stamp', { ids: Object.keys(state.providerKinds) })
         flusher.schedule()
@@ -304,8 +306,10 @@ export function apply(ctx) {
             rejection = undefined
           }
           if (rejection !== undefined && rejection !== null) {
+            logger.warn('route', 'forbidden', { method: req.method, path: url.pathname, source: 'requestRejection' })
             return rejection
           }
+          logger.warn('route', 'forbidden', { method: req.method, path: url.pathname, source: 'loopback' })
           json(res, 403, { ok: false, reason: 'forbidden' })
           return
         }
@@ -352,6 +356,7 @@ export function apply(ctx) {
             providerCacheMeta = { at: Date.now(), hadProviders: true, degraded: false }
             if (stampProviderKinds(state, subs)) flusher.schedule()
             logAdapterEvents(logger, subs)
+            logAdapterFailures(logger, subs.failures)
             logger.info('provider', 'subscriptions.refreshed', { ids: subs.map((item) => item.id) })
             json(res, 200, { ok: true, data: { refreshed: subs.map((item) => item.id) } })
             return

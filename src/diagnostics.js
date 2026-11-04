@@ -77,6 +77,7 @@ export function createLogger({ dir, level = 'info', version = '0.2.0', dshVersio
         ts: new Date().toISOString(),
         level: levelName,
         module,
+        prefix: `[TD:${module}]`,
         event,
         ...Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, typeof value === 'string' ? redact(value) : value])),
       }

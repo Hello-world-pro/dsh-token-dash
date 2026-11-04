@@ -2,6 +2,18 @@
 
 本文件记录每个版本的**新增**与**修改**。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.3.0-local.9] - 2026-11-05
+
+> 本地构建，未发布
+
+### 修改
+
+- 每条 JSONL 日志补 `prefix: "[TD:<module>]"`，与 `module` 分类并存
+- `readProviders` / `readSubscriptions` 输出源级 `failures[]`，新增 `adapter.<id> detect.fail`（含 `httpStatus` / `upstream`）
+- 非回环 403 记 `route.forbidden`；缓存刷新记 `provider.cache.state`（debug）
+- 日志模块清单补 `adapter.opencode` / `adapter.commandcode`；设计文档与日志速查同步
+- 单测增至 78：日志前缀、失败映射
+
 ## [1.3.0-local.8] - 2026-11-05
 
 > 本地构建，未发布

@@ -21,6 +21,7 @@ test('logger writes module JSONL and export contains header', () => {
     logger.info('adapter.glm', 'quota.ok', { windows: 2 })
     const exported = exportLog(dir, logger)
     assert.ok(exported.content.includes('"module":"adapter.glm"'))
+  assert.ok(exported.content.includes('"prefix":"[TD:adapter.glm]"'))
     assert.ok(exported.content.includes('"type":"header"'))
   } finally {
     rmSync(dir, { recursive: true, force: true })

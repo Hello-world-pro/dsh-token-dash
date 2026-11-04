@@ -190,10 +190,11 @@ dsh-token-dash/
 
 ## 日志体系
 
-- 文件：`$DSH_HOME/logs/dsh-token-dash/`，JSONL 格式；`[TD:<module>]` 前缀为导出格式
-- 模块：`boot / slot / adapter.* / pricing / collect / vm / provider / update / diag / route / data`
-- 错误带分类：`errorKind`（http/timeout/network/parse）+ `httpStatus`，报障可直接定位
-- 脱敏：不记 API Key、不记对话内容、不记响应体
+- 文件：`$DSH_HOME/logs/dsh-token-dash/`，JSONL 格式；每行同时带 `module` 与 `prefix: "[TD:<module>]"`，前缀仅作阅读 / 导出标记，分类以 `module` 为准
+- 模块：`boot / slot / pricing / collect / vm / provider / update / diag / route / data`；适配器 `adapter.deepseek / adapter.glm / adapter.kimi / adapter.openrouter / adapter.qwen / adapter.opencode / adapter.commandcode`
+- 事件：`adapter.*` 的 `quota.ok / quota.fail / quota.parse / balance.* / credits.ok / detect.fail`；`provider.probe.miss / kind.stamp / subscriptions.refreshed / cache.state`；`route.forbidden / route.failed`
+- 错误带分类：`errorKind`（http/timeout/network/parse）+ `httpStatus`；5xx 额外 `upstream: true`
+- 脱敏：不记 API Key / orgId / 对话内容 / 响应体；字符串字段与导出内容统一 `redact`
 
 ## 关键设计决策（摘要）
 

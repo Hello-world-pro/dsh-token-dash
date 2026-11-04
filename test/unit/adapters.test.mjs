@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { logAdapterEvents, parseGlmQuota, parseKimiQuota, parseOpenRouterCredits, readProviders, readSubscriptions, toSnapshot } from '../../src/adapters.js'
+import { logAdapterEvents, logAdapterFailures, parseGlmQuota, parseKimiQuota, parseOpenRouterCredits, readProviders, readSubscriptions, toSnapshot } from '../../src/adapters.js'
 import { parseCommandCodeCredits, parseOpenCodeUsage } from '../../src/quota-sources.js'
 
 test('GLM parses TOKENS_LIMIT unit 3/6 and ignores TIME_LIMIT', () => {
@@ -162,6 +162,19 @@ test('readProviders 接入 OpenCode 与 Command Code，并按源缓存', async (
   } finally {
     restore()
   }
+})
+
+test('logAdapterFailures 把源级异常映射到 adapter.<id> detect.fail', () => {
+  const events = []
+  const log = { info: () => {}, warn: (module, event, meta) => events.push([module, event, meta]) }
+  logAdapterFailures(log, [
+    { id: 'opencode-go', error: { kind: 'network' } },
+    { id: 'command-code', error: { kind: 'http', status: 503, upstream: true } },
+  ])
+  assert.deepEqual(events, [
+    ['adapter.opencode', 'detect.fail', { errorKind: 'network' }],
+    ['adapter.commandcode', 'detect.fail', { errorKind: 'http', httpStatus: 503, upstream: true }],
+  ])
 })
 
 test('Qwen 国际站 Key 按 USD，国内站按 CNY', async () => {

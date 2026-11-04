@@ -368,9 +368,14 @@ export async function readProviders(ctx, prefs, cache = new Map()) {
   const results = await Promise.allSettled(PROVIDER_SOURCES.map((source) => readCachedSource(ctx, prefs, source, cache)))
   const out = []
   const misses = []
+  const failures = []
   results.forEach((result, index) => {
     const id = PROVIDER_SOURCES[index].id
-    if (result.status !== 'fulfilled') { misses.push(`${id}:error`); return }
+    if (result.status !== 'fulfilled') {
+      misses.push(`${id}:error`)
+      failures.push({ id, error: errorDetail(result.reason) })
+      return
+    }
     if (result.value === null) { misses.push(`${id}:none`); return }
     if (visibleEntry(result.value, prefs) !== true) { misses.push(`${id}:hidden`); return }
     const value = result.value
@@ -378,6 +383,7 @@ export async function readProviders(ctx, prefs, cache = new Map()) {
     out.push(toSnapshot(value))
   })
   out.misses = misses
+  out.failures = failures
   return out
 }
 
@@ -391,14 +397,20 @@ export async function readSubscriptions(ctx, prefs) {
     source.legacy === 'kimi' ? readKimiSubscription(ctx, prefs) : readSource(ctx, prefs, source)
   )))
   const out = []
+  const failures = []
   results.forEach((result, index) => {
-    if (result.status !== 'fulfilled' || result.value === null) return
+    if (result.status !== 'fulfilled') {
+      failures.push({ id: sources[index].id, error: errorDetail(result.reason) })
+      return
+    }
+    if (result.value === null) return
     // 旧源（GLM / Kimi）配额失败时可能回落 API 条目，保留旧行为；新源只保留订阅条目。
     const legacy = sources[index].legacy !== undefined
     if (result.value.kind !== 'subscription' && legacy !== true) return
     if (visibleEntry(result.value, prefs) !== true) return
     out.push(toSnapshot(result.value))
   })
+  out.failures = failures
   return out
 }
 
@@ -447,6 +459,29 @@ export function logAdapterEvents(log, providers) {
       else info(module, 'quota.fail', { windows: 0, ...errorMeta(item.quotaError) })
       if (item.balance?.status === 'ok') info(module, 'credits.ok', { amount: item.balance.amount })
     }
+  }
+}
+
+const FAILURE_MODULES = {
+  'deepseek-official': 'adapter.deepseek',
+  zhipu: 'adapter.glm',
+  moonshot: 'adapter.kimi',
+  openrouter: 'adapter.openrouter',
+  qwen: 'adapter.qwen',
+  'opencode-go': 'adapter.opencode',
+  'command-code': 'adapter.commandcode',
+}
+
+/** Promise.allSettled 的拒绝项没有 entry，单独补 adapter.<id> 失败日志。 */
+export function logAdapterFailures(log, failures = []) {
+  for (const item of failures) {
+    const module = FAILURE_MODULES[item.id] ?? `adapter.${item.id}`
+    const error = item.error ?? { kind: 'network' }
+    log.warn(module, 'detect.fail', {
+      errorKind: error.kind,
+      ...(error.status === undefined ? {} : { httpStatus: error.status }),
+      ...(error.upstream === true ? { upstream: true } : {}),
+    })
   }
 }
 

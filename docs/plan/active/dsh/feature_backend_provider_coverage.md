@@ -263,8 +263,10 @@ export function parseOpenCodeUsage(body) {
 
 ## 七、日志速查
 
-- `adapter.<id>`：`quota.ok` / `quota.fail` / `balance.ok` / `balance.error` / `cache.hit` / `cache.refresh`
-- `provider`：`probe.miss`（`misses[]`）
+- `adapter.deepseek` / `adapter.glm` / `adapter.kimi` / `adapter.openrouter` / `adapter.qwen` / `adapter.opencode` / `adapter.commandcode`：`quota.ok` / `quota.fail` / `quota.parse` / `balance.ok` / `balance.error` / `credits.ok`
+- `provider`：`probe.miss`（`misses[]`）、`kind.stamp`、`subscriptions.refreshed`、`cache.state`（debug）
+- `route`：`forbidden`（非回环 403）、`failed`（路由异常）
+- 每条日志带 `prefix: "[TD:<module>]"`，与 JSON `module` 并存。
 - 只记状态、窗口数、错误分类；不记 Key / orgId / body。
 
 ## 八、决策记录
@@ -282,7 +284,38 @@ export function parseOpenCodeUsage(body) {
 
 ## 九、自测反馈台
 
-（暂无）
+### Issue #1 · 日志覆盖与前缀分类（[已修复]）
+
+**代码核对（2026-11-05）**
+
+- `logger` 实际只写 JSON `module` 字段，没有文档声称的 `[TD:<module>]` 前缀；`docs/design.md` §日志体系与实现不一致。
+- `readProviders` / `readSubscriptions` 用 `Promise.allSettled`，被拒绝的源只进入 `misses`，没有 `adapter.<id>` 失败日志；`logAdapterEvents` 只遍历成功条目。
+- 非回环 403 没有 `route.forbidden` 日志，安全拒绝不可见。
+- 新 provider 使用 `adapter.opencode` / `adapter.commandcode`，但 `docs/design.md` 模块清单只列到 `adapter.*`，未列具体新模块。
+- 每源缓存没有命中/刷新日志；`provider.cache.*` 不可观测。
+- 已有覆盖：boot / pricing / collect / provider.probe.miss / vm / data / slot / update / diag / route.failed / adapter 成功路径，无需重做。
+
+**修改范围**
+
+| 范围 | 内容 |
+|---|---|
+| `src/diagnostics.js` | 每条日志补 `prefix: '[TD:<module>]'`；保留 JSON `module` |
+| `src/adapters.js` | `readProviders` / `readSubscriptions` 输出 `failures[]`（`id + errorDetail`）；新增 `logAdapterFailures(log, failures)` |
+| `index.js` | 刷新后调用 `logAdapterFailures`；缓存状态 `provider.cache.state`（debug）；非回环 403 记 `route.forbidden`（warn） |
+| `docs/design.md` §日志体系 | 模块清单补 `adapter.opencode` / `adapter.commandcode`；说明前缀字段与 JSON `module` 并存 |
+| `docs/plan` §七 | 补 `adapter.opencode` / `adapter.commandcode` / `provider.cache.state` / `route.forbidden` |
+| `test/unit/diagnostics.test.mjs` | 断言 `prefix` |
+| `test/unit/adapters.test.mjs` | 断言 rejected source 进入 `failures` |
+
+**验收**
+
+- 日志行都能看到 `[TD:<module>]` 前缀，且 `module` 分类与实际模块一致；
+- 上游失败（非 2xx / timeout）有 `adapter.<id>` 失败事件与错误分类；
+- 403 / 缓存刷新 / 新 provider 均有明确 module；
+- `npm test`、`npm run e2e` 全绿；
+- 不改变日志脱敏与文件轮转行为。
+
+- 验证（2026-11-05）：`npm test` 78 通过 / 1 跳过；`npm run e2e` 通过；`prefix` 与 `detect.fail` 已由单测覆盖。
 
 ## 十、迭代记录
 
