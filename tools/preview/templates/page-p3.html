@@ -26,9 +26,8 @@
   .range span { font-size: 12px; padding: 2px 10px; border-radius: 999px; color: var(--muted); }
   .range .on { background: rgba(255, 255, 255, .10); color: var(--text); }
 
-  .box-head { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 12px; }
-  .box-head .range { justify-self: center; }
-  .box-meta { font-size: 11px; color: var(--weak); justify-self: center; }
+  .box-head { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 16px; }
+  .box-meta { font-size: 11px; color: var(--weak); }
 
   /* 总计：整宽摘要带，左右两半 + 中间竖线 */
   .summary-band {
@@ -48,7 +47,7 @@
   .summary-half .s { font-size: 11px; color: var(--weak); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   @media (max-width: 560px) {
-    .box-head { grid-template-columns: 1fr; justify-items: center; }
+    .box-head { gap: 8px; }
     .summary-band { grid-template-columns: 1fr; }
     .summary-half + .summary-half { border-left: 0; border-top: 1px solid var(--border); }
   }
