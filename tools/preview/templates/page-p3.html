@@ -26,19 +26,32 @@
   .range span { font-size: 12px; padding: 2px 10px; border-radius: 999px; color: var(--muted); }
   .range .on { background: rgba(255, 255, 255, .10); color: var(--text); }
 
-  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 16px; }
-  .tile { border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); padding: 12px; }
-  .tile .k { font-size: 11px; color: var(--muted); }
-  .tile .v { font-size: 18px; font-weight: 600; margin-top: 6px; font-variant-numeric: tabular-nums; }
-  .tile .s { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .box-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .box-meta { font-size: 11px; color: var(--weak); }
+
+  /* 总计：整宽摘要带，左右两半 + 中间竖线 */
+  .summary-band {
+    display: grid; grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  .summary-half { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .summary-half + .summary-half { border-left: 1px solid var(--border); }
+  .summary-half .k { font-size: 12px; color: var(--muted); }
+  .summary-half .v { font-size: 26px; font-weight: 600; line-height: 30px; font-variant-numeric: tabular-nums; }
+  .summary-half .v small { font-size: 14px; font-weight: 500; color: var(--muted); margin-left: 8px; }
+  .summary-half .s { font-size: 11px; color: var(--weak); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  @media (max-width: 560px) {
+    .summary-band { grid-template-columns: 1fr; }
+    .summary-half + .summary-half { border-left: 0; border-top: 1px solid var(--border); }
+  }
 
   .panel-box {
     border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg);
-    padding: 12px 14px; display: flex; flex-direction: column; gap: 12px;
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;
   }
   .panel-box .range { margin-bottom: 0; }
-  .panel-box .tiles { margin: 0; }
-  .table-wrap { overflow-x: auto; }
+  .table-wrap { overflow-x: auto; border-top: 1px solid var(--border); padding-top: 10px; }
   .table { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(7, minmax(52px, auto)); gap: 0 8px; font-size: 12px; min-width: 720px; }
   .table .h { font-size: 11px; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--border); }
   .table .c { padding: 5px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); }
@@ -83,15 +96,18 @@
   <section class="block">
     <h2>范围与明细</h2>
     <div class="panel-box">
-      <div class="range"><span>当天</span><span>近7天</span><span>近30天</span><span class="on">全部</span></div>
+      <div class="box-head">
+        <div class="range"><span>当天</span><span>近7天</span><span>近30天</span><span class="on">全部</span></div>
+        <span class="box-meta">共 3 个模型 · 更新于 12:30</span>
+      </div>
 
-      <div class="tiles">
-        <div class="tile">
-          <div class="k">总费用</div>
-          <div class="v">¥12.68　$19.00</div>
+      <div class="summary-band">
+        <div class="summary-half">
+          <span class="k">总费用</span>
+          <div class="v">¥12.68 <small>$19.00</small></div>
         </div>
-        <div class="tile">
-          <div class="k">真实 Tokens</div>
+        <div class="summary-half">
+          <span class="k">真实 Tokens</span>
           <div class="v">1.24M</div>
           <div class="s">输入 620k · 缓存 520k · 输出 100k</div>
         </div>
