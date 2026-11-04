@@ -1,11 +1,12 @@
 # Token 看板卡片化与三色环（前端重构）
 
-> 状态：**待批准**（设计已定稿，未改代码）<br>
+> 状态：草案（设计定稿，待批准施工）<br>
 > 创建时间：2026-11-04<br>
+> 更新时间：2026-11-04（按 plan skill 精修）<br>
 > 关联逻辑根：`dsh-token-dash`（`client.js`）<br>
-> 关联资料：[`ui-design.md`](../../../ui-design.md)（v3.2）、走查清单 [`board-visual-review-checklist.md`](../../../checklist/active/board-visual-review-checklist.md)、原型 [`tools/preview/templates/`](../../../tools/preview/templates/)、旧方案 [`feature_fullpage_board.md`](feature_fullpage_board.md)（已实施 `1.2.0-local.2`）
+> 关联资料：[`ui-design.md`](../../../ui-design.md)（v3.2）、走查清单 [`board-visual-review-checklist.md`](../../../checklist/active/board-visual-review-checklist.md)、施工稿 [`board-redesign-build-checklist.md`](../../../checklist/active/board-redesign-build-checklist.md)、原型 [`tools/preview/templates/`](../../../tools/preview/templates/)、历史方案 [`feature_fullpage_board.md`](../../archived/dsh/feature_fullpage_board.md)（已实施 `1.2.0-local.2`）
 
-## 〇、关键事实
+## 〇、前置事实
 
 **现状**
 
@@ -21,15 +22,15 @@
 
 **设计与预览**
 
-- 四个组件契约见 ui-design §2.5.1 / §2.5.4–2.5.6；页面原型见 `page-p1/p2/p3.html`。
+- 组件契约见 ui-design §2.5.1 / §2.5.4–2.5.6；页面原型见 `page-p1/p2/p3.html`。
 - 预览只出 HTML（`.tmp/preview/*.html`），IDE 直接看；PNG 仅在需要静态图时加 `--png`。
 
 ## 一、需求
 
-| ID | 优先级 | 需求 | 成功信号 |
+| ID | 优先级 | 需求 / 边界 / 风险 | 成功信号 |
 |---|---|---|---|
 | REQ-01 | P0 | 组件拆分：`ProgressRing`（几何）/ `PercentValue`（文本+颜色）/ `InlineRing`（P1/P2）/ `QuotaGauge`（P3） | 环不再持有数字；三处复用同一 `stateOf` / `percentText` |
-| REQ-02 | P0 | 三色语义：normal 低饱和绿、warn 黄、critical 红；环与数字同色 | 三态截图与 `ring.html` 一致 |
+| REQ-02 | P0 | 三色语义：normal 低饱和绿、warn 黄、critical 红；环与数字同色 | 三态与 `ring.html` 一致 |
 | REQ-03 | P0 | 金额去绿：费用与金额改前景色 + 600，负数 / 超支红 | 全页无「绿金额」 |
 | REQ-04 | P1 | P1：`InlineRing` 14/2，最多 3 窗，箭头改 SVG，空态 `--` | 与 `page-p1.html` 一致 |
 | REQ-05 | P1 | P2：`fit-content` 280–480；按量四列主区；订阅三窗两行；表格补表头线与行分隔 + aria | 实测宽 ~365 / ~349，320px 不横滚 |
@@ -40,100 +41,130 @@
 | REQ-10 | P1 | 响应式：页宽 `max-width 952`；订阅 4/3/2；整页无横向滚动 | 三档 `scrollWidth === clientWidth` |
 | REQ-11 | P1 | E2E 同步：环色 = 数字色、内联结构、P2 宽度、单币种居中、胶囊三行 | `npm run e2e` 全绿 |
 | REQ-12 | P2 | 文档与截图：README / README.en 文案与图片、CHANGELOG、`npm run shots` | 截图与实现一致 |
+| BND-01 | 边界 | 不改数据接口、不新增 provider、不改预算持久化格式 | 前端只消费现有 VM |
+| BND-02 | 边界 | 不改宿主槽位与入口机制（`main` / `sidebar.panellist`） | `key = token-dash` 不变 |
+| BND-03 | 边界 | 不引入组件库或 CSS 框架，继续内联样式 + token | 依赖不新增 |
+| BND-04 | 边界 | 不做主题切换、不做自定义配色 | 只消费宿主 token |
+| RSK-01 | 风险 | 环色断言在亮 / 暗主题下取色不同 | e2e 只断言「环与数字同色」，不断言具体 hex |
+| RSK-02 | 风险 | P2 `fit-content` 在长 provider 名下变宽 | 模型列 190px 截断 + `max-width 480` 兜底 |
+| RSK-03 | 风险 | 卡片化改动面大，e2e 旧断言大量失效 | S0→S3 串行提交，每阶段可独立回滚 |
+| RSK-04 | 风险 | 窄屏摘要带堆叠后过高 | ≤560 单列；明细内部滚动，不撑高页面 |
 
-## 二、范围
+## 二、设计方案
 
-**做**
+### 2.1 结构
 
-- `client.js` 组件拆分与 P1 / P2 / P3 视觉重构；`scripts/e2e.mjs`、`tools/mock/shots.mjs`、README、CHANGELOG 同步。
+```mermaid
+flowchart LR
+  P1[P1 Pill] --> IR1[InlineRing 14/2]
+  P2[P2 Panel] --> IR2[InlineRing 20/2.5]
+  P2 --> TT[TokenTable]
+  P3[P3 BoardPage] --> QG[QuotaGauge 40/4]
+  P3 --> SUM[摘要带]
+  P3 --> DET[明细表 8 列]
+  P3 --> CAP[设置胶囊]
+  IR1 --> PR[ProgressRing]
+  IR2 --> PR
+  QG --> PR
+  PR --> PV[PercentValue]
+```
 
-**不做**
-
-- 不改数据接口、不新增 provider、不改预算持久化格式。
-- 不改宿主槽位与入口机制；不做主题切换、不做自定义配色。
-- 不引入组件库或 CSS 框架，继续内联样式 + token。
-
-## 三、阶段与改动清单
-
-> 阶段串行；每阶段结束跑 `npm test`，S4 后跑 `npm run e2e`。
-
-### S0 · 组件层
-
-| CHG | 文件 | 内容 |
+| 节点 | 所在端 | 职责 |
 |---|---|---|
-| CHG-01 | `client.js` | 新增 `stateOf(percent, critical)` / `percentText(percent)`；`ProgressRing` 收窄为几何，去掉内部文字 |
-| CHG-02 | `client.js` | 新增 `PercentValue`（格式化 + 状态色） |
-| CHG-03 | `client.js` | 新增 `InlineRing`（环 + 右侧数字，14/2 与 20/2.5） |
-| CHG-04 | `client.js` | 新增 `QuotaGauge`（环 40/4 + 环心 + 百分比 + 三行辅助） |
+| `Pill` | P1 | `InlineRing` + 标签/金额；最多 3 窗 |
+| `Panel` | P2 | 按量四列主区 / 订阅三窗两行；范围 + 用量表 + 底部 |
+| `BoardPage` | P3 | 两区卡片网格；摘要带 + 明细底框；设置胶囊 |
+| `ProgressRing` | 共用 | 只画弧：`{ percent, state, size, stroke }` |
+| `PercentValue` | 共用 | 文本与状态色：`{ percent, state }` |
+| `InlineRing` / `QuotaGauge` | 组合层 | 分别承担 P1/P2 内联、P3 堆叠排版 |
 
-### S1 · P1
+### 2.2 关键签名 / 字段
 
-| CHG | 文件 | 内容 |
+| 层 | 名称 | 备注 |
 |---|---|---|
-| CHG-05 | `client.js` | Pill 改用 `InlineRing`；订阅最多 3 窗；箭头换 SVG；空态 `--` |
+| 几何 | `ProgressRing({ percent, state, size, stroke })` | `state ∈ normal / warn / critical / empty`；`percent = 0` 与 `empty` 不画弧 |
+| 文本 | `PercentValue({ percent, state })` | `42.5%` / `—`，与环同色 |
+| 组合 | `InlineRing({ percent, state, size = 14, stroke = 2, text? })` | P1 14/2、P2 20/2.5；`text` 省略时用 `PercentValue` |
+| 组合 | `QuotaGauge({ label, percent, state, remaining, relative, absolute, size = 40, stroke = 4 })` | P3 按量环心「已用」，订阅环心周期 |
+| 公共 | `stateOf(percent, critical)` / `percentText(percent)` | 阈值 warn 80 / API 100 / 订阅 90 |
 
-### S2 · P2
+### 2.4 关键陷阱
 
-| CHG | 文件 | 内容 |
-|---|---|---|
-| CHG-06 | `client.js` | 按量主区四列改用 `InlineRing(20/2.5)` + 三列标签 |
-| CHG-07 | `client.js` | 订阅主区改三窗两行（`周期 + 环 + %` / `剩余 · 倒计时`） |
-| CHG-08 | `client.js` | 用量表补表头线 / 行高 28 / 6% 行分隔 / aria role；模型名 190px 截断 |
-| CHG-09 | `client.js` | 宽度 `fit-content` 280–480（320 视口可降到 260）；`ResizeObserver` 重定位保留 |
-
-### S3 · P3
-
-| CHG | 文件 | 内容 |
-|---|---|---|
-| CHG-10 | `client.js` | 按量区改卡片网格（flex、上限 260、末行居中）；卡内竖排 |
-| CHG-11 | `client.js` | 订阅区改 `auto-fit` 卡片；窗口一排；缺窗不出列 |
-| CHG-12 | `client.js` | 范围 + 摘要带 + 明细合并底框；摘要带两半居中、单币种居中、顶部行左对齐 |
-| CHG-13 | `client.js` | 明细 8 列 + 内部滚动；金额前景色、负数红 |
-| CHG-14 | `client.js` | 设置胶囊三行标签 + 主/ghost 按钮 + 版本行收敛 |
-| CHG-15 | `client.js` | 整页 `max-width 952`、卡片 4/3/2 自适应 |
-
-### S4 · 脚本、测试与文档
-
-| CHG | 文件 | 内容 |
-|---|---|---|
-| CHG-16 | `scripts/e2e.mjs` | 断言改为卡片结构；新增环色=数字色、单币种居中、胶囊三行、三档宽度 |
-| CHG-17 | `tools/mock/shots.mjs` | 截图适配新布局（P3 整页、P2 两形态） |
-| CHG-18 | `README.md` / `README.en.md` | 功能说明与截图替换 |
-| CHG-19 | `CHANGELOG.md` | 新增本地构建版本块 |
-
-## 四、验收
-
-| 项 | 验证方式 | 通过标准 |
-|---|---|---|
-| 三色环 | 截图 + e2e | 环 `stroke` 与数字 `color` 相同；normal 绿、warn 黄、critical 红 |
-| P1 | 截图 | 14/2、最多 3 窗、空态 `--`、箭头 SVG |
-| P2 按量 | 截图 + 量宽 | 四列主区；宽 ~365；320px 不横滚 |
-| P2 订阅 | 截图 | 三窗两行；缺月不出列 |
-| P3 按量 | 截图 | 3 家一行 3 张、520 两行；卡内竖排；改预算即时重算 |
-| P3 订阅 | 截图 | 1000/760/520 = 4/3/2；辅助 68% |
-| 范围与明细 | 截图 | 底框内范围 + 摘要带 + 8 列；摘要两半居中；顶部行左对齐 |
-| 设置胶囊 | 截图 | 三行标签对齐；仅立即刷新主按钮 |
-| 响应式 | 三档量宽 | `scrollWidth === clientWidth` |
-| 回归 | `npm test` / `npm run e2e` | 全部通过 |
-
-## 五、测试
-
-- L1：`npm test`（host 侧聚合、备份、locale 词典）。
-- L2/L3：`npm run e2e` 覆盖 P1/P2/P3、三色环、单币种、三档宽度、胶囊。
-- 手工：`npm run preview page-p1/p2/p3` 目检；`npm run shots` 重出 README 图。
-
-## 六、风险与回滚
-
-| 风险 | 处理 |
+| 项 | 约束 |
 |---|---|
-| 环色断言在亮 / 暗主题下取色不同 | e2e 只断言「环与数字同色」，不断言具体 hex |
-| P2 `fit-content` 在长 provider 名下变宽 | 模型名 190px 截断；`max-width 480` 兜底 |
-| 卡片化改动面大，e2e 全红 | 按 S0→S3 串行提交，每阶段可独立回滚 |
-| 窄屏摘要带堆叠后过高 | ≤560 单列；明细内部滚动，不撑高页面 |
-| 截图脚本与新布局不同步 | S4 先跑 `shots` 再改 README，避免图文档不一致 |
+| 环与数字同色 | 不能只染数字；warn 时环也要变黄 |
+| `percent = 0` | 不画弧，否则 round linecap 在起点留一个点 |
+| 缺窗 | 按实际窗口数出列，不渲染 `月 —` 空列 |
+| P2 宽度 | 由摘要 / 窗口行驱动；模型名 190px 截断，不撑宽面板 |
+| 摘要带 | 两半居中；单币种居中；顶部行左对齐（不要混用居中） |
 
-## 七、文档回写
+## 三、实现要点（待实施）
+
+### 3.0 开发改动总览（计划）
+
+| ID | 类型 | 文件 | 开发改动说明 |
+|---|---|---|---|
+| CHG-01 | 修改 | `client.js` · `ProgressRing` | 收窄为几何，去掉内部文字；新增 `stateOf` / `percentText` |
+| CHG-02 | 新增 | `client.js` · `PercentValue` | 格式化 + 状态色 |
+| CHG-03 | 新增 | `client.js` · `InlineRing` | 环 + 右侧数字，14/2 与 20/2.5 |
+| CHG-04 | 新增 | `client.js` · `QuotaGauge` | 环 40/4 + 环心 + 百分比 + 三行辅助 |
+| CHG-05 | 修改 | `client.js` · `Pill` | 改用 `InlineRing`；最多 3 窗；箭头 SVG；空态 `--` |
+| CHG-06 | 修改 | `client.js` · `P2Summary` | 四列改用 `InlineRing(20/2.5)` + 标签 |
+| CHG-07 | 修改 | `client.js` · `P2Windows` / `WindowRow` | 三窗两行：环行 + `剩余 · 倒计时` |
+| CHG-08 | 修改 | `client.js` · `TokenTable` | 表头线 / 行高 28 / 6% 分隔 / aria；模型名 190px |
+| CHG-09 | 修改 | `client.js` · `Panel` | 宽度 `fit-content` 280–480（320 可降到 260）；重定位保留 |
+| CHG-10 | 修改 | `client.js` · `BudgetTable` | 改卡片网格（flex、上限 260、末行居中）；卡内竖排 |
+| CHG-11 | 修改 | `client.js` · `QuotaTable` / `QuotaCell` | 改 `auto-fit` 卡片；窗口一排；缺窗不出列 |
+| CHG-12 | 修改 | `client.js` · `RangeCards` / `DetailTable` | 范围 + 摘要带 + 明细合并底框；8 列 + 内部滚动 |
+| CHG-13 | 修改 | `client.js` · `SettingsRows` | 三行标签 + 主/ghost 按钮 + 版本行收敛 |
+| CHG-14 | 修改 | `client.js` · `BoardPage` | 整页 `max-width 952`；卡片 4/3/2 自适应 |
+| CHG-15 | 修改 | `scripts/e2e.mjs` | 断言改卡片结构；新增环同色 / 单币种 / 胶囊 / 三档宽度 |
+| CHG-16 | 修改 | `tools/mock/shots.mjs` | 截图适配新布局（P3 整页、P2 两形态） |
+| CHG-17 | 修改 | `README.md` / `README.en.md` | 功能说明与截图替换 |
+| CHG-18 | 修改 | `CHANGELOG.md` | 新增本地构建版本块 |
+
+### 3.1 阶段与改动清单（待实施）
+
+> 施工前按 CHG 逐条补 diff / 落点；当前为设计定稿阶段，未进入实施。
+
+| 阶段 | CHG | 完成判据 |
+|---|---|---|
+| S0 组件层 | CHG-01 ~ 04 | 四组件可用；旧页面行为不变；`npm test` 绿 |
+| S1 P1 | CHG-05 | 14/2、三色、最多 3 窗、SVG 箭头、空态 `--` |
+| S2 P2 | CHG-06 ~ 09 | 四列 / 三窗两行；表格样式；`fit-content`；320 不横滚 |
+| S3 P3 | CHG-10 ~ 14 | 两区卡片；摘要带 + 明细底框；三行胶囊；4/3/2 列 |
+| S4 脚本与文档 | CHG-15 ~ 18 | e2e 全绿；`shots` 重出图；README / CHANGELOG 同步 |
+
+## 四、不改动 / 边界
+
+- `BND-01`：不改数据接口、provider 清单与预算持久化格式。
+- `BND-02`：不改宿主槽位与入口（`main` / `sidebar.panellist`，`key = token-dash`）。
+- `BND-03`：不引入组件库或 CSS 框架。
+- `BND-04`：不做主题切换与自定义配色，只消费宿主 token。
+
+## 五、验收要点
+
+| 项 | 来源 | 验证方式 | 结果 |
+|---|---|---|---|
+| 三色环且环与数字同色 | REQ-02 / RSK-01 | 截图 + e2e 断言颜色相等 | 待验证 |
+| 四组件拆分、环不持有数字 | REQ-01 | 代码走查 + `InlineRing` DOM 结构 | 待验证 |
+| 金额无绿色、负数红 | REQ-03 | 截图 + 代码走查 | 待验证 |
+| P1 14/2、三窗、空态 | REQ-04 | 截图 + e2e | 待验证 |
+| P2 两形态、宽度 280–480、320 不横滚 | REQ-05 / RSK-02 | 截图 + 量宽 | 待验证 |
+| P3 按量 3 家一行、520 两行；竖排预算 | REQ-06 | 两档截图 + 改值重算 | 待验证 |
+| P3 订阅 4/3/2、缺窗不出列 | REQ-07 | 三档截图 | 待验证 |
+| 摘要带居中、单币种居中、顶部行左对齐 | REQ-08 | 两态截图 | 待验证 |
+| 胶囊三行标签对齐 | REQ-09 | 截图 | 待验证 |
+| 整页无横向滚动 | REQ-10 | `scrollWidth === clientWidth` | 待验证 |
+| e2e 全绿 | REQ-11 | `npm run e2e` | 待验证 |
+| README / CHANGELOG 同步 | REQ-12 | 目检 + `npm run shots` | 待验证 |
+
+## 六、文档回写
 
 - 实施完成后：`ui-design.md` 状态由「待实施」改「已实现」；本 plan 移入 `docs/plan/archived/`。
-- 新建 `docs/checklist/active/board-redesign-build-checklist.md` 记录阶段进度与偏差。
+- `board-redesign-build-checklist.md` 记录阶段进度与偏差。
 - README / CHANGELOG 按 S4 落地。
+
+## 九、自测反馈台
+
+（暂无）

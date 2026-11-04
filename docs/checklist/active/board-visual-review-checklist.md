@@ -1,7 +1,7 @@
 # 看板视觉走查 checklist（设计定稿）
 
 > 状态：**设计定稿**（2026-11-04 第五轮），待写实现 plan；本轮只改文档，未动 `client.js`。<br>
-> 依据：[`feature_fullpage_board.md`](../../plan/active/dsh/feature_fullpage_board.md)（已实施，`1.2.0-local.2`）<br>
+> 依据：[`feature_fullpage_board.md`](../../plan/archived/dsh/feature_fullpage_board.md)（已实施，`1.2.0-local.2`）<br>
 > 预览：`npm run preview ring` / `inline-ring` / `cards-sub` / `cards-api` / `page-p1` / `page-p2` / `page-p3`<br>
 > 生命周期：plan 批准 → 建施工 checklist；实现完成后归档到 `docs/checklist/archived/`。
 
