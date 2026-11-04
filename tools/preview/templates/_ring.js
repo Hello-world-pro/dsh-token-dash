@@ -1,5 +1,5 @@
 // 环的统一绘制：P1 / P2 / P3 共用一套几何，只有 size / stroke 与中心文案不同。
-// 由 render.mjs 注入 /*__RING_JS__*/，四个模板共用，避免各写一份导致漂移。
+// 由 render.mjs 注入 /*__RING_JS__*/，所有预览模板共用，避免各写一份导致漂移。
 
 /** 百分比 → 状态；critical 由调用方给（订阅 90 / API 100） */
 function ringStateOf(percent, critical) {

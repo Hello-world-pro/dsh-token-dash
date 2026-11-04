@@ -24,7 +24,7 @@ tools/preview/
   render.mjs            # 模板 + spec → 截图（支持 drafts/<name>）
   templates/
     _base.css           # 公共样式（卡片、Gauge、kv 行）
-    _ring.js            # 环的统一绘制与状态判定（四个模板共用）
+    _ring.js            # 环的统一绘制与状态判定（所有模板共用）
     ring.html           # 环全量状态：矩阵 / 阈值边界 / 尺寸档位 / 环心标签
     inline-ring.html    # InlineRing：P1/P2 内联组合 4 态 × 2 尺寸
     cards-sub.html      # 订阅卡 6 态（带供应商名）
