@@ -23,10 +23,8 @@
 <p align="center">
   <img src="https://img.shields.io/github/v/tag/spartawhy117/dsh-token-dash?label=version&sort=semver" alt="version" />
   <img src="https://img.shields.io/npm/dt/dsh-token-dash?logo=npm&label=npm%20downloads" alt="npm downloads" />
-  <img src="https://img.shields.io/github/downloads/spartawhy117/dsh-token-dash/total?label=downloads" alt="downloads" />
-  <img src="https://img.shields.io/github/license/spartawhy117/dsh-token-dash" alt="license" />
-  <img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen" alt="node" />
   <img src="https://img.shields.io/badge/DSH-0.2.2--rc.1_tested-4c8bf5" alt="DSH tested" />
+  <img src="https://img.shields.io/github/license/spartawhy117/dsh-token-dash" alt="license" />
   <a href="https://awesome-dsh-plugin.com/p/spartawhy117/dsh-token-dash"><img src="https://img.shields.io/badge/awesome--dsh--plugin-listed-6ea8ff" alt="awesome-dsh-plugin" /></a>
 </p>
 
