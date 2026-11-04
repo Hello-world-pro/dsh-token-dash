@@ -94,8 +94,13 @@
   .capsule .toggle .knob { width: 14px; height: 14px; border-radius: 50%; background: #fff; }
   .capsule .btn.icon { width: 22px; height: 22px; padding: 0; justify-content: center; }
 
-  .btn.primary { color: var(--text); border-color: color-mix(in srgb, var(--text) 26%, transparent); background: rgba(255, 255, 255, .08); }
-  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .btn.primary {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.ghost:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 </style>
 </head>
 <body>
