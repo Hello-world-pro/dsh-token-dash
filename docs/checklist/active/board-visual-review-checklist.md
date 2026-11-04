@@ -89,6 +89,7 @@
 | P2 320px 不出横向滚动、宽度 ≤480 | 待执行 | `scrollWidth === clientWidth` |
 | P3 卡片列数：1000px=4 / 760=3 / 520=2 | 待执行 | 三档截图量列数 |
 | 订阅卡窗口列数 = 实际窗口数（两窗不出「月」列） | 待执行 | Kimi / Command Code 各一张 |
+| 预览状态矩阵覆盖全部状态（5 / 4 / 5） | 待执行 | 目检 `.tmp/preview/gauge.png` |
 | 订阅 gauge 环直径 = 40，环心为周期标签 | 待执行 | 截图量环与中心文字 |
 | 百分比在环下 16px、剩余/时间 11px | 待执行 | 目检单卡字号层级 |
 | 按量卡字段竖排且 `已用 / 预算` 同行 | 待执行 | 目检单卡 |
@@ -114,6 +115,7 @@
 | 2026-11-04 | 四轮评审 | 确认 `QuotaGauge`：环 40、环心周期、环下百分比；新增 §十 控件要求；用临时 HTML 生成真实比例预览并目检 |
 | 2026-11-04 | 工具迁移 | 预览与草图工具迁入 `tools/preview/`（spec / render / ascii / templates），临时产物统一 `.tmp/preview/`；AGENTS.md 增加三层约定 |
 | 2026-11-04 | 预览修正 | 两窗订阅不再画空「月」列；补按量卡模拟（环 28、字段竖排、超支负值转红） |
+| 2026-11-04 | 状态矩阵 | 预览改为「状态穷举」：Gauge 5 / 订阅 4 / 按量 5；新增 `tools/mock/AGENTS.md` 定义假数据覆盖规则 |
 
 ## 九、新样式草图
 
@@ -281,7 +283,8 @@ QuotaGauge({
 ### 10.7 预览方式（本轮已验证）
 
 - 预览：`npm run preview gauge` → `.tmp/preview/gauge.png`（真实 229px 卡 + 40px 环，2x）；模板在 [`tools/preview/templates/gauge.html`](../../../tools/preview/templates/gauge.html)。
-- 一张图覆盖两类卡：按量卡（环 28 + 字段竖排 + 超支负值）与订阅卡（窗口一排，两窗 provider 只有两列）。
+- 预览是**状态矩阵**：QuotaGauge 5 态（normal 42.5 / 边界 89.9·90 / critical 96 / empty）、订阅卡 4 态（1 窗 / 2 窗无月 / 3 窗 / 含空窗）、按量卡 5 态（normal / warn / over / 预算未设置 / 余额不支持）。
+- 状态覆盖口径见 [`tools/mock/AGENTS.md`](../../../tools/mock/AGENTS.md) §2：组件有 N 种状态就出 N 个样本，不合并。
 - 尺寸来源：[`tools/preview/spec.mjs`](../../../tools/preview/spec.mjs)；改环径 / 字号只改这一处，预览与草图同步。
 - 只有会被 README / 设计文档引用的图才 `npm run preview:publish <name>`；分析图一律留在 `.tmp/preview/`。
 - 定稿后把尺寸 / 状态写回本清单与 `ui-design.md`。

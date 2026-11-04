@@ -24,7 +24,7 @@ tools/preview/
   render.mjs            # 模板 + spec → 截图
   ascii.mjs             # ASCII 草图
   templates/
-    gauge.html          # P3 卡片预览（按量卡 + 订阅卡 + Gauge 放大）
+    gauge.html          # P3 状态矩阵（Gauge 5 态 + 订阅 4 态 + 按量 5 态）
 ```
 
 ```bash

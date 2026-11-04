@@ -12,6 +12,7 @@
 | 发布 / 版本 | `docs/release.md` | `.agents/skills/dsh-token-dash-release/SKILL.md`、`references/official-release-version.md` |
 | 用户说明 / 变更历史 | `README.md` / `README.en.md` | `CHANGELOG.md`、`docs/pic/` |
 | 组件预览 / 草图 | `tools/preview/README.md` | `tools/preview/spec.mjs`、`tools/preview/templates/` |
+| 假数据 / 截图 | `tools/mock/AGENTS.md` | `tools/mock/fixtures.mjs`、`tools/mock/shots.mjs` |
 | Skill 维护 | `.agents/skills/`（项目） | `D:\Projects\Context-Engineer\skills\`（全局真源） |
 
 - active plan / checklist 不在此复制，进目录后按文件头状态判断，避免本文件与文档状态漂移。
