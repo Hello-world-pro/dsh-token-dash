@@ -24,11 +24,11 @@ body {
 h2 { font-size: 13px; font-weight: 600; margin: 0 0 12px; color: var(--muted); }
 section { margin-bottom: 28px; }
 
-.page { width: var(--content-width); }
+.page { width: 100%; max-width: var(--content-width); margin: 0 auto; }
 .grid { display: grid; gap: var(--layout-gap); align-items: start; justify-content: center; }
 .grid.api { display: flex; flex-wrap: wrap; justify-content: center; }
-.grid.api .cell { flex: 0 0 var(--card-max); }
-.grid.sub { grid-template-columns: repeat(4, minmax(var(--card-min), var(--card-max))); }
+.grid.api .cell { flex: 1 1 var(--card-min); max-width: var(--card-max); }
+.grid.sub { grid-template-columns: repeat(auto-fit, minmax(var(--card-min), 1fr)); }
 .cell { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .cap { font-size: 11px; color: var(--weak); padding-left: 2px; }
 

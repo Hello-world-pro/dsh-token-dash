@@ -7,7 +7,7 @@
   :root { /*__SPEC_CSS__*/ }
   /*__BASE_CSS__*/
   body { padding: 32px 24px; }
-  .page { width: var(--content-width); margin: 0 auto; }
+  .page { width: 100%; max-width: var(--content-width); margin: 0 auto; }
 
   .board-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
   .board-head h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
@@ -32,13 +32,14 @@
   .tile .v { font-size: 18px; font-weight: 600; margin-top: 6px; font-variant-numeric: tabular-nums; }
   .tile .s { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
-  .table { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(7, minmax(52px, auto)); gap: 0 8px; font-size: 12px; }
+  .table-wrap { overflow-x: auto; }
+  .table { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(7, minmax(52px, auto)); gap: 0 8px; font-size: 12px; min-width: 720px; }
   .table .h { font-size: 11px; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--border); }
   .table .c { padding: 5px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
 
   .capsule {
-    position: sticky; bottom: 12px; margin-top: 24px; border: 1px solid var(--border);
+    margin-top: 24px; border: 1px solid var(--border);
     border-radius: 10px; background: var(--card-bg); padding: 12px 14px;
     display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--muted);
   }
@@ -88,7 +89,7 @@
       </div>
     </div>
 
-    <div class="table" id="detail"></div>
+    <div class="table-wrap"><div class="table" id="detail"></div></div>
   </section>
 
   <div class="capsule">

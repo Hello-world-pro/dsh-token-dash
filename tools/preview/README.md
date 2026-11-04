@@ -61,6 +61,8 @@ npm run preview page-p3            # IDE 打开 .tmp/preview/page-p3.html
 
 它们与组件模板同属「设计态」，不代表当前 `client.js` 的实现。实现侧的 README 截图仍由 `npm run shots` 产出。
 
+页宽为 `100% / max-width 952`，卡片随可用宽度自动换行：1000 宽订阅 4 列、760 宽 3 列、520 宽 2 列；明细表在窄屏走内部横向滚动，整页不出现横向滚动。
+
 ## 模板对照
 
 | 模板 | 对应设计章节 | 状态 | 覆盖 |
