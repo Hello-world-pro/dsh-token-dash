@@ -37,8 +37,10 @@
   .summary-half { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .summary-half + .summary-half { border-left: 1px solid var(--border); }
   .summary-half .k { font-size: 12px; color: var(--muted); }
-  .summary-half .v { font-size: 26px; font-weight: 600; line-height: 30px; font-variant-numeric: tabular-nums; }
-  .summary-half .v small { font-size: 14px; font-weight: 500; color: var(--muted); margin-left: 8px; }
+  .summary-half .v {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px;
+    font-size: 26px; font-weight: 600; line-height: 30px; font-variant-numeric: tabular-nums;
+  }
   .summary-half .s { font-size: 11px; color: var(--weak); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   @media (max-width: 560px) {
@@ -104,7 +106,7 @@
       <div class="summary-band">
         <div class="summary-half">
           <span class="k">总费用</span>
-          <div class="v">¥12.68 <small>$19.00</small></div>
+          <div class="v"><span>¥12.68</span><span>$19.00</span></div>
         </div>
         <div class="summary-half">
           <span class="k">真实 Tokens</span>
