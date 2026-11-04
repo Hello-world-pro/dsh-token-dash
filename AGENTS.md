@@ -45,7 +45,6 @@
 - 四层分离：`tools/preview/templates/`（定稿原型）与 `drafts/`（探索稿）入库；`.tmp/preview/` 只放渲染器产出的 HTML（PNG 仅在 `--png` 时生成）；`docs/pic/` 只放定稿图，仅 `preview:publish` 写入。
 - **手写 HTML 不落 `.tmp/`**：探索写 `tools/preview/drafts/<name>.html`，跑 `npm run preview drafts/<name>`；定稿时把数值搬进 `spec.mjs`、改用变量后再移入 `templates/`。
 - 默认只生成 `.tmp/preview/<name>.html`，**在 IDE 里直接预览**（比截图更接近真实渲染）；需要静态图才加 `--png`，进 README / 设计文档才 `preview:publish`。
-- 要看**已实现**的 P1 / P2 / P3，用 `npm run preview:pages` 导出真实 DOM（`.tmp/preview/p*-*.html`）；`templates/` 反映新设计，两者不要混看。
 - 尺寸、字号、间距只在 `tools/preview/spec.mjs` 定义一次；预览模板与后续 E2E 尺寸断言共用，禁止各写一份。
 - 设计文档引用 `templates/` 的稳定路径或 `npm run preview` 命令，不引用 `.tmp/`；组件形态以原型为准，不维护 ASCII 草图。
 

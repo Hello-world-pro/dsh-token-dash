@@ -247,7 +247,6 @@ InlineRing({
   - `npm run preview cards-sub` → `.tmp/preview/cards-sub.html`：订阅卡 6 态（三窗 ×2 / 两窗无月 / 两窗 critical / 单窗 / 含空窗），卡顶为真实供应商名。环 + 三行辅助信息的组合只在这里看，不再单独出 Gauge 状态图。
   - `npm run preview cards-api` → `.tmp/preview/cards-api.html`：按量卡 5 态（normal / warn / over / 预算未设置 / 余额不支持）；右侧预算输入框可改，环与计划余额即时重算，卡下 caption 跟随状态。
 - 整页设计稿：`npm run preview page-p1` / `page-p2` / `page-p3` → `.tmp/preview/page-p*.html`（手写模板，代表新设计；可直接在 IDE 看，也能改假数据）。
-- 页面级快照：`npm run preview:pages` → `.tmp/preview/p1-pill-*.html` / `p2-panel-*.html` / `p3-board.html`，是**当前实现**的真实 DOM + 宿主 token；与 `templates/` 的新设计分开看，不能当验收依据。
 - 状态覆盖口径见 [`tools/mock/AGENTS.md`](../../../tools/mock/AGENTS.md) §2：组件有 N 种状态就出 N 个样本，不合并。
 - 尺寸来源：[`tools/preview/spec.mjs`](../../../tools/preview/spec.mjs)；模板在 [`tools/preview/templates/`](../../../tools/preview/templates/)，公共样式在 `_base.css`。
 - 探索稿放 `tools/preview/drafts/`（入库，可粗糙），定稿时接 `spec.mjs` 再移入 `templates/`；手写 HTML 不落 `.tmp/`。

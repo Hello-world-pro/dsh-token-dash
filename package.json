@@ -45,7 +45,6 @@
     "logs": "node tools/logs.mjs",
     "shots": "node tools/mock/shots.mjs",
     "preview": "node tools/preview/render.mjs",
-    "preview:pages": "node tools/mock/shots.mjs --html",
     "preview:publish": "node tools/preview/render.mjs --publish",
     "icon": "node tools/mock/icon.mjs",
     "pack": "node -e \"require('fs').mkdirSync('build',{recursive:true})\" && npm pack --pack-destination build",

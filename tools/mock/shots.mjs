@@ -1,29 +1,21 @@
 /**
  * 生成 README 截图：临时 DSH_HOME + web profile + 假数据注入，不读真实账本。
  *
- * 用法：
- *   npm run shots                 # 截图 → docs/pic/*.png
- *   npm run preview:pages         # 只导出 P1/P2/P3 的真实 DOM → .tmp/preview/*.html
- *   npm run shots -- --keep       # 保留临时 DSH_HOME
- *
- * 截图产物：docs/pic/panel-api.png、panel-sub-2.png、panel-sub-3.png（P2 三种形态）、
- *          settings.png（P3 整页）、pill-api.png / pill-sub.png
- * HTML 产物：.tmp/preview/p1-pill-api.html、p1-pill-sub.html、p2-panel-api.html、
- *            p2-panel-sub-2.html、p2-panel-sub-3.html、p3-board.html
+ * 用法：npm run shots [-- --keep]
+ * 产物：docs/pic/panel-api.png、panel-sub-2.png、panel-sub-3.png（P2 三种形态）、
+ *       settings.png（P3 整页）、pill-api.png / pill-sub.png
  */
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
 import { prefs, summary, summarySubThreeWindows, summarySubTwoWindows, usageFor } from './fixtures.mjs'
 
 const root = resolve('.')
 const keep = process.argv.includes('--keep')
-const htmlMode = process.argv.includes('--html')
 const tmpRoot = join(root, '.tmp')
 const home = join(tmpRoot, `shots-home-${Date.now()}`)
 const outDir = join(root, 'docs', 'pic')
-const previewDir = join(tmpRoot, 'preview')
 const appRoot = process.env.DSH_APP_ROOT ?? join(process.env.LOCALAPPDATA ?? '', 'Programs', 'DeepSeek Harness')
 const exe = join(appRoot, 'DeepSeek Harness.exe')
 const cliJs = join(appRoot, 'resources', 'app.asar', 'dsh', 'node_modules', '@deepseek-ai', 'dsh-desktop-host', 'lib', 'cli.js')
@@ -124,70 +116,6 @@ try {
   await pill.waitFor({ timeout: 20000 })
   const jsClick = (locator) => locator.evaluate((node) => node.click())
 
-  const htmlName = (png) => ({
-    'pill-api.png': 'p1-pill-api.html',
-    'pill-sub.png': 'p1-pill-sub.html',
-    'panel-api.png': 'p2-panel-api.html',
-    'panel-sub-2.png': 'p2-panel-sub-2.html',
-    'panel-sub-3.png': 'p2-panel-sub-3.html',
-    'settings.png': 'p3-board.html',
-  }[png] ?? png.replace(/\.png$/, '.html'))
-
-  /** 把真实 DOM 连同宿主主题变量导出为单文件 HTML，供 IDE 直接预览 */
-  const dumpHtml = async (locator, pngName) => {
-    const markup = await locator.evaluate((node) => node.outerHTML)
-    // 宿主 token 分散在多张表的多个选择器里，直接抄规则会漏；改为在当前主题下取解析后的值
-    const themeCss = await page.evaluate((html) => {
-      const names = new Set()
-      for (const sheet of document.styleSheets) {
-        let rules
-        try { rules = sheet.cssRules } catch { continue }
-        for (const rule of rules) {
-          const style = rule.style
-          if (style === undefined) continue
-          for (let index = 0; index < style.length; index += 1) {
-            const name = style.item(index)
-            if (name.startsWith('--')) names.add(name)
-          }
-        }
-      }
-      for (const match of html.matchAll(/var\((--[A-Za-z0-9-]+)/g)) names.add(match[1])
-
-      const rootStyle = getComputedStyle(document.documentElement)
-      const bodyStyle = getComputedStyle(document.body)
-      const lines = []
-      for (const name of names) {
-        const value = (bodyStyle.getPropertyValue(name) || rootStyle.getPropertyValue(name) || '').trim()
-        if (value !== '') lines.push(`${name}: ${value};`)
-      }
-      return `:root {\n${lines.join('\n')}\n}`
-    }, markup)
-    const file = htmlName(pngName)
-    mkdirSync(previewDir, { recursive: true })
-    writeFileSync(join(previewDir, file), `<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8" />
-<title>${file}</title>
-<style>
-${themeCss}
-html, body { margin: 0; padding: 0; background: var(--dsw-alias-bg-base, #1c1c1e); color: var(--dsw-alias-label-primary, #eee); }
-body { font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
-.wrap { display: inline-block; padding: 16px; }
-.wrap [data-testid=token-dash-panel] { position: static !important; top: auto !important; left: auto !important; max-height: none !important; overflow: visible !important; }
-.wrap [data-testid=token-dash-board] { zoom: 1 !important; }
-.wrap [data-testid=token-dash-settings-capsule] { position: static !important; }
-</style>
-</head>
-<body data-ds-dark-theme="1">
-<div class="wrap">
-${markup}
-</div>
-</body>
-</html>
-`)
-    console.log(`[preview] ${file}`)
-  }
   await jsClick(pill)
 
   const panel = page.locator('[data-testid=token-dash-panel]')
@@ -209,11 +137,8 @@ ${markup}
   // API 形态：切到近 30 天，让表内数据更完整
   await jsClick(panel.getByRole('tab', { name: '近30天' }))
   await page.waitForTimeout(600)
-  if (htmlMode) await dumpHtml(panel, 'panel-api.png')
-  else {
-    await panel.screenshot({ path: join(outDir, 'panel-api.png') })
-    console.log('[shots] panel-api.png')
-  }
+  await panel.screenshot({ path: join(outDir, 'panel-api.png') })
+  console.log('[shots] panel-api.png')
 
   // 整页看板截图放到最后（切走中栏后 pill 不再可见）
 
@@ -233,7 +158,6 @@ ${markup}
     const target = page.locator('[data-testid=token-dash-pill]')
     await target.waitFor({ timeout: 10000 })
     await target.scrollIntoViewIfNeeded()
-    if (htmlMode) { await dumpHtml(target, file); return }
     const box = await target.boundingBox()
     if (box === null) throw new Error(`pill box missing for ${file}`)
     // 按 pill 实际宽度加 20px 内边距裁切，避免裁到相邻的宿主控件
@@ -271,7 +195,6 @@ ${markup}
       content: '[data-testid=token-dash-panel]{position:fixed !important;top:8px !important;left:8px !important;bottom:auto !important;max-height:none !important;overflow:visible !important}',
     })
     await page.waitForTimeout(600)
-    if (htmlMode) { await dumpHtml(node, file); return }
     await node.screenshot({ path: join(outDir, file) })
     console.log(`[shots] ${file}`)
   }
@@ -300,11 +223,8 @@ ${markup}
     content: '[data-testid=token-dash-settings-capsule]{position:static !important}[data-testid=token-dash-board]{zoom:.72}',
   })
   await page.waitForTimeout(300)
-  if (htmlMode) await dumpHtml(board, 'settings.png')
-  else {
-    await board.screenshot({ path: join(outDir, 'settings.png') })
-    console.log('[shots] settings.png')
-  }
+  await board.screenshot({ path: join(outDir, 'settings.png') })
+  console.log('[shots] settings.png')
 } finally {
   await browser?.close().catch(() => {})
   stopTree(server?.child)

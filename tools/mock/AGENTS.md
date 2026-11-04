@@ -11,7 +11,6 @@
 | `scripts/e2e.mjs` 内联 fixture | 只服务断言，不与 `fixtures.mjs` 共享 | E2E |
 
 - 两边 fixture 不要求同步字段；**但状态集合必须一致**（见 §2）。
-- 页面级预览：`npm run preview:pages`（= `shots.mjs --html`）真机打开 mock 宿主，把 P1/P2/P3 的真实 DOM + 宿主 token 导出到 `.tmp/preview/`，不写 `docs/pic/`。
 
 ## 2. 核心规则：状态穷举
 
