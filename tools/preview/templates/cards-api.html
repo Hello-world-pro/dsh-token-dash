@@ -11,7 +11,7 @@
 <body>
 <div class="page">
   <section>
-    <h2>按量卡状态全量：normal / warn / over / 预算未设置 / 余额不支持</h2>
+    <h2>按量卡状态全量：normal / warn / over / 预算未设置 / 余额不支持（右侧可改月度预算，环与计划余额即时重算）</h2>
     <div class="grid api" id="cards"></div>
   </section>
 </div>
@@ -21,6 +21,14 @@
 </script>
 <script>
   const A = window.__SPEC__.apiGauge
+
+  const cards = [
+    { name: 'OpenRouter', cur: '$', used: 19, budget: '50.00', real: '$7.66', month: '$22.80' },
+    { name: 'DeepSeek', cur: '¥', used: 91.9, budget: '100.00', real: '¥87.66', month: '¥91.90' },
+    { name: '通义千问', cur: '¥', used: 6.43, budget: '5.00', real: '—', month: '¥6.43' },
+    { name: 'Kimi API', cur: '¥', used: 0, budget: '', real: '¥12.00', month: '¥3.20' },
+    { name: 'GLM API', cur: '¥', used: 6, budget: '50.00', real: '—', month: '¥6.00' },
+  ]
 
   const ringSvg = (percent, state) => {
     const r = (A.ring - A.stroke) / 2
@@ -38,40 +46,69 @@
       </svg>`
   }
 
-  const apiGauge = (percent, state) => {
-    const empty = state === 'empty' || percent === null
-    return `
-      <div class="gauge">
-        <div class="ring">
-          ${ringSvg(percent, empty ? 'empty' : state)}
-          <span class="ring-label">${A.label}</span>
-        </div>
-        <div class="pct ${empty ? 'empty' : state}">${empty ? '—' : percent.toFixed(1) + '%'}</div>
-      </div>`
+  const money = (cur, value) => value < 0 ? `-${cur}${Math.abs(value).toFixed(2)}` : `${cur}${value.toFixed(2)}`
+
+  const stateOf = (percent) => {
+    if (percent === null) return 'empty'
+    if (percent >= 100) return 'critical'
+    if (percent >= 80) return 'warn'
+    return 'normal'
   }
 
-  const kv = (label, value, over = false) => `
-    <div class="kv"><span class="k">${label}</span><span class="v${over ? ' over' : ''}">${value}</span></div>`
-
-  const apiCard = (name, percent, state, used, plan, real, month) => `
-    <div class="card">
-      <div class="head"><span class="name">${name}</span><span class="chip">[ 按量 API ]</span></div>
-      <div class="api-gauge">${apiGauge(percent, state)}</div>
-      ${kv('已用 / 预算', used)}
-      ${kv('计划余额', plan, plan.startsWith('-'))}
-      ${kv('真实余额', real)}
-      ${kv('本月已花', month)}
+  const cardHtml = (data, index) => `
+    <div class="cell">
+      <div class="card" data-index="${index}">
+        <div class="head"><span class="name">${data.name}</span><span class="chip">[ 按量 API ]</span></div>
+        <div class="api-body">
+          <div class="gauge">
+            <div class="ring">${ringSvg(null, 'empty')}<span class="ring-label">${A.label}</span></div>
+            <div class="pct empty" data-role="pct">—</div>
+          </div>
+          <label class="budget">
+            <span class="k">月度预算</span>
+            <span class="budget-input">
+              <span class="cur">${data.cur}</span>
+              <input data-role="budget" inputmode="decimal" value="${data.budget}" placeholder="未设置" />
+            </span>
+          </label>
+        </div>
+        <div class="kv"><span class="k">计划余额</span><span class="v" data-role="plan">—</span></div>
+        <div class="kv"><span class="k">真实余额</span><span class="v">${data.real}</span></div>
+        <div class="kv"><span class="k">本月已花</span><span class="v">${data.month}</span></div>
+      </div>
+      <span class="cap" data-role="cap"></span>
     </div>`
 
-  const cell = (node, cap) => `<div class="cell">${node}<span class="cap">${cap}</span></div>`
+  const update = (index) => {
+    const data = cards[index]
+    const card = document.querySelector(`.card[data-index="${index}"]`)
+    const raw = card.querySelector('[data-role=budget]').value.replace(/[^\d.]/g, '')
+    const budget = raw === '' ? null : Number(raw)
+    const percent = budget === null || budget <= 0 ? null : (data.used / budget) * 100
+    const state = stateOf(percent)
 
-  document.getElementById('cards').innerHTML = [
-    cell(apiCard('OpenRouter', 38, 'normal', '$19.00 / $50.00', '$31.00', '$7.66', '$22.80'), 'normal 38%'),
-    cell(apiCard('DeepSeek', 91.9, 'warn', '¥91.90 / ¥100.00', '¥8.10', '¥87.66', '¥91.90'), 'warn 80–100'),
-    cell(apiCard('通义千问', 128.6, 'critical', '¥6.43 / ¥5.00', '-¥1.43', '—', '¥6.43'), 'over ≥100 · 计划余额为负'),
-    cell(apiCard('Kimi API', null, 'empty', '—', '—', '¥12.00', '¥3.20'), '预算未设置'),
-    cell(apiCard('GLM API', 12, 'normal', '¥6.00 / ¥50.00', '¥44.00', '—', '¥6.00'), '余额不支持'),
-  ].join('')
+    card.querySelector('.ring').innerHTML = `${ringSvg(percent, state)}<span class="ring-label">${A.label}</span>`
+    const pct = card.querySelector('[data-role=pct]')
+    pct.className = `pct ${state}`
+    pct.textContent = percent === null ? '—' : `${percent.toFixed(1)}%`
+
+    const plan = card.querySelector('[data-role=plan]')
+    const planValue = budget === null || budget <= 0 ? null : budget - data.used
+    plan.textContent = planValue === null ? '—' : money(data.cur, planValue)
+    plan.className = `v${planValue !== null && planValue < 0 ? ' over' : ''}`
+
+    const cap = card.parentElement.querySelector('[data-role=cap]')
+    cap.textContent = state === 'empty'
+      ? '预算未设置'
+      : `${state} · ${percent.toFixed(1)}%`
+  }
+
+  document.getElementById('cards').innerHTML = cards.map((data, index) => cardHtml(data, index)).join('')
+  cards.forEach((_, index) => {
+    const input = document.querySelector(`.card[data-index="${index}"] [data-role=budget]`)
+    input.addEventListener('input', () => update(index))
+    update(index)
+  })
 </script>
 </body>
 </html>

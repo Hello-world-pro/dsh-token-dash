@@ -44,8 +44,8 @@
 
 - 三层分离：`.tmp/preview/`（临时产物，不入库）→ `tools/preview/`（工具，入库）→ `docs/pic/`（定稿图，入库）。判断标准：这张图会不会被 README / 设计文档引用。
 - 需要看真实比例时不要手搓临时 HTML：在 `tools/preview/templates/` 加模板，跑 `npm run preview <name>`，产物落 `.tmp/preview/`；只有定稿才 `npm run preview:publish <name>` 写 `docs/pic/`。
-- 尺寸、字号、间距只在 `tools/preview/spec.mjs` 定义一次；预览模板、`npm run sketch` 的 ASCII 草图、后续 E2E 尺寸断言共用，禁止各写一份。
-- ASCII 草图由 `npm run sketch` 生成，不手写带边框的草图；文档引用命令，不引用 `.tmp/` 路径。
+- 尺寸、字号、间距只在 `tools/preview/spec.mjs` 定义一次；预览模板与后续 E2E 尺寸断言共用，禁止各写一份。
+- 组件形态以 HTML 预览为准，不再维护 ASCII 草图；文档引用命令，不引用 `.tmp/` 路径。
 
 ### 4.3 Skill 归属
 

@@ -4,7 +4,6 @@
 
 ## 为什么需要
 
-- 手写带边框的 ASCII 草图会被 CJK 宽度搞歪；用 `ascii.mjs` 按字符宽度生成才对齐。
 - 手搓临时 HTML 看比例，尺寸/字号会散落在各处，改一次要改三处；本目录把数值收进 `spec.mjs`。
 - 预览图属于临时产物，不该进 `docs/pic/`；但生成图的**方法**要可复现、可入库。
 
@@ -22,7 +21,6 @@
 tools/preview/
   spec.mjs              # 尺寸/字号单一来源
   render.mjs            # 模板 + spec → 截图
-  ascii.mjs             # ASCII 草图
   templates/
     _base.css           # 公共样式（卡片、Gauge、kv 行）
     gauge.html          # Gauge 5 态
@@ -36,8 +34,9 @@ npm run preview cards-sub      # → .tmp/preview/cards-sub.png
 npm run preview cards-api      # → .tmp/preview/cards-api.png
 npm run preview gauge -- --scale 3
 npm run preview:publish gauge  # → docs/pic/gauge.png（仅 README/设计文档定稿）
-npm run sketch                 # 打印 ASCII 草图
 ```
+
+- `cards-api` 的预算输入框可直接改值，环、状态与计划余额即时重算，用于验证阈值与超支表现。
 
 ## 新增一个预览
 

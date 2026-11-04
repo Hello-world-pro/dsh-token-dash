@@ -52,8 +52,22 @@ section { margin-bottom: 28px; }
 .pct.empty { color: var(--weak); }
 .line { font-size: var(--gauge-meta); color: var(--weak); line-height: 15px; white-space: nowrap; }
 
-/* 按量卡：Gauge 居中，下面四行 label-value */
-.api-gauge { display: flex; justify-content: center; margin: 10px 0 12px; }
+/* 按量卡：左侧 Gauge，右侧预算输入框，下面三行 label-value */
+.api-body { display: flex; align-items: center; gap: 16px; margin: 12px 0 12px; }
+.api-body .gauge { align-items: flex-start; }
+.budget { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.budget .k { font-size: 11px; color: var(--weak); }
+.budget-input {
+  display: inline-flex; align-items: center; gap: 2px;
+  border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px;
+  background: rgba(255, 255, 255, .03);
+}
+.budget-input .cur { font-size: 12px; color: var(--weak); }
+.budget-input input {
+  width: 72px; border: 0; background: transparent; color: var(--text);
+  font: inherit; font-size: 13px; text-align: right; outline: none;
+}
+.budget-input input::placeholder { color: var(--weak); }
 .kv { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; line-height: 18px; margin-top: 4px; }
 .kv .k { color: var(--weak); }
 .kv .v { white-space: nowrap; }

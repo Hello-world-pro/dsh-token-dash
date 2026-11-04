@@ -49,7 +49,7 @@
 3. `usage` 的 `todayCost` / `monthCost` / `tokens` / `requests`。
 4. `todayModels` / `monthModels` 各一条，`providerId` 对齐。
 5. `pricingLinks` 一条（没有就留空数组）。
-6. 若影响状态集合，同步本文件 §2、`docs/checklist/active/board-visual-review-checklist.md` §十 与 `tools/preview/spec.mjs`。
+6. 若影响状态集合，同步本文件 §2、`docs/checklist/active/board-visual-review-checklist.md` §九 与 `tools/preview/spec.mjs`。
 
 ## 6. 禁止
 

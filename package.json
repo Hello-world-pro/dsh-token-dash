@@ -46,7 +46,6 @@
     "shots": "node tools/mock/shots.mjs",
     "preview": "node tools/preview/render.mjs",
     "preview:publish": "node tools/preview/render.mjs --publish",
-    "sketch": "node tools/preview/ascii.mjs",
     "icon": "node tools/mock/icon.mjs",
     "pack": "node -e \"require('fs').mkdirSync('build',{recursive:true})\" && npm pack --pack-destination build",
     "prepublishOnly": "npm test"
