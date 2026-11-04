@@ -71,8 +71,8 @@ const subCard = (name, windows) => {
   const line = (pick) => ` ${windows.map((win) => fit(pick(win), colWidth)).join('')}`
   return box(24, [
     ` ${name}`.padEnd(inner - 6) + '[SUB]',
-    line((win) => win.key),
-    line((win) => `(o)${win.percent}`),
+    line((win) => `(${win.key})`),
+    line((win) => win.percent),
     line((win) => win.left),
     line((win) => win.rel),
     line((win) => win.abs),
@@ -118,11 +118,11 @@ const apiZoom = box(64, [
 
 const subZoom = box(48, [
   ' GLM Coding'.padEnd(46 - 6) + '[SUB]',
-  ' 5h            week          month',
-  ' (o) 42.5%     (o) 18.2%     (o) 3.0%',
-  ' left 58%      left 82%      left 97%',
-  ' 3h            1d            18d',
-  ' 22:51         11-05         11-22',
+  '      (5h)         (week)        (mo)',
+  '     42.5%         18.2%         3.0%',
+  '     L58%          L82%          L97%',
+  '     3h            1d            18d',
+  '     22:51         11-05         11-22',
 ])
 
 const CONTENT_WIDTH = 952
