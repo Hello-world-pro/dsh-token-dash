@@ -337,6 +337,15 @@ try {
   const board = page.locator('[data-testid=token-dash-board]')
   await board.waitFor({ timeout: 8000 })
   await page.waitForTimeout(400)
+  // 清掉宿主欢迎/引导浮层，避免遮挡看板截图。
+  await page.evaluate(() => {
+    for (const node of document.querySelectorAll('[role=dialog],[role=presentation]')) {
+      if (node.querySelector('[data-testid=token-dash-board]') !== null) continue
+      node.remove()
+    }
+  })
+  // 全页截图时把 sticky 胶囊改为静态，否则会盖住摘要带与明细。
+  await board.getByTestId('token-dash-settings-capsule').evaluate((node) => { node.style.position = 'static' })
   await page.screenshot({ path: join(tmpRoot, 'e2e', 'p3-board.png'), fullPage: true })
 
   assert.match(await board.innerText(), /按量计价（按供应商）/)
@@ -345,32 +354,31 @@ try {
   // Two tables split by kind.
   assert.equal(await board.locator('[data-testid^=token-dash-budget-row-]').count(), apiProviders.length)
   assert.equal(await board.locator('[data-testid^=token-dash-quota-row-]').count(), subProviders.length)
-  // Budget table four columns.
-  assert.match(await board.getByTestId('token-dash-budget-budget-deepseek-official').innerText(), /¥100\.00/)
+  // Budget cards: always-visible input + gauge + three rows.
+  assert.match(await board.getByTestId('token-dash-budget-input-deepseek-official').inputValue(), /^100(\.00)?$/)
   assert.match(await board.getByTestId('token-dash-budget-used-deepseek-official').innerText(), /12\.3%/)
   assert.match(await board.getByTestId('token-dash-budget-plan-deepseek-official').innerText(), /¥87\.66/)
   assert.match(await board.getByTestId('token-dash-budget-balance-deepseek-official').innerText(), /¥49\.86/)
-  const planBox = await board.getByTestId('token-dash-budget-plan-deepseek-official').boundingBox()
-  const planBox2 = await board.getByTestId('token-dash-budget-plan-openrouter').boundingBox()
-  assert.ok(planBox !== null && planBox2 !== null && Math.abs(planBox.x - planBox2.x) <= 1, 'plan balance column should be left aligned')
-  // Subscription table: three window cells per provider, two lines each.
-  assert.equal(await board.locator('[data-testid^=token-dash-quota-cell-]').count(), subProviders.length * 3)
+  assert.equal(await board.locator('[data-testid^=token-dash-budget-gauge-label-]').count(), apiProviders.length)
+  // Subscription cards: only actual windows (two-window providers have no month cell).
+  const windowCount = subProviders.reduce((total, provider) => total + (provider.windows?.length ?? 0), 0)
+  assert.equal(await board.locator('[data-testid^=token-dash-quota-cell-]').count(), windowCount)
   assert.match(await board.getByTestId('token-dash-quota-cell-moonshot-5h').innerText(), /96\.0%|96%/)
   assert.match(await board.getByTestId('token-dash-quota-cell-opencode-go-month').innerText(), /58\.0%|58%/)
   assert.match(await board.getByTestId('token-dash-quota-rel-opencode-go-month').innerText(), /天后|小时后|分钟后/)
   assert.match(await board.getByTestId('token-dash-quota-abs-opencode-go-month').innerText(), /\d{2}-\d{2} \d{2}:\d{2}/)
-  // Two cards with border, above the detail table.
+  // Summary band: two halves inside one bordered band, above the detail table.
   const cardCost = board.getByTestId('token-dash-card-cost')
   const cardTokens = board.getByTestId('token-dash-card-tokens')
   const [costBox, tokensBox] = await Promise.all([cardCost.boundingBox(), cardTokens.boundingBox()])
   assert.ok(costBox !== null && tokensBox !== null)
-  assert.ok(Math.abs((tokensBox.x - costBox.x - costBox.width) - 12) < 2, 'cards should be 12px apart')
-  const borderStyle = await cardCost.evaluate((node) => getComputedStyle(node).borderTopStyle)
-  assert.equal(borderStyle, 'solid')
+  assert.ok(tokensBox.x > costBox.x, 'tokens half should sit right of cost half')
+  const bandBorder = await board.getByTestId('token-dash-range-cards').evaluate((node) => getComputedStyle(node).borderTopStyle)
+  assert.equal(bandBorder, 'solid')
   const detailTable = board.getByTestId('token-dash-detail-table')
   const detailBox = await detailTable.boundingBox()
-  assert.ok(detailBox !== null && costBox !== null && detailBox.y - (costBox.y + costBox.height) >= 16, 'cards should be 16px above detail table')
-  assert.match(await detailTable.innerText(), /费用（API 计价估算）/)
+  assert.ok(detailBox !== null && costBox !== null && detailBox.y > costBox.y + costBox.height, 'detail table should be below summary band')
+  assert.match(await detailTable.innerText(), /费用/)
   assert.equal(await board.locator('[data-testid^=token-dash-detail-row-]').count(), models.length)
   // Settings capsule: three rows and expected controls.
   assert.equal(await board.getByTestId('token-dash-settings-row-1').count(), 1)
@@ -380,7 +388,7 @@ try {
   const refreshSegmentBox = await refreshSegment.boundingBox()
   assert.ok(refreshSegmentBox !== null && refreshSegmentBox.width <= 170, `refresh segment width ${refreshSegmentBox?.width} should be <= 170`)
   assert.equal(await board.locator('select').count(), 0)
-  assert.match(await board.innerText(), new RegExp(`版本 ${PKG_VERSION.replaceAll('.', '\\.')}`))
+  assert.match(await board.innerText(), new RegExp(`v?${PKG_VERSION.replaceAll('.', '\\.')}`))
   assert.ok(!(await board.innerText()).includes('诊断'))
   assert.ok(!(await board.innerText()).includes('清空日志'))
   assert.ok(!(await board.innerText()).includes('本月 Token'))
@@ -391,11 +399,10 @@ try {
   assert.ok((await repoChip.getAttribute('href'))?.includes('github.com'))
   assert.equal(await repoChip.getAttribute('target'), '_blank')
 
-  // Budget inline edit: save updates used% and plan balance immediately.
-  await jsClick(board.getByTestId('token-dash-budget-edit-deepseek-official'))
+  // Budget: always-visible input; Enter commits and recalculates immediately.
   const budgetInput = board.getByTestId('token-dash-budget-input-deepseek-official')
   await budgetInput.waitFor({ timeout: 5000 })
-  assert.equal(await budgetInput.inputValue(), '100')
+  assert.match(await budgetInput.inputValue(), /^100(\.00)?$/)
   // Headless 窗口拿不到系统焦点：值走原生 setter + input 事件，按键直接派发。
   const setInputValue = (locator, value) => locator.evaluate((node, next) => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
@@ -409,30 +416,26 @@ try {
   await page.waitForTimeout(80)
   await pressInInput(budgetInput, 'Enter')
   await page.waitForTimeout(500)
-  assert.match(await board.getByTestId('token-dash-budget-budget-deepseek-official').innerText(), /¥200\.50/)
+  assert.match(await budgetInput.inputValue(), /^200\.5(0)?$/)
   assert.match(await board.getByTestId('token-dash-budget-plan-deepseek-official').innerText(), /¥188\.16/)
   assert.match(await board.getByTestId('token-dash-budget-used-deepseek-official').innerText(), /6\.2%/)
-  // Invalid value keeps editing and reports the error.
-  await jsClick(board.getByTestId('token-dash-budget-edit-deepseek-official'))
-  const secondInput = board.getByTestId('token-dash-budget-input-deepseek-official')
-  await setInputValue(secondInput, '-1')
+  // Invalid value reports the error and keeps the input.
+  await setInputValue(budgetInput, '-1')
   await page.waitForTimeout(50)
-  await pressInInput(secondInput, 'Enter')
+  await pressInInput(budgetInput, 'Enter')
   await page.waitForTimeout(300)
   assert.match(await board.innerText(), /请输入 0 或正数/)
-  // Esc cancels editing without saving.
-  await pressInInput(secondInput, 'Escape')
+  // Esc restores the last saved value without changing it.
+  await setInputValue(budgetInput, '123')
+  await pressInInput(budgetInput, 'Escape')
   await page.waitForTimeout(300)
-  assert.equal(await board.getByTestId('token-dash-budget-input-deepseek-official').count(), 0)
-  assert.match(await board.getByTestId('token-dash-budget-budget-deepseek-official').innerText(), /¥200\.50/)
+  assert.match(await budgetInput.inputValue(), /^200\.5(0)?$/)
   // Clearing writes an explicit zero => unset.
-  await jsClick(board.getByTestId('token-dash-budget-edit-deepseek-official'))
-  const thirdInput = board.getByTestId('token-dash-budget-input-deepseek-official')
-  await setInputValue(thirdInput, '')
+  await setInputValue(budgetInput, '')
   await page.waitForTimeout(50)
-  await pressInInput(thirdInput, 'Enter')
+  await pressInInput(budgetInput, 'Enter')
   await page.waitForTimeout(500)
-  assert.match(await board.getByTestId('token-dash-budget-budget-deepseek-official').innerText(), /未设置/)
+  assert.equal(await budgetInput.inputValue(), '')
   const clearedPrefs = (await (await fetch(`${base}/token-dash/api/prefs`)).json()).data
   assert.equal(clearedPrefs.budgets['deepseek-official'].amount, 0)
 

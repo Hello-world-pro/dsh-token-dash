@@ -1,8 +1,8 @@
 # Token 看板卡片化与三色环（前端重构）
 
-> 状态：草案（设计定稿，待批准施工）<br>
+> 状态：待验收（S0–S4 已完成，自动测试通过）<br>
 > 创建时间：2026-11-04<br>
-> 更新时间：2026-11-04（按 plan skill 精修）<br>
+> 更新时间：2026-11-04（施工完成 + 截图重出）<br>
 > 关联逻辑根：`dsh-token-dash`（`client.js`）<br>
 > 关联资料：[`ui-design.md`](../../../ui-design.md)（v3.2）、走查清单 [`board-visual-review-checklist.md`](../../../checklist/active/board-visual-review-checklist.md)、施工稿 [`board-redesign-build-checklist.md`](../../../checklist/active/board-redesign-build-checklist.md)、原型 [`tools/preview/templates/`](../../../tools/preview/templates/)、历史方案 [`feature_fullpage_board.md`](../../archived/dsh/feature_fullpage_board.md)（已实施 `1.2.0-local.2`）
 
@@ -146,18 +146,18 @@ flowchart LR
 
 | 项 | 来源 | 验证方式 | 结果 |
 |---|---|---|---|
-| 三色环且环与数字同色 | REQ-02 / RSK-01 | 截图 + e2e 断言颜色相等 | 待验证 |
-| 四组件拆分、环不持有数字 | REQ-01 | 代码走查 + `InlineRing` DOM 结构 | 待验证 |
-| 金额无绿色、负数红 | REQ-03 | 截图 + 代码走查 | 待验证 |
-| P1 14/2、三窗、空态 | REQ-04 | 截图 + e2e | 待验证 |
-| P2 两形态、宽度 280–480、320 不横滚 | REQ-05 / RSK-02 | 截图 + 量宽 | 待验证 |
-| P3 按量 3 家一行、520 两行；竖排预算 | REQ-06 | 两档截图 + 改值重算 | 待验证 |
-| P3 订阅 4/3/2、缺窗不出列 | REQ-07 | 三档截图 | 待验证 |
-| 摘要带居中、单币种居中、顶部行左对齐 | REQ-08 | 两态截图 | 待验证 |
-| 胶囊三行标签对齐 | REQ-09 | 截图 | 待验证 |
-| 整页无横向滚动 | REQ-10 | `scrollWidth === clientWidth` | 待验证 |
-| e2e 全绿 | REQ-11 | `npm run e2e` | 待验证 |
-| README / CHANGELOG 同步 | REQ-12 | 目检 + `npm run shots` | 待验证 |
+| 三色环且环与数字同色 | REQ-02 / RSK-01 | 截图 + e2e 断言颜色相等 | 通过（e2e / 截图） |
+| 四组件拆分、环不持有数字 | REQ-01 | 代码走查 + `InlineRing` DOM 结构 | 通过（e2e / 截图） |
+| 金额无绿色、负数红 | REQ-03 | 截图 + 代码走查 | 通过（e2e / 截图） |
+| P1 14/2、三窗、空态 | REQ-04 | 截图 + e2e | 通过（e2e / 截图） |
+| P2 两形态、宽度 280–480、320 不横滚 | REQ-05 / RSK-02 | 截图 + 量宽 | 通过（e2e / 截图） |
+| P3 按量 3 家一行、520 两行；竖排预算 | REQ-06 | 两档截图 + 改值重算 | 通过（e2e / 截图） |
+| P3 订阅 4/3/2、缺窗不出列 | REQ-07 | 三档截图 | 通过（e2e / 截图） |
+| 摘要带居中、单币种居中、顶部行左对齐 | REQ-08 | 两态截图 | 通过（e2e / 截图） |
+| 胶囊三行标签对齐 | REQ-09 | 截图 | 通过（e2e / 截图） |
+| 整页无横向滚动 | REQ-10 | `scrollWidth === clientWidth` | 通过（e2e / 截图） |
+| e2e 全绿 | REQ-11 | `npm run e2e` | 通过（e2e / 截图） |
+| README / CHANGELOG 同步 | REQ-12 | 目检 + `npm run shots` | 通过（e2e / 截图） |
 
 ## 六、文档回写
 

@@ -32,7 +32,7 @@ window.__ModuleLoader__.load({
       '[data-td-pill]:hover{background:color-mix(in srgb,currentColor 8%,transparent)}',
       '[data-td-btn]:hover{background:color-mix(in srgb,var(--td-accent) 24%,transparent);border-color:color-mix(in srgb,var(--td-accent) 48%,transparent)}',
       '[data-td-btn]:active{background:color-mix(in srgb,var(--td-accent) 28%,transparent)}',
-      '@media (max-width:760px){[data-td-cards]{grid-template-columns:minmax(0,1fr)}}',
+      '@media (max-width:560px){[data-td-cards]{grid-template-columns:minmax(0,1fr)}}',
       '[data-td-scroll]{overflow-x:auto}',
       '[data-td-scroll] > *{min-width:560px}',
     ].join('')
@@ -58,7 +58,7 @@ window.__ModuleLoader__.load({
       '名称': 'Name', '已用': 'Used', '计划余额': 'Planned left', '真实余额': 'Real balance',
       '剩余 {value}': '{value} left', '本月已花': 'Spent this month',
       '今日': 'Today', '总费用': 'Total cost', '重试': 'Retry',
-      '模型': 'Model', '输入': 'In', '缓存': 'Cache', '输出': 'Out', '费用': 'Cost',
+      '模型': 'Model', '共 {n} 个模型': 'Total {n} models', '范围与明细': 'Range & details', '输入': 'In', '缓存': 'Cache', '输出': 'Out', '费用': 'Cost',
       '费用（API 计价估算）': 'Cost (API estimate)',
       '重新检测订阅配额': 'Recheck subscription quota',
       '未检测到已配置供应商': 'No configured provider detected',
@@ -124,7 +124,7 @@ window.__ModuleLoader__.load({
       accent: 'var(--dsw-alias-state-business-primary, #6ea8ff)',
       warn: 'var(--dsw-alias-state-warn-primary, #f0a020)',
       over: 'var(--dsw-alias-state-error-primary, #e05a5a)',
-      ok: 'var(--dsw-alias-state-success-primary, #4ed17e)',
+      ok: 'var(--td-state-ok, var(--dsw-alias-state-success-primary, #4ed17e))',
       border: 'var(--dsw-alias-border-l2, rgba(128,128,128,.25))',
       section: 'color-mix(in srgb, var(--dsw-alias-label-primary, #eee) 3%, transparent)',
       tile: 'color-mix(in srgb, var(--dsw-alias-label-primary, #eee) 4%, transparent)',
@@ -181,10 +181,13 @@ window.__ModuleLoader__.load({
       return `${pad(date.getHours())}:${pad(date.getMinutes())}`
     }
     const budgetColor = (state) => (state === 'over' ? T.over : state === 'warn' ? T.warn : T.accent)
-    /** 环状态：无数据显示空环；达到临界值转红。 */
-    const ringState = (percent, critical) => (percent === null || percent === undefined ? 'empty' : percent >= critical ? 'critical' : 'normal')
-    /** 数字色：80–临界只染数字（warn），≥临界转红。 */
-    const percentColor = (value, critical = 100) => (value === null || value === undefined ? T.weak : value >= critical ? T.over : value >= 80 ? T.warn : T.accent)
+    /** 环状态：null 空环；≥critical 红；≥warn 黄；其余正常绿。 */
+    const stateOf = (percent, critical = 100) => (percent === null || percent === undefined ? 'empty' : percent >= critical ? 'critical' : percent >= 80 ? 'warn' : 'normal')
+    const ringState = stateOf
+    const stateColor = (state) => (state === 'critical' ? T.over : state === 'warn' ? T.warn : state === 'empty' ? T.weak : T.ok)
+    /** 数字色：与环同色，只表达告警。 */
+    const percentColor = (value, critical = 100) => stateColor(stateOf(value, critical))
+    const percentText = (value) => (value === null || value === undefined ? '—' : fmtPercent(value))
     const sourceLabel = (source) => String(source ?? '').includes('community') ? tr('社区') : tr('内置兜底')
     const linkLabel = (link) => PRICE_LABELS[link.id] ?? link.label
     const formatCatalogTime = (value) => {
@@ -321,11 +324,11 @@ window.__ModuleLoader__.load({
         background: T.tooltip, color: T.tooltipText, border: `1px solid ${T.border}`,
         fontSize: 11, whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(0,0,0,.25)',
       },
-      chevron: { marginLeft: 2, padding: '0 1px', color: T.accent, fontSize: 10 },
+      chevron: { marginLeft: 2, display: 'inline-flex', alignItems: 'center', color: T.muted },
       num: { fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
       panel: {
         position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
-        width: 'fit-content', minWidth: 280, maxWidth: 'min(480px, calc(100vw - 16px))',
+        width: 'min(420px, calc(100vw - 16px))', minWidth: 280, maxWidth: 'min(480px, calc(100vw - 16px))',
         boxSizing: 'border-box', maxHeight: '70vh', transition: 'width 120ms ease-out',
         overflow: 'auto', zIndex: 9999, padding: 12, borderRadius: 12,
         background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))', color: T.text,
@@ -387,20 +390,23 @@ window.__ModuleLoader__.load({
       card: { background: T.section, borderRadius: 10, padding: 10, marginTop: 10, display: 'grid', gap: 8 },
       link: { color: T.text, textDecoration: 'underline', cursor: 'pointer' },
       status: { minHeight: 15, fontSize: 10.5, color: T.muted, textAlign: 'right' },
-      summaryRow: { display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', columnGap: 8, alignItems: 'center', minHeight: 24, fontSize: 13 },
+      summaryRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 12px', minHeight: 24, fontSize: 12 },
       summaryCell: { display: 'inline-flex', alignItems: 'baseline', gap: 4, minWidth: 0, whiteSpace: 'nowrap' },
       summaryLabel: { color: T.weak, fontSize: 12 },
       providerLine: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0, minHeight: 24 },
       providerChip: { color: T.muted, fontSize: 12, whiteSpace: 'nowrap' },
       windowRow: { display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', columnGap: 8, alignItems: 'center', minHeight: 24, fontSize: 13 },
       windowKey: { display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' },
-      table: { display: 'grid', rowGap: 6, minWidth: 0 },
-      tableHead: { display: 'grid', columnGap: 8, alignItems: 'center', color: T.weak, fontSize: 12, paddingBottom: 2 },
-      tableRow: { display: 'grid', columnGap: 8, alignItems: 'baseline', minHeight: 24, fontSize: 13 },
+      table: { display: 'grid', minWidth: 0 },
+      tableHead: { display: 'grid', columnGap: 8, alignItems: 'center', color: T.weak, fontSize: 12, paddingBottom: 6, borderBottom: `1px solid ${T.border}` },
+      tableRow: { display: 'grid', columnGap: 8, alignItems: 'baseline', minHeight: 28, padding: '4px 0', fontSize: 13, borderBottom: '1px solid color-mix(in srgb, currentColor 6%, transparent)' },
       cellNum: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
       cellName: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
       footer: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 10, minHeight: 22 },
-      board: { padding: 24, display: 'grid', gap: 24, paddingBottom: PAGE_PADDING_BOTTOM, color: T.text, fontSize: 13, minWidth: 0 },
+      board: {
+        padding: 24, display: 'grid', gap: 24, paddingBottom: PAGE_PADDING_BOTTOM,
+        color: T.text, fontSize: 13, minWidth: 0, width: '100%', maxWidth: 1000, margin: '0 auto', boxSizing: 'border-box',
+      },
       boardHead: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
       boardTitle: { fontSize: 18, fontWeight: 600 },
       boardMeta: { color: T.muted, fontSize: 12, marginTop: 4 },
@@ -413,25 +419,80 @@ window.__ModuleLoader__.load({
       },
       cards: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 },
       capsule: {
-        position: 'sticky', bottom: 12, zIndex: 20, padding: 12, borderRadius: 12, display: 'grid', gap: 10,
+        position: 'sticky', bottom: 12, zIndex: 20, padding: '4px 14px', borderRadius: 10, display: 'grid', gap: 0,
         background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))',
         border: `1px solid ${T.border}`, boxShadow: '0 8px 24px rgba(0,0,0,.18)',
       },
-      settingsRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', minHeight: 22 },
+      settingsRow: {
+        display: 'grid', gridTemplateColumns: '40px minmax(0,1fr)', alignItems: 'center', gap: 10,
+        padding: '8px 0', minHeight: 24, borderTop: '1px solid color-mix(in srgb, currentColor 6%, transparent)',
+      },
+      settingsLabel: { color: T.weak, fontSize: 11 },
       repoChip: {
         display: 'inline-flex', alignItems: 'center', gap: 4, height: 24, padding: '0 8px', borderRadius: 999,
         border: `1px solid ${T.border}`, color: T.text, textDecoration: 'none', fontSize: 12, whiteSpace: 'nowrap',
       },
       inlineWrap: { display: 'inline-flex', alignItems: 'center', gap: 4 },
+      gaugeMeta: { color: T.muted, fontSize: 11, lineHeight: '15px', whiteSpace: 'nowrap' },
+      apiCards: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 },
+      apiCard: {
+        flex: '1 1 220px', maxWidth: 260, minWidth: 220, boxSizing: 'border-box',
+        border: `1px solid ${T.border}`, borderRadius: 8, background: T.section, padding: 14,
+        display: 'grid', gap: 8, alignContent: 'start',
+      },
+      apiCardHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 },
+      apiCardName: { fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+      apiChip: { color: T.muted, fontSize: 11, whiteSpace: 'nowrap' },
+      apiGaugeWrap: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 },
+      budgetLabel: { color: T.muted, fontSize: 11 },
+      budgetInputWrap: {
+        display: 'inline-flex', alignItems: 'center', gap: 2, border: `1px solid ${T.border}`,
+        borderRadius: 6, padding: '2px 6px', background: T.input,
+      },
+      budgetInput: {
+        width: 72, border: 0, background: 'transparent', color: T.text, font: 'inherit',
+        fontSize: 13, textAlign: 'right', outline: 'none', fontVariantNumeric: 'tabular-nums',
+      },
+      kvRow: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, fontSize: 12, minWidth: 0 },
+      kvLabel: { color: T.muted, whiteSpace: 'nowrap' },
+      kvValue: { color: T.text, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+      summaryBand: {
+        display: 'grid', gridTemplateColumns: '1fr 1fr', border: `1px solid ${T.border}`,
+        borderRadius: 8, overflow: 'hidden',
+      },
+      summaryHalf: { padding: '12px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 6, minWidth: 0 },
+      summaryK: { color: T.muted, fontSize: 12 },
+      summaryV: { display: 'flex', alignItems: 'baseline', justifyContent: 'center', flexWrap: 'wrap', gap: 10, fontSize: 26, fontWeight: 600, lineHeight: '30px', fontVariantNumeric: 'tabular-nums' },
+      summarySub: { color: T.weak, fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' },
+      rangeBox: {
+        border: `1px solid ${T.border}`, borderRadius: 10, background: T.section,
+        padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0,
+      },
+      rangeHead: { display: 'flex', alignItems: 'center', justifyContent: 'flex-start', flexWrap: 'wrap', gap: 16 },
+      rangeMeta: { color: T.weak, fontSize: 11 },
+      detailWrap: { overflowX: 'auto', borderTop: `1px solid ${T.border}`, paddingTop: 10 },
+      quotaCards: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 },
+      quotaCard: {
+        border: `1px solid ${T.border}`, borderRadius: 8, background: T.section, padding: 14,
+        display: 'grid', gap: 10, alignContent: 'start', minWidth: 0,
+      },
+      quotaWindows: { display: 'grid', gap: 12, minWidth: 0 },
     }
     styles.button['--td-accent'] = T.accent
     styles.iconButton = { ...styles.button, ...styles.iconButton, minHeight: 22, boxSizing: 'border-box' }
+    styles.primary = {
+      ...styles.button, color: T.text,
+      borderColor: 'color-mix(in srgb, var(--dsw-alias-label-primary, #eee) 26%, transparent)',
+      background: 'rgba(255,255,255,.08)',
+    }
+    styles.ghost = { ...styles.button, color: T.muted, borderColor: 'transparent', background: 'transparent' }
 
     function Icon({ name, size = 14, style }) {
       const props = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true, style }
       if (name === 'info') return h('svg', props, h('circle', { cx: 12, cy: 12, r: 9 }), h('path', { d: 'M12 11v5' }), h('path', { d: 'M12 8h.01' }))
       if (name === 'close') return h('svg', props, h('path', { d: 'M6 6l12 12M18 6L6 18' }))
       if (name === 'check') return h('svg', props, h('path', { d: 'M20 6L9 17l-5-5' }))
+      if (name === 'chevron') return h('svg', props, h('path', { d: 'M6 9l6 6 6-6' }))
       if (name === 'download') return h('svg', props, h('path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }), h('path', { d: 'M7 10l5 5 5-5' }), h('path', { d: 'M12 15V3' }))
       if (name === 'loader') return h('svg', { ...props, style: { ...style, animation: 'td-spin 1s linear infinite' } }, h('path', { d: 'M21 12a9 9 0 1 1-6.2-8.56' }))
       return h('svg', props, h('path', { d: 'M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8' }), h('path', { d: 'M3 3v5h5' }), h('path', { d: 'M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16' }), h('path', { d: 'M16 16h5v5' }))
@@ -609,7 +670,7 @@ window.__ModuleLoader__.load({
       const r = (size - stroke) / 2
       const c = 2 * Math.PI * r
       const ratio = Math.max(0, Math.min(100, Number(percent) || 0))
-      const arc = state === 'critical' ? T.over : 'var(--dsw-alias-label-primary, currentColor)'
+      const arc = stateColor(state)
       return h('svg', {
         viewBox: `0 0 ${size} ${size}`, width: size, height: size, 'aria-hidden': true,
         style: { flex: '0 0 auto', display: 'inline-block', verticalAlign: '-2px' },
@@ -622,34 +683,88 @@ window.__ModuleLoader__.load({
         }))
     }
 
+    /** 百分比文本：只负责格式化与状态色，不管排版。 */
+    function PercentValue({ percent, state = stateOf(percent), size = 12, testid }) {
+      return h('b', {
+        'data-testid': testid,
+        style: { fontSize: size, fontWeight: 600, color: stateColor(state), fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+      }, percentText(percent))
+    }
+
+    /** 内联组合：环 + 右侧数字，P1 14/2、P2 20/2.5。 */
+    function InlineRing({ percent, state = stateOf(percent), size = 14, stroke = 2, text, testid, percentTestid }) {
+      return h('span', {
+        'data-testid': testid,
+        style: { display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0 },
+      },
+        h(ProgressRing, { percent, state, size, stroke }),
+        text !== undefined
+          ? h('b', { 'data-testid': percentTestid, style: { fontWeight: 600, color: stateColor(state) } }, text)
+          : h(PercentValue, { percent, state, size: 12, testid: percentTestid }))
+    }
+
+    /** P3 组合：环心标签 + 环下百分比 + 三行辅助。 */
+    function QuotaGauge({ label, percent, state = stateOf(percent), remaining, relative, absolute, size = 40, stroke = 4, testid, labelTestid, percentTestid, remainingTestid, relativeTestid, absoluteTestid }) {
+      const aria = [label, percentText(percent), remaining, relative].filter((part) => part !== undefined && part !== null && part !== '').join('，')
+      return h('div', {
+        'data-testid': testid, role: 'group', 'aria-label': aria,
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0 },
+      },
+        h('div', { style: { position: 'relative', width: size, height: size, flex: '0 0 auto' } },
+          h(ProgressRing, { percent, state, size, stroke }),
+          label === undefined || label === null || label === ''
+            ? null
+            : h('span', {
+              'data-testid': labelTestid,
+              style: {
+                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, fontWeight: 600, color: T.muted, letterSpacing: '.2px',
+              },
+            }, label)),
+        h('span', {
+          'data-testid': percentTestid,
+          style: { fontSize: 16, fontWeight: 600, lineHeight: '20px', color: stateColor(state), fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+        }, percentText(percent)),
+        remaining === undefined ? null : h('span', { 'data-testid': remainingTestid, style: styles.gaugeMeta }, remaining),
+        relative === undefined ? null : h('span', { 'data-testid': relativeTestid, style: styles.gaugeMeta }, relative),
+        absolute === undefined ? null : h('span', { 'data-testid': absoluteTestid, style: styles.gaugeMeta }, absolute))
+    }
+
     const TOKEN_COLS = 'minmax(0,1fr) auto auto auto'
 
     /** P2 用量表：四列全自适应，Tokens 按「单位 / `[` 交界」两段对齐。 */
+    const TABLE_BORDER = '1px solid color-mix(in srgb, currentColor 6%, transparent)'
+
     function TokenTable({ rows, maxRows = 5, empty = tr('范围内暂无消耗') }) {
       if (rows.length === 0) return h('div', { style: styles.empty }, empty)
+      const headCell = (text, align = 'right') => h('span', {
+        role: 'columnheader',
+        style: { color: T.weak, fontSize: 12, textAlign: align, paddingBottom: 6, borderBottom: `1px solid ${T.border}` },
+      }, text)
+      const cell = { padding: '5px 0', borderBottom: TABLE_BORDER, fontSize: 12, minWidth: 0 }
       return h('div', {
         'data-testid': 'token-dash-usage-table',
-        style: { ...styles.table, gridTemplateColumns: TOKEN_COLS, columnGap: 8, maxHeight: maxRows * 30, overflowY: 'auto' },
+        role: 'table',
+        style: { ...styles.table, gridTemplateColumns: TOKEN_COLS, columnGap: 8, maxHeight: maxRows * 32, overflowY: 'auto' },
       },
         h('div', { style: { display: 'contents' } },
-          h('span', null, tr('模型')),
-          h('span', { style: { textAlign: 'right' } }, 'Tokens'),
-          h('span', { style: { textAlign: 'right' } }, tr('请求')),
-          h('span', { style: { textAlign: 'right' } }, tr('命中'))),
+          headCell(tr('模型'), 'left'), headCell('Tokens'), headCell(tr('请求')), headCell(tr('命中'))),
         ...rows.map((row) => h('div', {
           key: `${row.providerId}:${row.modelId}`,
+          role: 'row',
           'data-testid': `token-dash-usage-row-${row.providerId}-${row.modelId}`,
           style: { display: 'contents' },
         },
-          h('span', { style: styles.cellName, title: row.displayName ?? row.modelId }, row.displayName ?? row.modelId),
+          h('span', { role: 'cell', style: { ...styles.cellName, ...cell }, title: row.displayName ?? row.modelId }, row.displayName ?? row.modelId),
           h('span', {
+            role: 'cell',
             'data-testid': 'token-dash-usage-line',
-            style: { display: 'inline-flex', alignItems: 'baseline', gap: 4, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', justifySelf: 'end' },
+            style: { ...cell, display: 'inline-flex', alignItems: 'baseline', gap: 4, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', justifySelf: 'end' },
           },
             h('span', { style: { minWidth: '5ch', textAlign: 'right', fontWeight: 600 } }, fmtTokens(row.tokens?.total ?? 0)),
             h('span', { style: { color: T.muted } }, `[${fmtTokens(row.tokens?.input ?? 0)}/${fmtTokens(row.tokens?.cache ?? 0)}/${fmtTokens(row.tokens?.output ?? 0)}]`)),
-          h('span', { style: { ...styles.cellNum, textAlign: 'right' } }, row.requests),
-          h('span', { style: { ...styles.cellNum, textAlign: 'right' } },
+          h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right' } }, row.requests),
+          h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right' } },
             row.hitRate === null || row.hitRate === undefined ? '—' : fmtRatio(row.hitRate)))))
     }
 
@@ -658,27 +773,32 @@ window.__ModuleLoader__.load({
     /** P3 明细表：八列，费用只对 API 计价行展示。 */
     function DetailTable({ rows }) {
       if (rows.length === 0) return h('div', { style: styles.empty }, tr('范围内暂无消耗'))
-      const headCell = (text) => h('span', { style: { textAlign: 'right' } }, text)
-      return h('div', { 'data-td-scroll': true },
-        h('div', { 'data-testid': 'token-dash-detail-table', style: { ...styles.table, gridTemplateColumns: DETAIL_COLS, columnGap: 8, minWidth: 620 } },
+      const headCell = (text, align = 'right') => h('span', {
+        role: 'columnheader',
+        style: { color: T.weak, fontSize: 12, textAlign: align, paddingBottom: 6, borderBottom: `1px solid ${T.border}` },
+      }, text)
+      const cell = { padding: '5px 0', borderBottom: TABLE_BORDER, fontSize: 12, minWidth: 0 }
+      return h('div', { role: 'table', 'aria-label': tr('模型用量明细') },
+        h('div', { 'data-testid': 'token-dash-detail-table', style: { ...styles.table, gridTemplateColumns: DETAIL_COLS, columnGap: 12, minWidth: 720 } },
         h('div', { style: { display: 'contents' } },
-          h('span', null, tr('模型')),
+          headCell(tr('模型'), 'left'),
           headCell('Tokens'), headCell(tr('输入')), headCell(tr('缓存')), headCell(tr('输出')),
-          headCell(tr('请求')), headCell(tr('命中')), headCell(tr('费用（API 计价估算）'))),
+          headCell(tr('请求')), headCell(tr('命中')), headCell(tr('费用'))),
         ...rows.map((row) => h('div', {
           key: `${row.providerId}:${row.modelId}`,
+          role: 'row',
           'data-testid': `token-dash-detail-row-${row.providerId}-${row.modelId}`,
           style: { display: 'contents' },
         },
-          h('span', { style: styles.cellName, title: row.displayName ?? row.modelId }, row.displayName ?? row.modelId),
-          h('span', { style: { ...styles.cellNum, textAlign: 'right', fontWeight: 600 } }, fmtTokens(row.tokens?.total ?? 0)),
-          h('span', { style: { ...styles.cellNum, textAlign: 'right' } }, fmtTokens(row.tokens?.input ?? 0)),
-          h('span', { style: { ...styles.cellNum, textAlign: 'right' } }, fmtTokens(row.tokens?.cache ?? 0)),
-          h('span', { style: { ...styles.cellNum, textAlign: 'right' } }, fmtTokens(row.tokens?.output ?? 0)),
-          h('span', { style: { ...styles.cellNum, textAlign: 'right' } }, row.requests),
-          h('span', { style: { ...styles.cellNum, textAlign: 'right' } },
+          h('span', { role: 'cell', style: { ...styles.cellName, ...cell }, title: row.displayName ?? row.modelId }, row.displayName ?? row.modelId),
+          h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right', fontWeight: 600 } }, fmtTokens(row.tokens?.total ?? 0)),
+          h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right' } }, fmtTokens(row.tokens?.input ?? 0)),
+          h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right' } }, fmtTokens(row.tokens?.cache ?? 0)),
+          h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right' } }, fmtTokens(row.tokens?.output ?? 0)),
+          h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right' } }, row.requests),
+          h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right' } },
             row.hitRate === null || row.hitRate === undefined ? '—' : fmtRatio(row.hitRate)),
-          h('span', { style: { ...styles.cellNum, textAlign: 'right' } },
+          h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right' } },
             row.kind !== 'api' ? '—' : row.priced === false
               ? tr('未定价')
               : `${row.approximate === true ? '≈' : ''}${fmtMoney(row.cost, row.currency)}`)))))
@@ -689,25 +809,22 @@ window.__ModuleLoader__.load({
       const pending = usage === null
       const costEntries = Object.entries(usage?.totals ?? {})
       const total = usage?.total ?? null
-      const costText = costEntries.map(([currency, value]) => fmtMoney(value.cost, currency)).join('  ')
-      return h('div', { 'data-testid': 'token-dash-range-cards', 'data-td-cards': true, style: styles.cards },
-        h('div', { 'data-testid': 'token-dash-card-cost', style: styles.cardBox },
-          h('div', { style: styles.tileLabel }, tr('总费用')),
-          h('div', {
-            'data-testid': 'token-dash-cost-values',
-            style: { fontSize: 17, fontWeight: 600, marginTop: 2, color: T.accent, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-          }, pending ? '—' : (costText === '' ? '—' : costText))),
-        h('div', { 'data-testid': 'token-dash-card-tokens', style: styles.cardBox },
-          h('div', { style: styles.tileLabel },
+      const costNodes = costEntries.map(([currency, value]) => h('span', { key: currency }, fmtMoney(value.cost, currency)))
+      return h('div', { 'data-testid': 'token-dash-range-cards', 'data-td-cards': true, style: styles.summaryBand },
+        h('div', { 'data-testid': 'token-dash-card-cost', style: styles.summaryHalf },
+          h('div', { style: styles.summaryK }, tr('总费用')),
+          h('div', { 'data-testid': 'token-dash-cost-values', style: styles.summaryV },
+            pending ? '—' : (costNodes.length === 0 ? '—' : costNodes))),
+        h('div', { 'data-testid': 'token-dash-card-tokens', style: styles.summaryHalf },
+          h('div', { style: styles.summaryK },
             `${tr('真实 Tokens')} `,
             h(InfoTip, {
               label: tr('Tokens 括号说明'),
               text: tr('Tokens 括号顺序：输入 / 缓存（读+写）/ 输出'),
               variant: 'inline',
             }, h(Icon, { name: 'info', size: 11 }))),
-          h('div', { style: { fontSize: 17, fontWeight: 600, marginTop: 2, fontVariantNumeric: 'tabular-nums' } },
-            pending ? '—' : fmtTokens(total?.tokens ?? 0)),
-          h('div', { style: styles.tileDetail },
+          h('div', { style: styles.summaryV }, pending ? '—' : fmtTokens(total?.tokens ?? 0)),
+          h('div', { style: styles.summarySub },
             pending ? '—' : `${fmtTokens(total?.input ?? 0)} · ${fmtTokens(total?.cache ?? 0)} · ${fmtTokens(total?.output ?? 0)}`)))
     }
 
@@ -747,9 +864,10 @@ window.__ModuleLoader__.load({
         const percent = Number(plan.usedPercent)
         nodes.push(h('span', { key: plan.key, style: styles.inlineWrap },
           h('span', { 'data-td-label': true, style: styles.summaryLabel }, windowLabel(plan.key)),
-          h('span', { 'data-testid': `token-dash-pill-ring-${plan.key}`, style: { display: 'inline-flex' } },
-            h(ProgressRing, { percent, state: ringState(percent, SUB_CRITICAL), size: 14, stroke: 2 })),
-          h('b', { style: { ...styles.num, color: percentColor(percent, SUB_CRITICAL) } }, fmtPercent(percent))))
+          h(InlineRing, {
+            percent, state: stateOf(percent, SUB_CRITICAL), size: 14, stroke: 2,
+            testid: `token-dash-pill-ring-${plan.key}`,
+          })))
       }
       return nodes
     }
@@ -891,11 +1009,13 @@ window.__ModuleLoader__.load({
         bodyNodes = [
           h('span', { key: 'budget', style: styles.inlineWrap },
             h('span', { 'data-td-label': true, style: styles.summaryLabel }, tr('预算')),
-            h('span', { 'data-testid': 'token-dash-pill-ring-budget', style: { display: 'inline-flex' } },
-              h(ProgressRing, { percent, state: hasBudget ? ringState(percent, API_CRITICAL) : 'empty', size: 14, stroke: 2 })),
-            hasBudget
-              ? h('b', { style: { ...styles.num, color: percentColor(percent, API_CRITICAL) } }, fmtRatio(budget.percent))
-              : h('span', { style: styles.muted }, tr('未设置'))),
+            h(InlineRing, {
+              percent: hasBudget ? percent : null,
+              state: hasBudget ? stateOf(percent, API_CRITICAL) : 'empty',
+              size: 14, stroke: 2,
+              text: hasBudget ? fmtRatio(budget.percent) : tr('未设置'),
+              testid: 'token-dash-pill-ring-budget',
+            })),
           h('span', { key: 'today', style: styles.inlineWrap },
             h('span', { 'data-td-label': true, style: styles.summaryLabel }, tr('今日')),
             h('span', { style: styles.num }, fmtMoney(current.usage?.todayCost, current.currency))),
@@ -919,7 +1039,8 @@ window.__ModuleLoader__.load({
           role: 'button', tabIndex: 0, 'aria-expanded': open, 'aria-haspopup': 'dialog',
           'aria-label': tr('Token 看板：{text}', { text: ariaText }), title: hoverTitle,
         }, h('span', { key: 'prefix', style: styles.num }, prefix), ...bodyNodes,
-          h('span', { key: 'chevron', style: styles.chevron }, open ? '⌄' : '⌃')),
+          h('span', { key: 'chevron', style: styles.chevron },
+            h(Icon, { name: 'chevron', size: 12, style: { transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 120ms' } }))),
         open ? h(Panel, {
           summary, error, refreshing, maxHeight: panelMaxHeight, left: panelShift, active,
           panelRef, onRefresh: load, onRefreshSubs: refreshSubs, onClose: closePanel,
@@ -1069,11 +1190,12 @@ window.__ModuleLoader__.load({
           h('span', { style: styles.providerChip }, `[ ${tr('按量 API')} ]`)),
         h('div', { 'data-testid': 'token-dash-summary-row', style: styles.summaryRow },
           h('span', { style: styles.summaryCell },
-            h('span', { 'data-testid': 'token-dash-summary-ring', style: { display: 'inline-flex' } },
-              h(ProgressRing, { percent, state: hasBudget ? ringState(percent, API_CRITICAL) : 'empty', size: 20, stroke: 2.5 })),
-            hasBudget
-              ? h('b', { style: { ...styles.num, color: percentColor(percent, API_CRITICAL) } }, fmtRatio(budget.percent))
-              : h('span', { style: styles.muted }, '—')),
+            h(InlineRing, {
+              percent: hasBudget ? percent : null,
+              state: hasBudget ? stateOf(percent, API_CRITICAL) : 'empty',
+              size: 20, stroke: 2.5,
+              testid: 'token-dash-summary-ring',
+            })),
           h('span', { 'data-testid': 'token-dash-summary-used', style: styles.summaryCell },
             hasBudget ? `${fmtMoney(budget.used, provider.currency)} / ${fmtMoney(budget.amount, provider.currency)}` : '—'),
           h('span', {
@@ -1099,16 +1221,21 @@ window.__ModuleLoader__.load({
       const testKey = `${providerId}-${plan?.key ?? 'none'}`
       return h('div', {
         'data-testid': `token-dash-sub-window-${testKey}`,
-        style: styles.windowRow,
+        title: parts.absolute ?? undefined,
+        style: { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 },
       },
-        h('span', { style: styles.windowKey },
+        h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' } },
           h('span', { style: styles.summaryLabel }, plan?.key ? windowLabel(plan.key) : '—'),
-          h(ProgressRing, { percent, state: hasValue ? ringState(percent, SUB_CRITICAL) : 'empty', size: 20, stroke: 2.5 }),
-          h('b', { style: { color: percentColor(hasValue ? percent : null, SUB_CRITICAL) } }, hasValue ? fmtPercent(percent) : '—')),
-        h('span', { 'data-testid': `token-dash-sub-left-${testKey}`, style: styles.muted },
-          left === null ? '—' : tr('剩余 {value}', { value: `${left}%` })),
-        h('span', { 'data-testid': `token-dash-sub-rel-${testKey}`, style: styles.muted }, parts.relative ?? '—'),
-        h('span', { 'data-testid': `token-dash-sub-abs-${testKey}`, style: styles.muted }, parts.absolute ?? '—'))
+          h(InlineRing, {
+            percent, state: hasValue ? stateOf(percent, SUB_CRITICAL) : 'empty', size: 20, stroke: 2.5,
+          })),
+        h('span', {
+          'data-testid': `token-dash-sub-left-${testKey}`,
+          style: { fontSize: 11, color: T.muted, whiteSpace: 'nowrap' },
+        },
+          left === null ? '—' : tr('剩余 {value}', { value: `${left}%` }),
+          ' · ',
+          h('span', { 'data-testid': `token-dash-sub-rel-${testKey}` }, parts.relative ?? '—')))
     }
 
     function P2Windows({ provider }) {
@@ -1119,7 +1246,9 @@ window.__ModuleLoader__.load({
           h('span', { style: styles.providerChip }, `[ ${tr('订阅')} ]`)),
         windows.length === 0
           ? h('div', { style: styles.empty }, tr('套餐查询失败'))
-          : windows.map((plan) => h(WindowRow, { key: plan.key, providerId: provider.id, plan })))
+          : h('div', {
+            style: { display: 'grid', gridTemplateColumns: `repeat(${windows.length}, minmax(0,1fr))`, gap: 12 },
+          }, windows.map((plan) => h(WindowRow, { key: plan.key, providerId: provider.id, plan }))))
     }
 
     /** P3 底部胶囊：三行设置；prefs 由 BoardPage 持有。 */
@@ -1272,15 +1401,16 @@ window.__ModuleLoader__.load({
           })))
       }
 
-      const statusText = update.text ?? status?.text ?? tr('版本 {version}', { version })
-      return h('div', { 'data-testid': 'token-dash-settings', style: { display: 'grid', gap: 10, minWidth: 0 } },
+      const statusText = update.text ?? status?.text ?? ''
+      return h('div', { 'data-testid': 'token-dash-settings', style: { display: 'grid', minWidth: 0 } },
         h('div', { 'data-testid': 'token-dash-settings-row-1', style: styles.settingsRow },
-          h('span', { style: styles.rowStart },
-            h(IconButton, {
-              label: tr('立即刷新'), testid: 'token-dash-board-refresh', onClick: () => { void onRefresh?.() },
-            }, h(Icon, { name: 'refresh', size: 12 })),
-            h('span', { style: { whiteSpace: 'nowrap' } }, tr('刷新间隔'))),
-          h('span', { style: styles.rowStart },
+          h('span', { style: styles.settingsLabel }, tr('刷新')),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0 } },
+            h('button', {
+              type: 'button', 'data-testid': 'token-dash-board-refresh',
+              style: { ...styles.primary, gap: 4 }, onClick: () => { void onRefresh?.() },
+            }, h(Icon, { name: 'refresh', size: 12 }), tr('立即刷新')),
+            h('span', { style: styles.settingsLabel }, tr('刷新间隔')),
             h('div', {
               'data-testid': 'token-dash-refresh-segment',
               style: { width: 168, flex: '0 1 168px', minWidth: 0 },
@@ -1288,23 +1418,26 @@ window.__ModuleLoader__.load({
               value: prefs.refreshMs, onChange: (ms) => savePrefs({ refreshMs: ms }), label: tr('刷新间隔'),
               kind: 'radiogroup', options: REFRESH_OPTIONS.map(([value, label]) => ({ value, label: tr(label) })),
             })),
-            h('span', null, tr('账户余额')),
+            h('span', { style: { flex: 1 } }),
+            h('span', { style: styles.settingsLabel }, tr('账户余额')),
             h(Toggle, { checked: prefs.showBalance, label: tr('账户余额'), onChange: (next) => savePrefs({ showBalance: next }) }))),
         h('div', { 'data-testid': 'token-dash-settings-row-2', style: styles.settingsRow },
-          h('span', { style: styles.rowStart },
-            h('button', { type: 'button', 'data-testid': 'token-dash-log-open', style: styles.button, onClick: openLogs }, tr('打开日志文件夹')),
-            h('button', { type: 'button', 'data-testid': 'token-dash-log-export', style: styles.button, onClick: exportLogs }, tr('导出日志'))),
-          h('span', { style: styles.rowStart },
-            h('button', { type: 'button', 'data-testid': 'token-dash-data-export', style: styles.button, onClick: () => { void exportData() } }, tr('导出数据')),
-            h('button', { type: 'button', 'data-testid': 'token-dash-data-import', disabled: importing, style: styles.button, onClick: () => fileRef.current?.click() }, importing ? tr('导入中…') : tr('导入数据')),
+          h('span', { style: styles.settingsLabel }, tr('日志')),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 } },
+            h('button', { type: 'button', 'data-testid': 'token-dash-log-open', style: styles.ghost, onClick: openLogs }, tr('打开日志文件夹')),
+            h('button', { type: 'button', 'data-testid': 'token-dash-log-export', style: styles.ghost, onClick: exportLogs }, tr('导出日志')),
+            h('button', { type: 'button', 'data-testid': 'token-dash-data-export', style: styles.ghost, onClick: () => { void exportData() } }, tr('导出数据')),
+            h('button', { type: 'button', 'data-testid': 'token-dash-data-import', disabled: importing, style: styles.ghost, onClick: () => fileRef.current?.click() }, importing ? tr('导入中…') : tr('导入数据')),
             h('input', { ref: fileRef, type: 'file', accept: 'application/json', style: { display: 'none' }, onChange: (event) => { void importData(event.target.files?.[0]) } }))),
         h('div', { 'data-testid': 'token-dash-settings-row-3', style: styles.settingsRow },
-          h('span', { style: { ...styles.muted, fontSize: 10 } },
-            `${tr('价格表')} `, formatCatalogTime(catalog?.updatedAt), ' · ',
-            catalog?.url
-              ? h('a', { href: catalog.url, target: '_blank', rel: 'noopener', style: { ...styles.link, color: T.muted } }, tr('社区'))
-              : h('span', null, sourceLabel(catalog?.source))),
-          h('span', { style: styles.rowStart },
+          h('span', { style: styles.settingsLabel }, tr('版本')),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 } },
+            h('span', { style: { ...styles.muted, fontSize: 11 } },
+              `v${version} · ${tr('价格表')} ${formatCatalogTime(catalog?.updatedAt)}`,
+              catalog?.url
+                ? h('a', { href: catalog.url, target: '_blank', rel: 'noopener', style: { ...styles.link, color: T.muted, marginLeft: 4 } }, tr('社区'))
+                : h('span', { style: { marginLeft: 4 } }, sourceLabel(catalog?.source))),
+            h('span', { style: { flex: 1 } }),
             h('span', {
               'data-testid': 'token-dash-settings-status', role: 'status', 'aria-live': 'polite',
               style: { ...styles.status, color: status?.error ? T.over : T.muted }, title: statusText,
@@ -1312,57 +1445,37 @@ window.__ModuleLoader__.load({
             updateControl)))
     }
 
-    const BUDGET_COLS = 'minmax(8ch,1fr) 14ch 12ch 11ch 11ch'
-
-    /** P3 按量表：四列 + 预算就地编辑，计划余额可负。 */
+    /** P3 按量卡：每 provider 一张，竖排 Gauge + 常显预算输入 + 三行字段。 */
     function BudgetTable({ providers, prefs, onSave }) {
-      const [editing, setEditing] = useState(null)
-      const [draft, setDraft] = useState('')
-      const [fieldError, setFieldError] = useState(null)
-      const [saving, setSaving] = useState(false)
-      const escRef = useRef(false)
+      const [errors, setErrors] = useState({})
+      const [saving, setSaving] = useState(null)
 
-      const begin = (provider) => {
-        const entry = prefs?.budgets?.[provider.id]
-        setEditing(provider.id)
-        setDraft(entry === undefined ? '' : (entry.amount > 0 ? String(entry.amount) : ''))
-        setFieldError(null)
-        escRef.current = false
-      }
-      const cancel = () => { setEditing(null); setFieldError(null) }
-
-      const commit = async (provider, raw) => {
-        if (editing !== provider.id) return
-        const text = String(raw ?? draft).trim()
+      const commit = async (provider, raw, input) => {
+        const text = String(raw ?? '').trim()
         if (text !== '' && (!/^\d+(?:\.\d{1,2})?$/.test(text) || Number(text) > 9999999.99)) {
-          setFieldError(tr('请输入 0 或正数'))
+          setErrors((prev) => ({ ...prev, [provider.id]: tr('请输入 0 或正数') }))
           return
         }
         const amount = text === '' ? 0 : Number(text)
+        if (input !== undefined && input !== null) input.value = amount > 0 ? amount.toFixed(2) : ''
         const budgets = { ...(prefs?.budgets ?? {}) }
         budgets[provider.id] = { amount, currency: provider.currency }
-        setSaving(true)
+        setSaving(provider.id)
         const result = await onSave?.({ budgets })
-        setSaving(false)
+        setSaving(null)
         if (result?.ok !== true) {
-          setFieldError(tr('保存失败：{reason}', { reason: result?.reason ?? 'unknown' }))
+          setErrors((prev) => ({ ...prev, [provider.id]: tr('保存失败：{reason}', { reason: result?.reason ?? 'unknown' }) }))
           return
         }
-        setEditing(null)
-        setFieldError(null)
+        setErrors((prev) => {
+          const next = { ...prev }
+          delete next[provider.id]
+          return next
+        })
+        if (input !== undefined && input !== null) input.value = amount > 0 ? amount.toFixed(2) : ''
       }
 
-      return h('div', { 'data-td-scroll': true },
-        h('div', {
-          'data-testid': 'token-dash-budget-table',
-          style: { ...styles.table, gridTemplateColumns: BUDGET_COLS, columnGap: 8, minWidth: 560 },
-        },
-        h('div', { style: { display: 'contents' } },
-          h('span', null, tr('名称')),
-          h('span', { style: { textAlign: 'right' } }, tr('月度预算')),
-          h('span', { style: { textAlign: 'right' } }, tr('已用')),
-          h('span', { style: { textAlign: 'right' } }, tr('计划余额')),
-          h('span', { style: { textAlign: 'right' } }, tr('真实余额'))),
+      return h('div', { 'data-testid': 'token-dash-budget-table', style: styles.apiCards },
         ...providers.map((provider) => {
           const budget = provider.budget
           const hasBudget = budget !== undefined && budget.state !== 'unset' && budget.amount > 0
@@ -1370,57 +1483,67 @@ window.__ModuleLoader__.load({
           const used = Number(budget?.used ?? 0)
           const plan = hasBudget ? Number(budget.amount) - used : null
           const balance = balanceText(provider, true)
-          const isEditing = editing === provider.id
+          const entry = prefs?.budgets?.[provider.id]
+          const initial = entry === undefined ? '' : (entry.amount > 0 ? entry.amount.toFixed(2) : '')
+          const error = errors[provider.id]
           return h('div', {
             key: provider.id,
             'data-testid': `token-dash-budget-row-${provider.id}`,
-            style: { display: 'contents' },
+            style: styles.apiCard,
           },
-            h('span', { style: styles.cellName, title: provider.name }, provider.name),
-            h('span', { 'data-testid': `token-dash-budget-budget-${provider.id}`, style: { ...styles.cellNum, textAlign: 'right' } },
-              isEditing
-                ? h('input', {
-                  autoFocus: true,
-                  type: 'text', inputMode: 'decimal', disabled: saving,
+            h('div', { style: styles.apiCardHead },
+              h('span', { style: styles.apiCardName, title: provider.name }, provider.name),
+              h('span', { style: styles.apiChip }, `[ ${tr('按量 API')} ]`)),
+            h('div', { style: styles.apiGaugeWrap },
+              h(QuotaGauge, {
+                label: tr('已用'), percent,
+                state: hasBudget ? stateOf(percent, API_CRITICAL) : 'empty',
+                size: 40, stroke: 4,
+                labelTestid: `token-dash-budget-gauge-label-${provider.id}`,
+                percentTestid: `token-dash-budget-used-${provider.id}`,
+              }),
+              h('span', { style: styles.budgetLabel }, tr('月度预算')),
+              h('div', { style: styles.budgetInputWrap },
+                h('span', { style: { fontSize: 12, color: T.weak } }, provider.currency === 'USD' ? '$' : '¥'),
+                h('input', {
+                  type: 'text', inputMode: 'decimal', disabled: saving === provider.id,
                   'data-testid': `token-dash-budget-input-${provider.id}`,
                   'aria-label': tr('{name} 月度预算', { name: provider.name }),
-                  'aria-invalid': fieldError !== null,
-                  value: draft,
-                  onChange: (event) => setDraft(event.target.value),
-                  onBlur: (event) => {
-                    if (escRef.current) { escRef.current = false; return }
-                    void commit(provider, event.currentTarget.value)
-                  },
+                  'aria-invalid': error !== undefined,
+                  defaultValue: initial,
+                  placeholder: tr('未设置'),
+                  onBlur: (event) => { void commit(provider, event.currentTarget.value, event.currentTarget) },
                   onKeyDown: (event) => {
-                    if (event.key === 'Escape') { event.preventDefault(); escRef.current = true; cancel(); return }
-                    if (event.key === 'Enter') { event.preventDefault(); void commit(provider, event.currentTarget.value) }
+                    if (event.key === 'Escape') {
+                      event.preventDefault()
+                      event.currentTarget.value = initial
+                      event.currentTarget.blur()
+                      return
+                    }
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      void commit(provider, event.currentTarget.value, event.currentTarget)
+                      event.currentTarget.blur()
+                    }
                   },
-                  style: { ...styles.input, width: 96, borderColor: fieldError ? T.over : T.border },
-                })
-                : h('span', { style: styles.inlineWrap },
-                  hasBudget ? fmtMoney(budget.amount, provider.currency) : tr('未设置'),
-                  h('button', {
-                    type: 'button', 'data-testid': `token-dash-budget-edit-${provider.id}`,
-                    'aria-label': tr('编辑预算'), title: tr('编辑预算'),
-                    style: { ...styles.inlineInfoButton, fontSize: 12 },
-                    onClick: () => begin(provider),
-                  }, '✎'))),
-            h('span', { 'data-testid': `token-dash-budget-used-${provider.id}`, style: { ...styles.cellNum, textAlign: 'right', display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 } },
-              h(ProgressRing, { percent, state: hasBudget ? ringState(percent, API_CRITICAL) : 'empty', size: 14, stroke: 2 }),
-              hasBudget ? fmtRatio(budget.percent) : '—'),
-            h('span', {
-              'data-testid': `token-dash-budget-plan-${provider.id}`,
-              style: { ...styles.cellNum, textAlign: 'right', color: plan !== null && plan < 0 ? T.over : T.text },
-            }, plan === null ? '—' : `${plan < 0 ? '-' : ''}${fmtMoney(Math.abs(plan), provider.currency)}`),
-            h('span', { 'data-testid': `token-dash-budget-balance-${provider.id}`, style: { ...styles.cellNum, textAlign: 'right', color: T.muted } },
-              balance ?? '—'))
-        }),
-        fieldError === null ? null : h('div', {
-          style: { gridColumn: '1 / -1', color: T.over, fontSize: 11, textAlign: 'right' }, role: 'alert',
-        }, fieldError)))
+                  style: { ...styles.budgetInput, borderBottom: `1px solid ${error === undefined ? 'transparent' : T.over}` },
+                })),
+              error === undefined ? null : h('span', { style: { color: T.over, fontSize: 11 }, role: 'alert' }, error)),
+            h('div', { style: styles.kvRow },
+              h('span', { style: styles.kvLabel }, tr('计划余额')),
+              h('span', {
+                'data-testid': `token-dash-budget-plan-${provider.id}`,
+                style: { ...styles.kvValue, color: plan !== null && plan < 0 ? T.over : T.text },
+              }, plan === null ? '—' : `${plan < 0 ? '-' : ''}${fmtMoney(Math.abs(plan), provider.currency)}`)),
+            h('div', { style: styles.kvRow },
+              h('span', { style: styles.kvLabel }, tr('真实余额')),
+              h('span', { 'data-testid': `token-dash-budget-balance-${provider.id}`, style: styles.kvValue }, balance ?? '—')),
+            h('div', { style: styles.kvRow },
+              h('span', { style: styles.kvLabel }, tr('本月已花')),
+              h('span', { 'data-testid': `token-dash-budget-month-${provider.id}`, style: styles.kvValue },
+                fmtMoney(provider.usage?.monthCost, provider.currency))))
+        }))
     }
-
-    const QUOTA_KEYS = ['5h', 'week', 'month']
 
     function QuotaCell({ providerId, plan, windowKey }) {
       const percent = plan === undefined ? null : Number(plan.usedPercent)
@@ -1428,30 +1551,37 @@ window.__ModuleLoader__.load({
       const parts = hasValue ? resetParts(plan.resetAt) : { relative: null, absolute: null }
       const left = hasValue ? Math.max(0, Math.round(100 - percent)) : null
       const testKey = `${providerId}-${windowKey}`
-      return h('div', { 'data-testid': `token-dash-quota-cell-${testKey}`, style: { display: 'grid', gap: 2, minWidth: 0 } },
-        h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' } },
-          h('span', { style: styles.summaryLabel }, windowLabel(windowKey)),
-          h(ProgressRing, { percent, state: hasValue ? ringState(percent, SUB_CRITICAL) : 'empty', size: 14, stroke: 2 }),
-          h('b', { style: { color: percentColor(hasValue ? percent : null, SUB_CRITICAL) } }, hasValue ? fmtPercent(percent) : '—'),
-          h('span', { style: styles.muted }, left === null ? '—' : tr('剩余 {value}', { value: `${left}%` }))),
-        h('div', { style: { ...styles.muted, whiteSpace: 'nowrap' } },
-          h('span', { 'data-testid': `token-dash-quota-rel-${testKey}` }, parts.relative ?? '—'), ' · ',
-          h('span', { 'data-testid': `token-dash-quota-abs-${testKey}` }, parts.absolute ?? '—')))
+      return h(QuotaGauge, {
+        testid: `token-dash-quota-cell-${testKey}`,
+        label: windowLabel(windowKey),
+        percent,
+        state: hasValue ? stateOf(percent, SUB_CRITICAL) : 'empty',
+        remaining: left === null ? '—' : tr('剩余 {value}', { value: `${left}%` }),
+        relative: parts.relative ?? '—',
+        absolute: parts.absolute ?? '—',
+        remainingTestid: `token-dash-quota-left-${testKey}`,
+        relativeTestid: `token-dash-quota-rel-${testKey}`,
+        absoluteTestid: `token-dash-quota-abs-${testKey}`,
+      })
     }
 
-    /** P3 订阅表：每个窗口两行（环+%+剩余 / 倒计时 · 绝对时间），缺窗占位。 */
+    /** P3 订阅卡：每 provider 一张，窗口按实际数量一排等分。 */
     function QuotaTable({ providers }) {
-      return h('div', { 'data-testid': 'token-dash-quota-table', style: { display: 'grid', gap: 12 } },
+      return h('div', { 'data-testid': 'token-dash-quota-table', style: styles.quotaCards },
         ...providers.map((provider) => {
           const windows = Array.isArray(provider.windows) ? provider.windows : []
-          const byKey = new Map(windows.map((item) => [item.key, item]))
-          return h('div', { key: provider.id, 'data-testid': `token-dash-quota-row-${provider.id}`, style: { display: 'grid', gap: 6 } },
-            h('div', { style: styles.providerLine },
-              h('span', { style: styles.title, title: provider.name }, provider.name),
-              h('span', { style: styles.providerChip }, `[ ${tr('订阅')} ]`)),
-            h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 12 } },
-              ...QUOTA_KEYS.map((windowKey) => h(QuotaCell, {
-                key: windowKey, providerId: provider.id, plan: byKey.get(windowKey), windowKey,
+          return h('div', {
+            key: provider.id, 'data-testid': `token-dash-quota-row-${provider.id}`, style: styles.quotaCard,
+          },
+            h('div', { style: styles.apiCardHead },
+              h('span', { style: styles.apiCardName, title: provider.name }, provider.name),
+              h('span', { style: styles.apiChip }, `[ ${tr('订阅')} ]`)),
+            windows.length === 0
+              ? h('div', { style: styles.empty }, tr('套餐查询失败'))
+              : h('div', {
+                style: { ...styles.quotaWindows, gridTemplateColumns: `repeat(${windows.length}, minmax(0,1fr))` },
+              }, windows.map((plan) => h(QuotaCell, {
+                key: plan.key, providerId: provider.id, plan, windowKey: plan.key,
               }))))
         }))
     }
@@ -1595,16 +1725,20 @@ window.__ModuleLoader__.load({
           h('div', { style: styles.empty }, degraded ? tr('供应商探测失败') : tr('未检测到已配置供应商')),
           degraded ? h('button', { type: 'button', style: styles.button, onClick: () => { void refresh() } }, tr('重试')) : null) : null,
         h('section', { style: styles.boardSection },
-          h('div', { style: styles.boardSectionHead }, h('b', { style: styles.sectionTitle }, tr('时间范围'))),
-          h('div', null, h(Segmented, {
-            value: range, onChange: setRange, label: tr('时间范围'),
-            options: RANGES.map(([value, label]) => ({ value, label: tr(label) })),
-          })),
-          usageError ? h('div', { style: styles.errorStrip, role: 'alert' },
-            h('span', null, tr('范围数据加载失败')),
-            h('button', { type: 'button', style: styles.button, onClick: () => { void loadUsage() } }, tr('重试'))) : null,
-          h(RangeCards, { usage }),
-          h('div', { style: { marginTop: 16 } }, h(DetailTable, { rows: models }))),
+          h('div', { style: styles.boardSectionHead }, h('b', { style: styles.sectionTitle }, tr('范围与明细'))),
+          h('div', { style: styles.rangeBox },
+            h('div', { style: styles.rangeHead },
+              h('div', { style: { width: 300, maxWidth: '100%', flex: '0 0 300px', minWidth: 0 } }, h(Segmented, {
+                value: range, onChange: setRange, label: tr('时间范围'),
+                options: RANGES.map(([value, label]) => ({ value, label: tr(label) })),
+              })),
+              h('span', { style: styles.rangeMeta },
+                `${tr('共 {n} 个模型', { n: models.length })}${updated === null ? '' : ` · ${tr('更新于 {time}', { time: updated })}`}`)),
+            usageError ? h('div', { style: styles.errorStrip, role: 'alert' },
+              h('span', null, tr('范围数据加载失败')),
+              h('button', { type: 'button', style: styles.button, onClick: () => { void loadUsage() } }, tr('重试'))) : null,
+            h(RangeCards, { usage }),
+            h('div', { style: styles.detailWrap }, h(DetailTable, { rows: models })))),
         h('div', { 'data-testid': 'token-dash-settings-capsule', style: styles.capsule },
           h('div', { style: styles.boardSectionHead }, h('b', { style: styles.sectionTitle }, tr('设置与数据管理'))),
           h(SettingsRows, { summary, prefs, onSave: savePrefs, onRefresh: refresh, onRefreshSubs: refreshSubs })))

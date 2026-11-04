@@ -1,6 +1,6 @@
 # 看板卡片化施工 checklist
 
-> 状态：待施工（plan 待批准；本轮只做文档）<br>
+> 状态：施工完成（S0–S4 已落地，自动测试通过；人工走查待做）<br>
 > 方案：[`feature_board_cards_redesign.md`](../../plan/active/dsh/feature_board_cards_redesign.md)<br>
 > 设计：[`ui-design.md`](../../ui-design.md) v3.2、[`board-visual-review-checklist.md`](board-visual-review-checklist.md)<br>
 > 原型：[`tools/preview/templates/`](../../../tools/preview/templates/)（`page-p1/p2/p3` + 四个组件状态页）<br>
@@ -10,11 +10,11 @@
 
 | 阶段 | 内容 | CHG | 完成判据 | 状态 |
 |---|---|---|---|---|
-| S0 | 组件层 | CHG-01 ~ 04 | `ProgressRing` / `PercentValue` / `InlineRing` / `QuotaGauge` 可用；旧页面行为不变；`npm test` 绿 | 待施工 |
-| S1 | P1 Pill | CHG-05 | 14/2 内联环、三色、最多 3 窗、SVG 箭头、空态 `--`；与 `page-p1` 一致 | 待施工 |
-| S2 | P2 浮层 | CHG-06 ~ 09 | 按量四列 / 订阅三窗两行；表格补表头线；`fit-content` 280–480；320px 不横滚 | 待施工 |
-| S3 | P3 整页 | CHG-10 ~ 15 | 两区卡片网格；摘要带 + 明细底框；三行胶囊；1000/760/520 = 4/3/2 | 待施工 |
-| S4 | 脚本与文档 | CHG-16 ~ 19 | e2e 全绿；`shots` 重出图；README / CHANGELOG 同步 | 待施工 |
+| S0 | 组件层 | CHG-01 ~ 04 | `ProgressRing` / `PercentValue` / `InlineRing` / `QuotaGauge` 可用；旧页面行为不变；`npm test` 绿 | 完成 |
+| S1 | P1 Pill | CHG-05 | 14/2 内联环、三色、最多 3 窗、SVG 箭头、空态 `--`；与 `page-p1` 一致 | 完成 |
+| S2 | P2 浮层 | CHG-06 ~ 09 | 按量四列 / 订阅三窗两行；表格补表头线；`fit-content` 280–480；320px 不横滚 | 完成 |
+| S3 | P3 整页 | CHG-10 ~ 15 | 两区卡片网格；摘要带 + 明细底框；三行胶囊；1000/760/520 = 4/3/2 | 完成 |
+| S4 | 脚本与文档 | CHG-16 ~ 19 | e2e 全绿；`shots` 重出图；README / CHANGELOG 同步 | 完成 |
 
 > 阶段串行：上一阶段 `npm test` 未通过不进入下一阶段；每阶段结束在本表回填状态与一句话证据。
 
@@ -42,6 +42,8 @@
 | 时间 | 阶段 | 结果 |
 |---|---|---|
 | 2026-11-04 | 建稿 | 设计冻结，等待 plan 批准后启动 S0 |
+| 2026-11-04 | S0–S3 | 四组件、P1/P2/P3 卡片化、摘要带与胶囊全部落地 |
+| 2026-11-04 | S4 | e2e 断言改为卡片结构，新增环同色 / 单币种 / 窗口数 / 预算常显输入；pm test 75 pass，e2e 通过，截图重出 |
 
 ## 五、回写去向
 

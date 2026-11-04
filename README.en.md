@@ -30,9 +30,9 @@
 </p>
 
 - **Providers**: DeepSeek (DS account / API key), GLM Coding (subscription), Kimi Coding (subscription), Kimi / OpenRouter / Qwen (pay-as-you-go; OpenRouter in USD, Qwen CNY domestic / USD international) — paste a key and the billing mode is detected automatically
-- **Pages**: bottom bar Pill → floating "current model" panel (four-column summary + time range + usage table); "Full dashboard" at the bottom or the sidebar entry opens the full page with pay-as-you-go and subscription tables, two summary tiles, model breakdown and a settings capsule
-- **Dashboard data**: time range (today / last 7 days / last 30 days / all), monthly budget with used ring, planned balance, real account balance, month-to-date spend, subscription 5h / weekly / monthly windows with countdown; two tiles for **total cost by currency** and **real Tokens (including cache read/write)**
-- **Settings**: three rows in the page footer — refresh now with interval, logs with data export/import, price table with version check; per-provider budgets are edited inline in the pay-as-you-go table (defaults to 100 when empty)
+- **Pages**: bottom bar Pill → floating "current model" panel (four-column summary + time range + usage table); "Full dashboard" at the bottom or the sidebar entry opens the full page with pay-as-you-go and subscription card grids, a summary band, model breakdown and a settings capsule
+- **Dashboard data**: time range (today / last 7 days / last 30 days / all), monthly budget with used ring, planned balance, real account balance, month-to-date spend, subscription 5h / weekly / monthly windows with countdown; the summary band shows **total cost by currency** and **real Tokens (including cache read/write)**
+- **Settings**: three rows in the page footer — refresh now with interval, logs with data export/import, price table with version check; per-provider budgets are edited in each pay-as-you-go card (defaults to 100 when empty)
 - **Data**: daily / monthly usage estimated locally (built-in price catalog + community price table), three-layer model attribution, read-only local sessions; subscription models count toward Tokens but not cost, and the billing mode is pinned per key instead of following quota flakiness
 
 ---
@@ -84,7 +84,7 @@ Screenshots below use mock data so the full layout is visible at once:
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-sub-3.png" alt="Floating panel - three subscription windows" />
 </p>
 
-**P3 · Full-page dashboard**: pay-as-you-go, subscription plans, summary tiles and model breakdown, settings and data
+**P3 · Full-page dashboard**: pay-as-you-go cards, subscription cards, summary band and model breakdown, settings and data
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/settings.png" alt="Settings" />
