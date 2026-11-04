@@ -72,7 +72,7 @@ npm run preview page-p3            # IDE 打开 .tmp/preview/page-p3.html
 | `cards-sub.html` | §5.4 订阅套餐 | final | 6 态 |
 | `cards-api.html` | §5.3 按量计价 | final | 5 态 |
 | `page-p1.html` | §3 P1 Pill | final | 8 种形态（normal/warn/over/未设置/无余额/2窗/3窗/临界） |
-| `page-p2.html` | §4 P2 浮层 | final | 按量（四列主区）/ 订阅（窗口行）两种形态 |
+| `page-p2.html` | §4 P2 浮层 | final | 按量（四列主区）/ 订阅（窗口行 + 剩余·倒计时）两种形态 |
 | `page-p3.html` | §5 P3 整页 | final | 两表 + 两格卡 + 8 列明细 + 设置胶囊 |
 
 新增模板时补一行；状态用 `draft` / `final`，不写具体日期。

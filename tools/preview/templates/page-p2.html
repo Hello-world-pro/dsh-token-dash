@@ -24,9 +24,11 @@
   .sub-head .name { font-weight: 600; }
   .sub-head .chip { font-size: 11px; color: var(--muted); }
 
-  .windows { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-  .win { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+  .windows { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .win { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .win .top { display: flex; align-items: center; gap: 4px; }
   .win .k { font-size: 11px; color: var(--muted); }
+  .win .meta { font-size: 11px; color: var(--weak); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .summary { display: flex; align-items: center; gap: 16px; justify-content: space-between; }
   .summary .cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -127,12 +129,15 @@
   document.getElementById('used-inline').innerHTML = inline(p2.size, p2.stroke, 91.9, 100)
 
   const windows = [
-    { key: '5h', pct: 42.5 },
-    { key: '周', pct: 18.2 },
-    { key: '月', pct: 3 },
+    { key: '5h', pct: 42.5, left: '剩余 58%', rel: '3 小时后' },
+    { key: '周', pct: 18.2, left: '剩余 82%', rel: '1 天后' },
+    { key: '月', pct: 3, left: '剩余 97%', rel: '18 天后' },
   ]
   document.getElementById('sub-windows').innerHTML = windows
-    .map((win) => `<span class="win"><span class="k">${win.key}</span>${inline(p2.size, p2.stroke, win.pct, criticalSub)}</span>`)
+    .map((win) => `<span class="win">
+      <span class="top"><span class="k">${win.key}</span>${inline(p2.size, p2.stroke, win.pct, criticalSub)}</span>
+      <span class="meta">${win.left} · ${win.rel}</span>
+    </span>`)
     .join('')
 </script>
 </body>
