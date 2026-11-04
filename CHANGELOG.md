@@ -2,6 +2,15 @@
 
 本文件记录每个版本的**新增**与**修改**。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.3.0-local.10] - 2026-11-05
+
+> 本地构建，未发布
+
+### 修改
+
+- 日志 header 的 `dshVersion` 改为动态读取：优先 `DSH_VERSION`，其次 Electron asar 内 `package.json`，读不到写 `unknown`
+- `refreshProviderCache` 增加单飞 Promise，并发 `/summary` 不再重复写 `probe.miss` / `vm.build` / `adapter.*` 日志
+
 ## [1.3.0-local.9] - 2026-11-05
 
 > 本地构建，未发布

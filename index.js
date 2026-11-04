@@ -20,6 +20,26 @@ export const name = 'dsh-token-dash'
 const ROUTE_PREFIX = '/token-dash/api'
 const CURRENT_VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
+
+/** 宿主版本：优先环境变量，其次 Electron asar 内的 package.json；读不到时写 unknown，避免硬编码过期。 */
+function hostVersion() {
+  if (typeof process.env.DSH_VERSION === 'string' && process.env.DSH_VERSION !== '') return process.env.DSH_VERSION
+  const resources = join(dirname(process.execPath), 'resources')
+  const candidates = [
+    join(resources, 'app.asar', 'package.json'),
+    join(resources, 'app.asar', 'dsh', 'package.json'),
+    join(resources, 'app.asar', 'dsh', 'node_modules', '@deepseek-ai', 'dsh-desktop-host', 'package.json'),
+  ]
+  for (const file of candidates) {
+    try {
+      const version = JSON.parse(readFileSync(file, 'utf8')).version
+      if (typeof version === 'string' && version !== '') return version
+    } catch {
+      // try next
+    }
+  }
+  return 'unknown'
+}
 let updateCache = { at: 0, data: null }
 
 /** Locate the bundled dsh CLI (same layout scripts/e2e.mjs relies on). */
@@ -174,7 +194,7 @@ function isLoopbackRequest(req) {
 export function apply(ctx) {
   const dir = dataDir(ctx)
   const logDir = logsDir(ctx)
-  const logger = createLogger({ dir: logDir, version: CURRENT_VERSION, dshVersion: '0.2.1-rc.5' })
+  const logger = createLogger({ dir: logDir, version: CURRENT_VERSION, dshVersion: hostVersion() })
   let prefs
   let state
   let providerCache = new Map()
@@ -270,28 +290,33 @@ export function apply(ctx) {
   ctx.inject(['webServer'], (scoped) => {
     const webServer = scoped.webServer
     if (webServer === undefined) return
+    let providerRefresh = null
     const refreshProviderCache = async () => {
-      const data = await readProviders(scoped, prefs, providerCache)
-      const hadProviders = providerCacheMeta.hadProviders === true || data.length > 0
-      providerCacheMeta = {
-        at: Date.now(),
-        hadProviders,
-        degraded: data.length === 0 && hadProviders,
-      }
-      if (data.length === 0) {
-        logger.warn('provider', 'probe.miss', {
-          misses: data.misses ?? [],
-          credentials: scoped.get?.('credentials') !== undefined,
-          account: scoped.get?.('deepseekAccount') !== undefined,
-        })
-      }
-      logAdapterEvents(logger, data)
-      logAdapterFailures(logger, data.failures)
-      logger.debug('provider', 'cache.state', { entries: providerCache.size, providers: data.length, misses: (data.misses ?? []).length })
-      if (stampProviderKinds(state, data)) {
-        logger.info('provider', 'kind.stamp', { ids: Object.keys(state.providerKinds) })
-        flusher.schedule()
-      }
+      if (providerRefresh !== null) return providerRefresh
+      providerRefresh = (async () => {
+        const data = await readProviders(scoped, prefs, providerCache)
+        const hadProviders = providerCacheMeta.hadProviders === true || data.length > 0
+        providerCacheMeta = {
+          at: Date.now(),
+          hadProviders,
+          degraded: data.length === 0 && hadProviders,
+        }
+        if (data.length === 0) {
+          logger.warn('provider', 'probe.miss', {
+            misses: data.misses ?? [],
+            credentials: scoped.get?.('credentials') !== undefined,
+            account: scoped.get?.('deepseekAccount') !== undefined,
+          })
+        }
+        logAdapterEvents(logger, data)
+        logAdapterFailures(logger, data.failures)
+        logger.debug('provider', 'cache.state', { entries: providerCache.size, providers: data.length, misses: (data.misses ?? []).length })
+        if (stampProviderKinds(state, data)) {
+          logger.info('provider', 'kind.stamp', { ids: Object.keys(state.providerKinds) })
+          flusher.schedule()
+        }
+      })().finally(() => { providerRefresh = null })
+      return providerRefresh
     }
     const off = webServer.register({
       kind: 'prefix',
