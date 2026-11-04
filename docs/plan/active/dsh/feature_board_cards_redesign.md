@@ -167,22 +167,62 @@ flowchart LR
 
 ## 九、自测反馈台
 
-### Issue #1 · P2/P3 与目标模板的 6 处结构差异（[已修复]）
+### Issue #1 · P2 浮层排版定稿（[待实施]）
 
-- 现象：
-  1. P2 主区未按「标签在上、值在下」四列排布，`已用/预算` 与环同行；
-  2. P2 范围胶囊铺满整行，模板为紧凑 220px；
-  3. P2「全量看板」为蓝色描边，模板为中性描边；
-  4. P3 页头缺 ⟳ 刷新与 ⓘ 说明；
-  5. P3 卡片缺状态 caption（`normal · 38.0%` / `3 窗`）；
-  6. P3 明细模型列缺 `· 供应商`。
-- 根因：`P2Summary` 沿用旧四列、`Segmented` 默认撑满、按钮复用 accent；`BoardPage` 头部与卡片未补设计稿的辅助信息。
-- 修复：`P2Summary` 改四列 label/value；范围胶囊限宽 220；按钮改 `styles.outline`；页头补 `IconButton` + `InfoTip`；卡片补 11px caption；`DetailTable` 接收 `providerNames`。
-- 验证：`npm test` 75 通过 / 1 跳过；`npm run e2e` 通过（新增标签列、胶囊宽度、页头刷新、明细 provider 后缀断言）；P2/P3 截图与模板逐项对齐。
+> 范围：只改 P2；P3 保持现状。规则以 `tools/preview/templates/page-p2.html` 为唯一形态参考。
 
-### Issue #2 · 全量看板按钮颜色与胶囊贴住表格（[已修复]）
+**定稿规则**
 
-- 现象：「全量看板」变成中性描边；P3 设置胶囊紧贴范围/明细底框，没有间距。
-- 根因：上一轮按模板把按钮改成 `styles.outline`；胶囊 `position: sticky`，滚动时覆盖在表格下方，且自带重复标题。
-- 修复：按钮恢复 `styles.button`；胶囊改静态、去掉重复标题，由页面网格 gap 24 提供间距。
-- 验证：`npm test` 75 通过；`npm run e2e` 通过（新增胶囊与范围区间距 ≥20px 断言）。
+1. **宽度固定 380**：`width: 380px; max-width: calc(100vw - 16px)`，不再用 `fit-content`，避免切 provider / 金额变化时面板跳宽。
+2. **头部**：标题左、三个图标右（`ⓘ ⟳ ×`）；图标按钮 22×22、圆角 6、accent 文字 + 16% 底 + 32% 边，gap 4。
+3. **摘要单行四列**：`环(20/2.5) | 已用/预算 | 真实余额 | 本月已花`，`flex + space-between` 铺满；前三组左对齐，最后一组右对齐；标签 11px `label-secondary`，值 12px/600。
+4. **时间范围条**：撑满内容宽（380 − 24 = 356），四段等分居中。
+5. **订阅窗口三槽位**：`grid-template-columns: repeat(3, 1fr)`；第 1 窗左对齐、第 2 窗居中、第 3 窗右对齐；只有两窗时占用**前两个槽位**（左 / 中），不补空列、不把「周」推到右边；每窗两行：`周期 + 环 + %` / `剩余 N% · X 后`。
+6. **用量表**：模型列 `max-width: 150px` + 省略号；列距 6；Tokens 括号 11px；表头右对齐；行高 28。
+7. **底部**：「更新于 HH:mm」左；「全量看板」右，蓝色按钮（`styles.button`）。
+
+> 风险：380 下若 Tokens 括号与模型名冲突，优先把括号降到 10.5px 或继续截断模型名，**不得为此加宽面板**。
+
+**设计文档**
+
+| 章节 | 改动 |
+|---|---|
+| `ui-design.md` §2 面板宽 | 由 `fit-content 280–480` 改为 `380 / max-width calc(100vw-16)` |
+| `ui-design.md` §4.1 | 结构图改为「固定 380 + 单行摘要」，补订阅三槽位说明 |
+| `ui-design.md` §4.2 | 宽度由 `fit-content 280–480` 改为 `380 / max-width calc(100vw-16)` |
+| `ui-design.md` §4.3 | 四列改单行 `space-between`，最后一组右对齐 |
+| `ui-design.md` §4.4 | 三窗左/中/右，两窗占前两槽位 |
+| `ui-design.md` §4.5 | 模型列 150、列距 6、括号 11px |
+| `ui-design.md` §8 | 窄屏按 `100vw - 16` 收缩，不再写 280–480 |
+
+**代码落点**
+
+| 文件 · 落点 | 改动 |
+|---|---|
+| `client.js` · `styles.panel` | 固定 380 + `max-width` |
+| `client.js` · `styles.summaryRow` / `summaryCell` | 单行 `space-between`；最后一组右对齐 |
+| `client.js` · `P2Summary` | 保持四组，环与三组同排 |
+| `client.js` · `Panel` 范围容器 | 去掉 220 限宽，改 `width: 100%` |
+| `client.js` · `P2Windows` / `WindowRow` | 三槽位 grid + 左/中/右；两窗用前两槽位 |
+| `client.js` · `TokenTable` | 模型列 150、列距 6、括号 11px、表头右对齐 |
+| `client.js` · `Panel` footer | 保持 `styles.button`，确认右侧贴边 |
+
+**测试**
+
+- e2e：
+  - 头部存在三个图标按钮（`ⓘ / ⟳ / ×`），且都带 accent 色；
+  - 面板宽度 = 380（360 视口下 ≤344）；
+  - 摘要四组 `space-between`，最后一组右边缘与面板内容右边缘差 ≤1px；
+  - 范围条宽度 ≥ 面板内容宽 − 2；
+  - 三窗 provider：第 1/2/3 窗的 x 分别贴左、居中、贴右；
+  - 两窗 provider：只有两个窗口，第二个居中，第三个槽位不存在；
+  - 模型列 `scrollWidth > clientWidth` 时长名省略、`title` 为全名；
+  - 底部「全量看板」为蓝色（`color` 含 accent token）。
+- 模板：`npm run preview page-p2` 目检三块（按量 / 订阅三窗 / 订阅两窗）。
+
+**完成判据**
+
+- 上述 e2e 断言全绿；
+- `page-p2.html` 与实现截图逐项一致；
+- `ui-design.md` §4 已按表回写；
+- 版本记录进 `CHANGELOG.md` 后打包。
