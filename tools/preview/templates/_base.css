@@ -30,7 +30,7 @@ section { margin-bottom: 28px; }
 .grid.api .cell { flex: 1 1 var(--card-min); max-width: var(--card-max); }
 .grid.sub { grid-template-columns: repeat(auto-fit, minmax(var(--card-min), 1fr)); }
 .cell { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.cap { font-size: 11px; color: var(--weak); padding-left: 2px; }
+.cap { display: block; font-size: 11px; color: var(--weak); text-align: center; }
 
 .card {
   background: var(--card-bg);

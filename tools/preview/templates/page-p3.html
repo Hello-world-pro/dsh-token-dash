@@ -12,7 +12,13 @@
   .board-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
   .board-head h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
   .board-head .meta { font-size: 12px; color: var(--muted); }
-  .actions { display: flex; gap: 8px; align-items: center; }
+  .actions { display: flex; gap: 6px; align-items: center; }
+  .actions .btn {
+    width: 22px; height: 22px; padding: 0; justify-content: center;
+    color: var(--accent); font-size: 12px;
+    border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
   .btn {
     height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border);
     background: transparent; color: var(--muted); font-size: 12px;
@@ -20,7 +26,7 @@
   }
 
   .block { margin-top: 24px; }
-  .block h2 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 10px; }
+  .block h2 { font-size: 13px; font-weight: 600; color: var(--text); margin: 0 0 10px; }
 
   .range { display: inline-flex; gap: 2px; border: 1px solid var(--border); border-radius: 999px; padding: 2px; margin-bottom: 12px; }
   .range span { font-size: 12px; padding: 2px 10px; border-radius: 999px; color: var(--muted); }
@@ -77,6 +83,12 @@
   .capsule .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
   .capsule .seg span { padding: 2px 8px; font-size: 11px; color: var(--muted); }
   .capsule .seg .on { background: rgba(255, 255, 255, .10); color: var(--text); }
+  .capsule .toggle {
+    width: 32px; height: 18px; border-radius: 999px; background: var(--accent);
+    display: inline-flex; align-items: center; justify-content: flex-end; padding: 2px; box-sizing: border-box;
+  }
+  .capsule .toggle .knob { width: 14px; height: 14px; border-radius: 50%; background: #fff; }
+  .capsule .btn.icon { width: 22px; height: 22px; padding: 0; justify-content: center; }
 
   .btn.primary { color: var(--text); border-color: color-mix(in srgb, var(--text) 26%, transparent); background: rgba(255, 255, 255, .08); }
   .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
@@ -134,11 +146,11 @@
     <div class="row">
       <span class="row-k">刷新</span>
       <button class="btn primary" type="button">⟳ 立即刷新</button>
-      <span class="row-label">间隔</span>
+      <span class="row-label">刷新间隔</span>
       <span class="seg"><span class="on">30 秒</span><span>1 分钟</span><span>5 分钟</span></span>
       <span class="grow"></span>
       <span class="row-label">账户余额</span>
-      <span class="seg"><span class="on">开</span><span>关</span></span>
+      <span class="toggle"><span class="knob"></span></span>
     </div>
     <div class="row">
       <span class="row-k">日志</span>
@@ -149,9 +161,9 @@
     </div>
     <div class="row">
       <span class="row-k">版本</span>
-      <span class="meta">v1.2.0 · 价格表 2026-11-04</span>
+      <span class="meta">v1.3.0-local.5 · 价格表 2026-11-04 17:31 社区</span>
       <span class="grow"></span>
-      <button class="btn ghost" type="button">⤓ 检查更新</button>
+      <button class="btn ghost icon" type="button" title="检查更新">⤓</button>
     </div>
   </div>
 </div>
@@ -265,7 +277,7 @@
     plan.textContent = planValue === null ? '—' : money(data.cur, planValue)
     plan.className = `v${planValue !== null && planValue < 0 ? ' over' : ''}`
     card.parentElement.querySelector('[data-role=cap]').textContent = state === 'empty'
-      ? '预算未设置'
+      ? 'unset · —'
       : `${state} · ${percent.toFixed(1)}%`
   }
 
@@ -276,7 +288,7 @@
   })
 
   document.getElementById('detail').innerHTML = `
-    <div class="h">模型</div><div class="h">Tokens</div><div class="h num">输入</div><div class="h num">缓存</div>
+    <div class="h">模型</div><div class="h num">Tokens</div><div class="h num">输入</div><div class="h num">缓存</div>
     <div class="h num">输出</div><div class="h num">请求</div><div class="h num">命中</div><div class="h num">费用</div>
     ${detailRows.map((row) => row.map((cell, index) => `<div class="c${index > 1 ? ' num' : ''}">${cell}</div>`).join('')).join('')}
   `
