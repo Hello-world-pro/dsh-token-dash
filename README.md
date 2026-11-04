@@ -28,7 +28,7 @@
   <a href="https://awesome-dsh-plugin.com/zh/p/spartawhy117/dsh-token-dash"><img src="https://img.shields.io/badge/awesome--dsh--plugin-listed-6ea8ff" alt="awesome-dsh-plugin" /></a>
 </p>
 
-**三个入口，一份数据**：底栏 Pill 看当前模型；浮层看预算、余额与用量表；整页看 7 家供应商的全量卡片与模型明细。所有页面共用同一份本地账本，不重复计算。
+**三个入口，一份数据**：输入框右侧 Pill 看当前模型；浮层看预算、余额与用量表；整页看 7 家供应商的全量卡片与模型明细。所有页面共用同一份本地账本，不重复计算。
 
 ## 支持矩阵
 
@@ -51,7 +51,7 @@
 
 以下截图使用假数据演示，便于一次看到完整效果。
 
-**P1 · 底栏 Pill**：按量 / 订阅两种形态，点击展开浮层，点击外部、`×` 或 `Esc` 收起。
+**P1 · 输入框右侧 Pill**：按量 / 订阅两种形态，点击展开浮层，点击外部、`×` 或 `Esc` 收起。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-api.png" alt="按量 Pill" />
@@ -142,7 +142,7 @@ npm run logs -- --module provider,route      # 缓存 / 路由异常
 ## 开发
 
 ```bash
-npm test      # 单元测试（79 通过）
+npm test      # 单元测试（80 通过）
 npm run e2e   # 端到端（临时 DSH_HOME + web profile + Playwright）
 npm run shots # 用假数据重新生成 docs/pic 的 P1/P2/P3 截图
 npm run pack  # 发布 tarball 生成到 build/

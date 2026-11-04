@@ -28,7 +28,7 @@
   <a href="https://awesome-dsh-plugin.com/p/spartawhy117/dsh-token-dash"><img src="https://img.shields.io/badge/awesome--dsh--plugin-listed-6ea8ff" alt="awesome-dsh-plugin" /></a>
 </p>
 
-**Three entry points, one local ledger**: the Pill shows the current model; the floating panel shows budget, balance and the usage table; the full dashboard shows every provider card and model breakdown. No duplicated accounting between pages.
+**Three entry points, one local ledger**: the composer-right Pill shows the current model; the floating panel shows budget, balance and the usage table; the full dashboard shows every provider card and model breakdown. No duplicated accounting between pages.
 
 ## Provider matrix
 
@@ -51,7 +51,7 @@
 
 Screenshots use mock data so the full layout is visible at once.
 
-**P1 · Bottom bar Pill**: pay-as-you-go / subscription variants; click to open, click outside, `×` or `Esc` to close.
+**P1 · Composer-right Pill**: pay-as-you-go / subscription variants; click to open, click outside, `×` or `Esc` to close.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-api.png" alt="Pay-as-you-go pill" />
@@ -142,7 +142,7 @@ Common events:
 ## Development
 
 ```bash
-npm test      # unit tests (79 passing)
+npm test      # unit tests (80 passing)
 npm run e2e   # end-to-end (temp DSH_HOME + web profile + Playwright)
 npm run shots # regenerate the P1/P2/P3 screenshots in docs/pic from mock data
 npm run pack  # build the release tarball into build/

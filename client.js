@@ -335,7 +335,7 @@ window.__ModuleLoader__.load({
         boxSizing: 'border-box', maxHeight: '70vh', transition: 'width 120ms ease-out',
         overflow: 'auto', zIndex: 9999, padding: 16, borderRadius: 12,
         background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))', color: T.text,
-        border: `1px solid ${T.border}`, boxShadow: '0 12px 40px rgba(0,0,0,.35)', fontSize: 13, outline: 'none',
+        border: `1px solid ${T.border}`, boxShadow: '0 12px 40px rgba(0,0,0,.35)', fontSize: 13, lineHeight: 1.4, outline: 'none',
       },
       header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 28 },
       headerTabs: { flex: 1, minWidth: 0 },
@@ -1840,13 +1840,9 @@ window.__ModuleLoader__.load({
             }).catch(() => {})
           } catch { /* ignore */ }
         }
-        slots.inject('conversation.hero.agentPreset', () => {
-          reportMount('conversation.hero.agentPreset')
-          return slots.register({ name: 'conversation.hero.agentPreset', id: 'token-dash-home', order: 10 }, LocaleRoot)
-        })
-        slots.inject('conversation.composer.dock', () => {
-          reportMount('conversation.composer.dock')
-          return slots.register({ name: 'conversation.composer.dock', id: 'token-dash-input', order: -1 }, LocaleRoot)
+        slots.inject('conversation.input.right', () => {
+          reportMount('conversation.input.right')
+          return slots.register({ name: 'conversation.input.right', id: 'token-dash-input', order: 10 }, LocaleRoot)
         })
         slots.inject('main', () => {
           reportMount('main')
