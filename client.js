@@ -334,7 +334,7 @@ window.__ModuleLoader__.load({
         background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))', color: T.text,
         border: `1px solid ${T.border}`, boxShadow: '0 12px 40px rgba(0,0,0,.35)', fontSize: 13, outline: 'none',
       },
-      header: { display: 'flex', alignItems: 'center', gap: 6, minHeight: 28 },
+      header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, minHeight: 28 },
       headerTabs: { flex: 1, minWidth: 0 },
       headerActions: { display: 'flex', alignItems: 'center', gap: 4, flex: '0 0 auto' },
       row: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
@@ -1119,7 +1119,8 @@ window.__ModuleLoader__.load({
       const updated = fmtClock(summary?.updatedAt)
       const stale = Number.isFinite(summary?.updatedAt)
         && Date.now() - summary.updatedAt > (Number(summary?.refreshMs) || 60000) * 2
-      const canOpen = typeof layoutRef?.hasMainPanel === 'function' && layoutRef.hasMainPanel(PAGE_ID)
+      // 布局服务可用就显示入口；注册时序可能导致 hasMainPanel 暂时为 false，点击时再判。
+      const canOpen = layoutRef !== null
 
       const strip = error || usageError
         ? h('div', { style: styles.errorStrip, role: 'alert' },
@@ -1605,8 +1606,10 @@ window.__ModuleLoader__.load({
 
     const openBoardPage = () => {
       try {
-        if (typeof layoutRef?.hasMainPanel === 'function' && layoutRef.hasMainPanel(PAGE_ID) !== true) return
-        layoutRef?.selectPanel?.(PAGE_ID)
+        const layout = layoutRef ?? (typeof ctxRef?.get === 'function' ? ctxRef.get('layout') : null)
+        if (layout === null || layout === undefined) return
+        if (typeof layout.hasMainPanel === 'function' && layout.hasMainPanel(PAGE_ID) !== true) return
+        layout.selectPanel?.(PAGE_ID)
       } catch { /* 宿主未注册时保持当前页 */ }
     }
 
@@ -1746,7 +1749,7 @@ window.__ModuleLoader__.load({
 
     return {
       name: PKG,
-      inject: ['slots', 'locale'],
+      inject: ['slots', 'locale', 'layout'],
       apply(ctx) {
         if (ctx.locale !== undefined) {
           localeService = ctx.locale
