@@ -6,7 +6,7 @@
 - 第三方参考项目**不写进 checklist**：现状描述放 `docs/reference/<repo>.md`（不带 `-checklist` 后缀），只写「定位 / 规模 / 现状 / 特点 / 已知取舍」，不写我方改造结论。
 - 参考类清单**只定能力与形态，不写实现步骤**，且**不构成施工授权**；实施步骤、验收项、测试用例一律写 `docs/plan/active/dsh/feature_*.md`，按 plan-workflow 批准后执行。
 - 回写 plan 时走 `docs/plan/`，并先加载全局 `plan-workflow` skill。
-- 当前 active：无（卡片化与视觉走查均随 plan 归档）。
+- 当前 active：`docs/checklist/active/dsh-0.2.2-upgrade-compat-checklist.md`（DSH 0.2.2 升级兼容评估，只读，未改代码）。
 - 已归档：
   - `docs/checklist/archived/board-redesign-build-checklist.md`（卡片化施工，`1.3.0-local.7`）
   - `docs/checklist/archived/board-visual-review-checklist.md`（视觉决策 D1–D20，`1.3.0-local.7`）
