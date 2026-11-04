@@ -40,12 +40,12 @@
 - 施工与走查用 `checklist` skill 维护 `docs/checklist/active/`（单层，不建项目域子目录）；回写完成 + 用户明确指令后才归档。
 - 每次实现完成、测试通过或发布后，回写 plan 的 §3.0/§5 与 checklist 的阶段 / 测试 / 执行日志，避免状态只留在对话里。
 
-### 4.2 预览与草图
+### 4.2 预览与原型
 
-- 三层分离：`.tmp/preview/`（临时产物，不入库）→ `tools/preview/`（工具，入库）→ `docs/pic/`（定稿图，入库）。判断标准：这张图会不会被 README / 设计文档引用。
-- 需要看真实比例时不要手搓临时 HTML：在 `tools/preview/templates/` 加模板，跑 `npm run preview <name>`，产物落 `.tmp/preview/`；只有定稿才 `npm run preview:publish <name>` 写 `docs/pic/`。
+- 四层分离：`tools/preview/templates/`（定稿原型）与 `drafts/`（探索稿）入库；`.tmp/preview/` 只放渲染器生成的 HTML/PNG；`docs/pic/` 只放定稿图，仅 `preview:publish` 写入。
+- **手写 HTML 不落 `.tmp/`**：探索写 `tools/preview/drafts/<name>.html`，跑 `npm run preview drafts/<name>`；定稿时把数值搬进 `spec.mjs`、改用变量后再移入 `templates/`。
 - 尺寸、字号、间距只在 `tools/preview/spec.mjs` 定义一次；预览模板与后续 E2E 尺寸断言共用，禁止各写一份。
-- 组件形态以 HTML 预览为准，不再维护 ASCII 草图；文档引用命令，不引用 `.tmp/` 路径。
+- 设计文档引用 `templates/` 的稳定路径或 `npm run preview` 命令，不引用 `.tmp/`；组件形态以原型为准，不维护 ASCII 草图。
 
 ### 4.3 Skill 归属
 

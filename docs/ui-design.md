@@ -79,7 +79,8 @@
 
 ## 2.5 公共组件（P0）
 
-> 三件先于页面落地：环、重置时间、用量表。组件内零 hex、零主题判断，全走宿主语义 token。
+> 三件先于页面落地：环、重置时间、用量表。组件内零 hex、零主题判断，全走宿主语义 token。<br>
+> 形态以 [`tools/preview/templates/`](../tools/preview/templates/) 的 HTML 原型为准；本文只定规格与状态，不回写像素。
 
 ### 2.5.1 ProgressRing
 
@@ -238,14 +239,19 @@ Token 看板                                              ★ 1.2k
 
 ### 5.3 按量计价（按供应商）
 
-- **只列 `billingMode === 'api'`**；**无「计费」列**（整表同类型，靠区块标题表达）。
-- 列：名称 / 月度预算（可编辑）/ 已用（`ProgressRing(14)` + 已用%）/ 计划余额（预算 − 已用）/ 真实余额（账户余额）。
-- 计费模式只读（自动侦测）；`billingModes = hide` 的 provider 两张表都不出现。
+- **每个 provider 一张卡**：`repeat(auto-fit, minmax(220px, 1fr))` + gap 12；卡内 padding 14、圆角 8、1px `border-l3`。
+- 卡顶：供应商名 + `[ 按量 API ]`；上部左右分栏：左 `QuotaGauge(40)`（环心「已用」、环下百分比），右「月度预算」输入框（常显，币种前缀 + 数字，空 = 未设置）。
+- 卡内三行：计划余额（预算 − 已用，可为负）/ 真实余额 / 本月已花；不再单列「已用 / 预算」。
+- 改预算后环、状态、计划余额即时重算：80–100 只染数字，≥100 环与数字转红。
+- 只列 `billingMode === 'api'`；计费模式只读（自动侦测）；`billingModes = hide` 的 provider 不出现。
+- 原型：[`tools/preview/templates/cards-api.html`](../tools/preview/templates/cards-api.html)。
 
 ### 5.4 订阅套餐（按供应商）
 
-- **只列订阅类**；每窗单元格两行：`环 + 已用% + 剩余 N%` / `倒计时 · 绝对时间`；缺窗 `◌ —`。
-- 不再单列「重置」列（绝对时间已在第二行）。
+- **每个 provider 一张卡**（与 5.3 同一套网格与卡片容器）；卡顶：供应商名 + `[ 订阅 ]`。
+- 卡内 `5h / 周 / 月` 一排等分，每列一个 `QuotaGauge(40)`：环心周期 → 环下已用% → 剩余% → 倒计时 → 绝对时间。
+- 按实际窗口数出列（1–3）：没有「月」就只出两列，不显示 `月 —`；完全没有窗口的 provider 整卡不出现。
+- 原型：[`tools/preview/templates/cards-sub.html`](../tools/preview/templates/cards-sub.html)。
 
 ### 5.5 范围与明细
 
@@ -254,11 +260,12 @@ Token 看板                                              ★ 1.2k
 - 两格卡各自用卡片容器（圆角 8 / 1px `border-l3` / padding 12 / elevated 背景），并排 gap 12，与表格间距 16。
 - 明细表：模型 / Tokens / 输入 / 缓存 / 输出 / 请求 / 命中 / 费用（API 计价估算）；只列范围内有消耗的模型。
 
-### 5.6 预算就地编辑
+### 5.6 预算编辑
 
-- 点 `✎` 或预算数值进入编辑；同时只允许一行。
-- Enter / 失焦保存，Esc 取消；保存后本地立即更新环、已用% 与计划余额。
+- 按量卡右侧**常显输入框**（`月度预算` 标签 + 币种前缀 + 数字，空 = 未设置），不再用 `✎` 入口。
+- Enter / 失焦提交，Esc 回原值；提交后环、状态、计划余额即时重算。
 - 只改预算数字；允许空（= 未设置）或 ≥0 十进制，拒绝负数 / 科学计数法 / 货币符号。
+- 交互原型：[`tools/preview/templates/cards-api.html`](../tools/preview/templates/cards-api.html)。
 
 ### 5.7 设置与数据管理
 

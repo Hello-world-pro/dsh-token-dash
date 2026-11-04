@@ -117,6 +117,7 @@
 | 2026-11-04 | 预览修正 | 两窗订阅不再画空「月」列；补按量卡模拟（环 28、字段竖排、超支负值转红） |
 | 2026-11-04 | 预览拆分 | 三张独立图（gauge / cards-sub / cards-api）；卡片带真实供应商名；按量卡改用同款 Gauge（环 40 + 环心「已用」） |
 | 2026-11-04 | 预算入口 | 按量卡去掉「已用 / 预算」行与 `✎`，改左环右输入框；改预算实时重算环、状态与计划余额；删除 ASCII 草图章节与对应生成脚本 |
+| 2026-11-04 | 目录规范 | 新增 `tools/preview/drafts/` 与四层约定（templates / drafts / .tmp / docs.pic）；手写 HTML 禁入 `.tmp`；`ui-design` §5.3/§5.4/§5.6 按原型回写 |
 | 2026-11-04 | 状态矩阵 | 预览改为「状态穷举」：Gauge 5 / 订阅 4 / 按量 5；新增 `tools/mock/AGENTS.md` 定义假数据覆盖规则 |
 
 ## 九、QuotaGauge 控件要求（P3 按量卡 + 订阅卡共用）
@@ -192,5 +193,6 @@ QuotaGauge({
   - `npm run preview cards-api` → `.tmp/preview/cards-api.png`：按量卡 5 态（normal / warn / over / 预算未设置 / 余额不支持）；右侧预算输入框可改，环与计划余额即时重算，卡下 caption 跟随状态。
 - 状态覆盖口径见 [`tools/mock/AGENTS.md`](../../../tools/mock/AGENTS.md) §2：组件有 N 种状态就出 N 个样本，不合并。
 - 尺寸来源：[`tools/preview/spec.mjs`](../../../tools/preview/spec.mjs)；模板在 [`tools/preview/templates/`](../../../tools/preview/templates/)，公共样式在 `_base.css`。
+- 探索稿放 `tools/preview/drafts/`（入库，可粗糙），定稿时接 `spec.mjs` 再移入 `templates/`；手写 HTML 不落 `.tmp/`。
 - 只有会被 README / 设计文档引用的图才 `npm run preview:publish <name>`；分析图一律留在 `.tmp/preview/`。
 - 定稿后把尺寸 / 状态写回本清单与 `ui-design.md`。

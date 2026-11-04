@@ -51,8 +51,15 @@ const css = [
   `--api-stroke: ${SPEC.apiGauge.stroke}px;`,
 ].join('\n    ')
 
-const templatePath = resolve('tools/preview/templates', `${template}.html`)
-if (!existsSync(templatePath)) throw new Error(`template not found: ${templatePath}`)
+// 支持 `drafts/<name>`：探索稿放 drafts/，定稿移 templates/；输出统一加 draft- 前缀避免撞名
+const isDraft = template.startsWith('drafts/')
+const name = isDraft ? template.slice('drafts/'.length) : template
+const outName = isDraft ? `draft-${name}` : name
+const searchDirs = isDraft ? ['drafts'] : ['templates', 'drafts']
+const templatePath = searchDirs
+  .map((dir) => resolve('tools/preview', dir, `${name}.html`))
+  .find((candidate) => existsSync(candidate))
+if (templatePath === undefined) throw new Error(`template not found: ${name}.html（templates/ 或 drafts/）`)
 
 const baseCssPath = resolve('tools/preview/templates/_base.css')
 const baseCss = existsSync(baseCssPath) ? readFileSync(baseCssPath, 'utf8') : ''
@@ -64,7 +71,7 @@ const html = readFileSync(templatePath, 'utf8')
 
 const tmpDir = resolve('.tmp/preview')
 mkdirSync(tmpDir, { recursive: true })
-const htmlPath = join(tmpDir, `${template}.html`)
+const htmlPath = join(tmpDir, `${outName}.html`)
 writeFileSync(htmlPath, html)
 
 const executablePath = (() => {
@@ -93,14 +100,14 @@ const contentHeight = await page.evaluate(() => {
 })
 await page.setViewportSize({ width: 1000, height: Math.max(200, contentHeight) })
 await page.waitForTimeout(100)
-const pngPath = join(tmpDir, `${template}.png`)
+const pngPath = join(tmpDir, `${outName}.png`)
 await page.screenshot({ path: pngPath, fullPage: true })
 await browser.close()
 
-console.log(`[preview] ${template} → ${pngPath} (${card}px × ${columns} 列, ${scale}x)`)
+console.log(`[preview] ${outName} → ${pngPath} (${card}px × ${columns} 列, ${scale}x)`)
 
 if (publish) {
-  const target = resolve('docs/pic', `${template}.png`)
+  const target = resolve('docs/pic', `${outName}.png`)
   mkdirSync(resolve('docs/pic'), { recursive: true })
   copyFileSync(pngPath, target)
   console.log(`[preview] published → ${target}`)
