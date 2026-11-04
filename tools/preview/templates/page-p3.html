@@ -80,6 +80,11 @@
   }
   .capsule .row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; }
   .capsule .row + .row { border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent); }
+  .capsule .row-refresh { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .capsule .group { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+  .capsule .group-left { justify-self: start; }
+  .capsule .group-center { justify-self: center; }
+  .capsule .group-right { justify-self: end; }
   .capsule .row-k { width: 40px; flex: none; font-size: 11px; color: var(--weak); }
   .capsule .row-label { font-size: 11px; color: var(--muted); }
   .capsule .meta { font-size: 11px; color: var(--weak); }
@@ -151,14 +156,19 @@
   </section>
 
   <div class="capsule">
-    <div class="row">
-      <span class="row-k">刷新</span>
-      <button class="btn primary" type="button">⟳ 立即刷新</button>
-      <span class="row-label">刷新间隔</span>
-      <span class="seg"><span class="on">30 秒</span><span>1 分钟</span><span>5 分钟</span></span>
-      <span class="grow"></span>
-      <span class="row-label">账户余额</span>
-      <span class="toggle"><span class="knob"></span></span>
+    <div class="row row-refresh">
+      <div class="group group-left">
+        <span class="row-k">刷新</span>
+        <button class="btn primary" type="button">⟳ 立即刷新</button>
+      </div>
+      <div class="group group-center">
+        <span class="row-label">刷新间隔</span>
+        <span class="seg"><span class="on">30 秒</span><span>1 分钟</span><span>5 分钟</span></span>
+      </div>
+      <div class="group group-right">
+        <span class="row-label">账户余额</span>
+        <span class="toggle"><span class="knob"></span></span>
+      </div>
     </div>
     <div class="row">
       <span class="row-k">日志</span>
