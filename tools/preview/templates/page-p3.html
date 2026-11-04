@@ -308,7 +308,7 @@
   document.getElementById('detail').innerHTML = `
     <div class="h">模型</div><div class="h num">Tokens</div><div class="h num">输入</div><div class="h num">缓存</div>
     <div class="h num">输出</div><div class="h num">请求</div><div class="h num">命中</div><div class="h num">费用</div>
-    ${detailRows.map((row) => row.map((cell, index) => `<div class="c${index > 1 ? ' num' : ''}">${cell}</div>`).join('')).join('')}
+    ${detailRows.map((row) => row.map((cell, index) => `<div class="c${index > 0 ? ' num' : ''}">${cell}</div>`).join('')).join('')}
   `
 </script>
 </body>
