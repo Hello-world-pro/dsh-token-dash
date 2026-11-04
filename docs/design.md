@@ -1,6 +1,6 @@
 # dsh-token-dash 设计文档
 
-> 更新时间：2026-11-05（v3.3，7 家 Provider 源表、每源缓存与路由安全门）<br>
+> 更新时间：2026-11-05（v3.4，1.3.0 定稿；已在 DSH 0.2.2-rc.1 验证）<br>
 > 面向贡献者的一页式架构说明。需求背景见 [token-dash 计划（已归档）](plan/archived/feature_token_dash.md)，已归档的 UI 迭代见 [UI 迭代计划](plan/archived/feature_ui_refresh.md)；Provider/VM/UI 边界收口见 [边界计划](plan/archived/feature_provider_boundary.md)；UI 视觉以 [UI 设计](ui-design.md) 为唯一真源。
 
 ## 总体架构
@@ -94,7 +94,7 @@ SummaryVM（core.js → client 的唯一 DTO）
 - **页面入口**：P3 走宿主「全局面板」机制——`slots.inject('main')` 注册整页（`key = token-dash`），`sidebar.panellist` 注册同 `id` 的左侧常驻行；`layout` 通过 `inject` 注入，浮层底部「全量看板」与侧栏入口调用 `selectPanel('token-dash')`（点击时再校验 `hasMainPanel`）。
 - **兼容**：VM 可读取旧 `plans` 输入，但输出只保留 `windows`；`DEFAULT_MODELS` 保留为派生导出，供旧调用方过渡。
 
-## Provider 源表（v3.3）
+## Provider 源表（v3.4）
 
 > 当前 7 家：DeepSeek / GLM / Kimi / OpenRouter / Qwen / OpenCode Go / Command Code。前 5 家用 `legacy` 函数保留既有账号钱包、双路径等特例；后 2 家由声明式 `credential + quota + preflight` 驱动。详细能力见 [后端能力清单](checklist/archived/backend-capability-checklist.md) §4。
 
@@ -190,7 +190,7 @@ dsh-token-dash/
 
 ## 日志体系
 
-- 文件：`$DSH_HOME/logs/dsh-token-dash/`，JSONL 格式；每行同时带 `module` 与 `prefix: "[TD:<module>]"`，前缀仅作阅读 / 导出标记，分类以 `module` 为准
+- 文件：`$DSH_HOME/logs/dsh-token-dash/`，JSONL 格式；每行同时带 `module` 与 `prefix: "[TD:<module>]"`，前缀仅作阅读 / 导出标记，分类以 `module` 为准；header 的 `dshVersion` 从宿主动态读取（`DSH_VERSION` → asar `package.json` → `unknown`）
 - 模块：`boot / slot / pricing / collect / vm / provider / update / diag / route / data`；适配器 `adapter.deepseek / adapter.glm / adapter.kimi / adapter.openrouter / adapter.qwen / adapter.opencode / adapter.commandcode`
 - 事件：`adapter.*` 的 `quota.ok / quota.fail / quota.parse / balance.* / credits.ok / detect.fail`；`provider.probe.miss / kind.stamp / subscriptions.refreshed / cache.state`；`route.forbidden / route.failed`
 - 错误带分类：`errorKind`（http/timeout/network/parse）+ `httpStatus`；5xx 额外 `upstream: true`
@@ -212,4 +212,5 @@ dsh-token-dash/
 12. **不做 Cookie / 本机登录态**：百炼 Token Plan、小米 MiMo、Codex `~/.codex/auth.json` 均不接入——凭据会过期或越界读用户目录
 13. **升级不迁移数据**：账本与设置在 `$DSH_HOME/dsh-token-dash/`，与 profile 的 `node_modules` 分离，`dsh plugin add` 不触碰；跨机迁移走 P3「导出 / 导入」，导出只含设置与当月使用，不含配额、余额与日志
 14. **P3 自持滚动与 4px 间距**：`BoardPage` 外层 `board-scroll` 负责纵向滚动，不改宿主 `main`；间距只用 4 / 8 / 12 / 16 / 24 / 32 六档
+15. **DSH 0.2.2 兼容基线**：已在 `0.2.2-rc.1` 验证 `slots / layout / webServer / sessionPersistence / credentials`；不依赖 PTC、tools、agent 路由等 0.2.2 迁移项；DSH 自身要求 Node 24.9，插件元数据仍声明 `>=20`
 

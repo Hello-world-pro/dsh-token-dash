@@ -9,9 +9,9 @@
 </p>
 
 <p align="center">
-  Track daily/monthly model spend and budget headroom right next to the DSH input box:<br />
-  paste an API Key and the plan is auto-detected (subscription or pay-as-you-go), set a monthly budget, and consumption is estimated locally in real time;<br />
-  export the current month as a backup and import it back after switching machines or reinstalling.
+  See today's model spend, monthly budget headroom, and subscription windows for 7 providers right next to the DSH input box.<br />
+  Paste a key and the billing mode is detected automatically; cost, Tokens and cache hits are estimated locally;<br />
+  export the current month and import it back after switching machines or reinstalling.
 </p>
 
 <p align="center">
@@ -26,41 +26,34 @@
   <img src="https://img.shields.io/github/downloads/spartawhy117/dsh-token-dash/total?label=downloads" alt="downloads" />
   <img src="https://img.shields.io/github/license/spartawhy117/dsh-token-dash" alt="license" />
   <img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen" alt="node" />
+  <img src="https://img.shields.io/badge/DSH-0.2.2--rc.1_tested-4c8bf5" alt="DSH tested" />
   <a href="https://awesome-dsh-plugin.com/p/spartawhy117/dsh-token-dash"><img src="https://img.shields.io/badge/awesome--dsh--plugin-listed-6ea8ff" alt="awesome-dsh-plugin" /></a>
 </p>
 
-- **Providers**: DeepSeek (DS account / API key), GLM Coding (subscription), Kimi Coding (subscription), Kimi / OpenRouter / Qwen (pay-as-you-go; OpenRouter in USD, Qwen CNY domestic / USD international) — paste a key and the billing mode is detected automatically
-- **Pages**: bottom bar Pill → floating "current model" panel (four-column summary + time range + usage table); "Full dashboard" at the bottom or the sidebar entry opens the full page with pay-as-you-go and subscription card grids, a summary band, model breakdown and a settings capsule
-- **Dashboard data**: time range (today / last 7 days / last 30 days / all), monthly budget with used ring, planned balance, real account balance, month-to-date spend, subscription 5h / weekly / monthly windows with countdown; the summary band shows **total cost by currency** and **real Tokens (including cache read/write)**
-- **Settings**: three rows in the page footer — refresh now with interval, logs with data export/import, price table with version check; per-provider budgets are edited in each pay-as-you-go card (defaults to 100 when empty)
-- **Data**: daily / monthly usage estimated locally (built-in price catalog + community price table), three-layer model attribution, read-only local sessions; subscription models count toward Tokens but not cost, and the billing mode is pinned per key instead of following quota flakiness
+**Three entry points, one local ledger**: the Pill shows the current model; the floating panel shows budget, balance and the usage table; the full dashboard shows every provider card and model breakdown. No duplicated accounting between pages.
 
----
+## Provider matrix
 
-## Install
+| Provider | Billing | Credential | What you get |
+|---|---|---|---|
+| DeepSeek | Pay-as-you-go | DS account wallet / `DEEPSEEK_API_KEY` | Balance, month-to-date spend, budget |
+| Zhipu GLM Coding | Subscription / API | `ZHIPU_API_KEY` / `GLM_API_KEY` / `ZAI_API_KEY` | 5h + weekly windows |
+| Kimi Coding | Subscription / API | `KIMI_API_KEY` / `KIMI_CODING_API_KEY`, optional `MOONSHOT_API_KEY` | 5h + weekly/monthly windows; falls back to balance |
+| OpenRouter | Pay-as-you-go | `OPENROUTER_API_KEY` | Credits (USD) |
+| Qwen | Pay-as-you-go | `DASHSCOPE_API_KEY` (CNY) / `DASHSCOPE_INTL_API_KEY` (USD) | Usage only; balance unsupported |
+| OpenCode Go | Subscription | `OPENCODE_GO_API_KEY` | 5h / weekly / monthly windows (USD) |
+| Command Code | Subscription | `COMMAND_CODE_API_KEY` + `COMMAND_CODE_ORG_ID` | 5h + weekly windows, credits (CNY) |
 
-Requires DSH `0.2.1` or newer. Three options:
-
-```bash
-# Option 1: install from npm (recommended)
-dsh plugin --profile desktop add dsh-token-dash
-
-# Option 2: install straight from the GitHub repo (plain JS, no build step)
-dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash
-
-# Option 3: download dsh-token-dash-x.y.z.tgz from Releases and install locally (offline)
-dsh plugin --profile desktop add /path/to/dsh-token-dash-1.1.0.tgz
-```
-
-Update: run `update` with the same name, or use the `⤓` button on the right of “Pricing & version” in settings. Remove: run `remove` with the same name; data stays in `$DSH_HOME/dsh-token-dash/`.
-
----
+- Save keys under the names above in DSH's credential settings; the plugin reads them through the host `credentials` service, not environment variables or local login files.
+- Keys are detected automatically; GLM / Kimi / OpenCode Go / Command Code can be re-detected from the dashboard footer.
+- Subscription models count toward Tokens but not cost; billing mode is pinned per key instead of following quota flakiness.
+- Balance, quota and usage are separate; a balance failure never resets today's Token ledger to zero.
 
 ## Interface
 
-Screenshots below use mock data so the full layout is visible at once:
+Screenshots use mock data so the full layout is visible at once.
 
-**P1 · Bottom bar pill** (pay-as-you-go and subscription variants; click to open the panel, click outside or `×` to close)
+**P1 · Bottom bar Pill**: pay-as-you-go / subscription variants; click to open, click outside, `×` or `Esc` to close.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-api.png" alt="Pay-as-you-go pill" />
@@ -70,7 +63,7 @@ Screenshots below use mock data so the full layout is visible at once:
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-sub.png" alt="Subscription pill" />
 </p>
 
-**P2 · Floating panel (current model)**: used ring and percent, used / budget, real balance, month-to-date spend, time range and usage table
+**P2 · Floating panel (current model)**: fixed 380, one row with four groups — used ring / used-budget / real balance / month-to-date spend — a full-width range control and the usage table.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-api.png" alt="Floating panel - pay-as-you-go" />
@@ -84,39 +77,80 @@ Screenshots below use mock data so the full layout is visible at once:
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-sub-3.png" alt="Floating panel - three subscription windows" />
 </p>
 
-**P3 · Full-page dashboard**: pay-as-you-go cards, subscription cards, summary band and model breakdown, settings and data
+- Subscription windows use three slots: first left, second center, third right; two windows occupy the first two slots.
+- Model column is capped at 150; Tokens / requests / hit rate are right-aligned.
+
+**P3 · Full dashboard**: cards for 7 providers, summary band, 8-column model breakdown and a settings capsule; the page owns its scrollbar at the window edge.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/settings.png" alt="Settings" />
+  <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/settings.png" alt="Full dashboard" />
 </p>
 
----
+- Pay-as-you-go card: budget input, planned balance, real balance, month-to-date spend; subscription card: one ring per window with remaining percentage and countdown.
+- Breakdown: model / Tokens / input / cache / output / requests / hit rate / cost; everything except the model column is right-aligned.
+- Settings capsule: refresh interval + account-balance toggle; logs, export/import, price table and version below.
+- Spacing uses only 4 / 8 / 12 / 16 / 24 / 32; P2 and P3 share the same tokens.
 
-## Logs & privacy
+## Install
 
-When filing a bug, attach `$DSH_HOME/logs/dsh-token-dash/` (already redacted). Error log entries carry `errorKind` (http/timeout/network/parse) and `httpStatus`, which usually pinpoints the cause:
+Requires DSH `0.2.1` or newer; tested on **DSH 0.2.2-rc.1**. DSH 0.2.2 itself requires Node **24.9+**.
 
 ```bash
-npm run logs -- --tail 50                # tail recent logs
-npm run logs -- --module slot,adapter.*  # filter by module
+# Option 1: install from npm (recommended)
+dsh plugin --profile desktop add dsh-token-dash
+
+# Option 2: install straight from the GitHub repo (plain JS, no build step)
+dsh plugin --profile desktop add github:spartawhy117/dsh-token-dash
+
+# Option 3: download dsh-token-dash-x.y.z.tgz from Releases and install locally (offline)
+dsh plugin --profile desktop add /path/to/dsh-token-dash-x.y.z.tgz
 ```
 
-Reads only local session `usage` (title-generation overhead excluded); balances come from official endpoints only, with credentials resolved by the host and never written to disk; costs are local estimates — no billing requests are ever made.
+Update: run `update` with the same name, or use the `⤓` button on the right of “Pricing & version” in settings. Remove: run `remove` with the same name; data stays in `$DSH_HOME/dsh-token-dash/`.
 
-Backups happen entirely on disk: `Export data` writes one JSON file (settings + current-month usage, without subscription quotas or balances), `Import data` only parses that file, and the existing files are backed up before the current month is overwritten. No network involved.
+> If the plugin disappears from the profile after a DSH 0.2.2 upgrade, reinstall the same tarball. The ledger and settings are not deleted with the plugin package.
 
----
+## Compatibility & limitations
+
+- DSH `0.2.1+`; verified on `0.2.2-rc.1`. DSH 0.2.2 is a pre-release and itself requires Node 24.9.
+- After a DSH upgrade the plugin may disappear from the profile; reinstall the same tarball — the ledger is not deleted.
+- Qwen tracks usage only; its balance endpoint is unsupported. Other balances/quotas follow what each API returns.
+- Upstream APIs are rate-limited; successful results are cached for 60s, failures for 10s, and concurrent requests are coalesced.
+
+## Data & privacy
+
+- Reads only local session `usage` (title-generation overhead excluded); cost and Tokens are local estimates — no billing requests.
+- Balances come from official endpoints only; credentials are resolved by the host and are never written to disk or logs.
+- Data lives in `$DSH_HOME/dsh-token-dash/`: `daily.json`, `months/`, `prefs.json`.
+- Export/import is local: settings + current-month usage, without quotas, balances or logs; the existing files are backed up before an import overwrites them.
+
+## Logs & troubleshooting
+
+Logs live in `$DSH_HOME/logs/dsh-token-dash/` as JSONL; every line carries `prefix: "[TD:<module>]"` and `module`:
+
+```bash
+npm run logs -- --tail 50                    # recent 50 lines
+npm run logs -- --module adapter.*           # provider detection only
+npm run logs -- --module provider,route      # cache / routing issues
+```
+
+Common events:
+
+- `[TD:adapter.*]`: `quota.ok` / `quota.fail` / `quota.parse` / `balance.*` / `detect.fail`
+- `[TD:provider]`: `probe.miss` (none / hidden / error), `subscriptions.refreshed`, `cache.state`
+- `[TD:route]`: `forbidden` (non-loopback), `failed`
+- Errors carry `errorKind` (http / timeout / network / parse) and `httpStatus`; 5xx adds `upstream: true`.
 
 ## Development
 
 ```bash
-npm test      # unit tests
+npm test      # unit tests (79 passing)
 npm run e2e   # end-to-end (temp DSH_HOME + web profile + Playwright)
-npm run shots # regenerate the P1/P2/P3 screenshots in docs/pic from mock data (tools/mock)
+npm run shots # regenerate the P1/P2/P3 screenshots in docs/pic from mock data
 npm run pack  # build the release tarball into build/
 ```
 
-Releases: pushing a `v*` tag triggers the GitHub Release (tarball) and a direct npm publish automatically (Trusted Publishing via OIDC, with provenance — no manual approval step); see [docs/release.md](./docs/release.md) for the full checklist.
+Releases: pushing a `v*` tag triggers the GitHub Release (tarball) and a direct npm publish automatically (Trusted Publishing via OIDC, with provenance); see [docs/release.md](./docs/release.md) for the full checklist.
 
 ## Acknowledgements
 
@@ -128,3 +162,5 @@ Attribution and billing semantics learned from these community plugins:
 - [dsh-spend](https://github.com/nonewind/dsh-spend)
 - [dsh-stats-panel](https://github.com/zhang-jiazhi/dsh-stats-panel)
 - [DshCockpit](https://github.com/Lxiayu/DshCockpit)
+- [shy3130/dsh-quota](https://github.com/shy3130/dsh-quota) (OpenCode Go / cache structure reference)
+- [InvisibleSirius/dsh-quota-dashboard](https://github.com/InvisibleSirius/dsh-quota-dashboard) (multi-provider table reference)
