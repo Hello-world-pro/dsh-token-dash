@@ -492,6 +492,17 @@ try {
       && capsuleBox.y - (rangeSectionBox.y + rangeSectionBox.height) >= 20,
     'settings capsule should keep a gap below the range/detail section',
   )
+  assert.equal(await board.getByTestId('token-dash-settings-title').count(), 1)
+  assert.match(await board.getByTestId('token-dash-settings-title').innerText(), /设置与数据管理/)
+  const [settingsTitleBox, settingsRow1Box] = await Promise.all([
+    board.getByTestId('token-dash-settings-title').boundingBox(),
+    board.getByTestId('token-dash-settings-row-1').boundingBox(),
+  ])
+  assert.ok(
+    settingsTitleBox !== null && settingsRow1Box !== null
+      && settingsTitleBox.y + settingsTitleBox.height <= settingsRow1Box.y + 1,
+    'settings title should be the first row',
+  )
   assert.equal(await board.getByTestId('token-dash-settings-row-1').count(), 1)
   assert.equal(await board.getByTestId('token-dash-settings-row-2').count(), 1)
   assert.equal(await board.getByTestId('token-dash-settings-row-3').count(), 1)

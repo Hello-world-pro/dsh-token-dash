@@ -1,19 +1,19 @@
 # P3 设置卡片标题行
 
-> 状态：草案（待确认标题文案）<br>
+> 状态：待验收（2.0.0 候选）<br>
 > 创建时间：2026-11-05<br>
-> 更新时间：2026-11-05（代码核对 + 标题建议）<br>
+> 更新时间：2026-11-05（文案确认 + 实现 + 测试）<br>
 > 关联逻辑根：`dsh-token-dash`（`client.js`）<br>
-> 关联资料：[`ui-design.md`](../../../ui-design.md) v3.7 §5.7、归档 plan [`feature_p1_bottom_right.md`](../../archived/dsh/feature_p1_bottom_right.md)
+> 关联资料：[`ui-design.md`](../../../ui-design.md) v3.8 §5.7、归档 plan [`feature_p1_bottom_right.md`](../../archived/dsh/feature_p1_bottom_right.md)
 
 ## 一、最终需求与范围
 
 | ID | 处置 | 需求 | 建议结论 |
 |---|---|---|---|
-| REQ-01 | 待确认 | P3 设置卡片增加一行标题 | 卡片内第一行，文案 **设置与数据管理** |
-| REQ-02 | 待确认 | 标题与现有三行区分 | 13px / 600、40px 高、左对齐，行下 1px 6% 分隔线 |
-| REQ-03 | 待确认 | 不改变现有控件顺序与行为 | 刷新间隔 / 日志 / 版本三行原样下移 |
-| REQ-04 | 待确认 | 文档、预览、截图、e2e 同步 | UI §5.7 / preview / settings.png / e2e |
+| REQ-01 | 完成 | P3 设置卡片增加一行标题 | 卡片内第一行，文案 **设置与数据管理** |
+| REQ-02 | 完成 | 标题与现有三行区分 | 13px / 600、40px 高、左对齐，行下 1px 6% 分隔线 |
+| REQ-03 | 完成 | 不改变现有控件顺序与行为 | 刷新间隔 / 日志 / 版本三行原样下移 |
+| REQ-04 | 完成 | 文档、预览、截图、e2e 同步 | UI §5.7 / preview / settings.png / e2e |
 | BND-01 | 保持 | 不加按钮、不加折叠、不改数据/接口 | 纯标题行 |
 | BND-02 | 保持 | 不增加卡片高度之外的结构变化 | 只多一行 40px |
 | BND-03 | 保持 | 不改 P1/P2 与 provider / VM | 仅 P3 设置胶囊 |
@@ -119,4 +119,8 @@ settings capsule
 
 ## 九、自测反馈台
 
-（待确认标题后实施）
+- 2026-11-05：标题文案确认「设置与数据管理」，代码插入 `token-dash-settings-title`；
+- 标题行 40px / 13px / 600，原有三行下移，功能不变；
+- `docs/ui-design.md` v3.8 §5.7 同步；
+- `page-p3` 预览与 `settings.png` 已重出；
+- `npm test` 80 通过；`npm run e2e` UI assertions passed（含标题顺序断言）。

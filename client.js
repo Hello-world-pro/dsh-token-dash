@@ -441,6 +441,10 @@ window.__ModuleLoader__.load({
         background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))',
         border: `1px solid ${T.border}`,
       },
+      settingsTitle: {
+        display: 'flex', alignItems: 'center', height: 40,
+        fontSize: 13, fontWeight: 600, color: T.text,
+      },
       settingsRow: {
         display: 'grid', gridTemplateColumns: '40px minmax(0,1fr)', alignItems: 'center', gap: 12,
         padding: '8px 0', minHeight: 24, borderTop: '1px solid color-mix(in srgb, currentColor 6%, transparent)',
@@ -1453,6 +1457,7 @@ window.__ModuleLoader__.load({
 
       const statusText = update.text ?? status?.text ?? ''
       return h('div', { 'data-testid': 'token-dash-settings', style: { display: 'grid', minWidth: 0 } },
+        h('div', { 'data-testid': 'token-dash-settings-title', style: styles.settingsTitle }, tr('设置与数据管理')),
         h('div', {
           'data-testid': 'token-dash-settings-row-1',
           style: { ...styles.settingsRow, ...styles.settingsRowRefresh },
