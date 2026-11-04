@@ -32,6 +32,12 @@
   .tile .v { font-size: 18px; font-weight: 600; margin-top: 6px; font-variant-numeric: tabular-nums; }
   .tile .s { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
+  .panel-box {
+    border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg);
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .panel-box .range { margin-bottom: 0; }
+  .panel-box .tiles { margin: 0; }
   .table-wrap { overflow-x: auto; }
   .table { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(7, minmax(52px, auto)); gap: 0 8px; font-size: 12px; min-width: 720px; }
   .table .h { font-size: 11px; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--border); }
@@ -75,21 +81,24 @@
   </section>
 
   <section class="block">
-    <div class="range"><span>当天</span><span>近7天</span><span>近30天</span><span class="on">全部</span></div>
+    <h2>范围与明细</h2>
+    <div class="panel-box">
+      <div class="range"><span>当天</span><span>近7天</span><span>近30天</span><span class="on">全部</span></div>
 
-    <div class="tiles">
-      <div class="tile">
-        <div class="k">总费用</div>
-        <div class="v">¥12.68　$19.00</div>
+      <div class="tiles">
+        <div class="tile">
+          <div class="k">总费用</div>
+          <div class="v">¥12.68　$19.00</div>
+        </div>
+        <div class="tile">
+          <div class="k">真实 Tokens</div>
+          <div class="v">1.24M</div>
+          <div class="s">输入 620k · 缓存 520k · 输出 100k</div>
+        </div>
       </div>
-      <div class="tile">
-        <div class="k">真实 Tokens</div>
-        <div class="v">1.24M</div>
-        <div class="s">输入 620k · 缓存 520k · 输出 100k</div>
-      </div>
+
+      <div class="table-wrap"><div class="table" id="detail"></div></div>
     </div>
-
-    <div class="table-wrap"><div class="table" id="detail"></div></div>
   </section>
 
   <div class="capsule">
