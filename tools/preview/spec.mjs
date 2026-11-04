@@ -31,6 +31,15 @@ export const RING = {
 
 export const SPEC = {
   ring: RING,
+  /** 统一间距：4 的倍数，页面只用这六档 */
+  spacing: {
+    xxs: 4,
+    xs: 8,
+    sm: 12,
+    md: 16,
+    lg: 24,
+    xl: 32,
+  },
   /** P3 中栏内容宽与卡片网格 */
   layout: {
     contentWidth: 952, // 1000 中栏 − 24 × 2 padding
@@ -41,7 +50,7 @@ export const SPEC = {
   },
   card: {
     radius: 8,
-    padding: 14,
+    padding: 16,
     gap: 12,
     headerFont: 13,
     chipFont: 11,
@@ -54,7 +63,7 @@ export const SPEC = {
     percent: 16, // 环下百分比
     meta: 11, // 剩余 / 倒计时 / 绝对时间
     gap: 4,
-    percentOffset: 3, // 环与百分比之间的额外间距
+    percentOffset: 4, // 环与百分比之间的额外间距
   },
   /** 按量卡内的环：与订阅同款，只是环心文案不同 */
   apiGauge: {

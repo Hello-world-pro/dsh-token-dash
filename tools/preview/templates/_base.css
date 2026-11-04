@@ -29,7 +29,7 @@ section { margin-bottom: 28px; }
 .grid.api { display: flex; flex-wrap: wrap; justify-content: center; }
 .grid.api .cell { flex: 1 1 var(--card-min); max-width: var(--card-max); }
 .grid.sub { grid-template-columns: repeat(auto-fit, minmax(var(--card-min), 1fr)); }
-.cell { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cell { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .cap { display: block; font-size: 11px; color: var(--weak); text-align: center; }
 
 .card {
@@ -38,12 +38,12 @@ section { margin-bottom: 28px; }
   border-radius: var(--card-radius);
   padding: var(--card-padding);
 }
-.head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .name { font-size: var(--card-header-font); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip { font-size: var(--card-chip-font); color: var(--muted); white-space: nowrap; }
 
 /* Gauge：环心标签 + 环下百分比 + 三行辅助 */
-.windows { display: grid; gap: var(--layout-gap); margin-top: 10px; }
+.windows { display: grid; gap: var(--layout-gap); margin-top: var(--space-3); }
 .gauge { display: flex; flex-direction: column; align-items: center; gap: var(--gauge-gap); min-width: 0; }
 .ring { position: relative; width: var(--gauge-ring); height: var(--gauge-ring); flex: none; }
 .ring svg { display: block; width: 100%; height: 100%; }
@@ -56,17 +56,17 @@ section { margin-bottom: 28px; }
 .pct.warn { color: var(--warn); }
 .pct.critical { color: var(--error); }
 .pct.empty { color: var(--weak); }
-.line { font-size: var(--gauge-meta); color: var(--muted); line-height: 15px; white-space: nowrap; }
+.line { font-size: var(--gauge-meta); color: var(--muted); line-height: var(--space-4); white-space: nowrap; }
 
 /* 按量卡：左侧 Gauge，右侧预算输入框，下面三行 label-value */
 /* 按量卡：环 → 百分比 → 月度预算 → 输入框，整列居中 */
-.api-body { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 12px 0 14px; }
+.api-body { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); margin: var(--space-3) 0; }
 .api-body .gauge { justify-content: center; }
-.budget { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 4px; }
+.budget { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); margin-top: var(--space-1); }
 .budget .k { font-size: 11px; color: var(--muted); white-space: nowrap; }
 .budget-input {
   display: inline-flex; align-items: center; gap: 2px;
-  border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px;
+  border: 1px solid var(--border); border-radius: 6px; padding: var(--space-1) var(--space-2);
   background: rgba(255, 255, 255, .03);
 }
 .budget-input .cur { font-size: 12px; color: var(--weak); }
@@ -75,7 +75,7 @@ section { margin-bottom: 28px; }
   font: inherit; font-size: 13px; text-align: right; outline: none;
 }
 .budget-input input::placeholder { color: var(--weak); }
-.kv { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; line-height: 18px; margin-top: 4px; }
+.kv { display: flex; justify-content: space-between; gap: var(--space-2); font-size: 12px; line-height: 18px; margin-top: var(--space-1); }
 .kv .k { color: var(--muted); }
 .kv .v { white-space: nowrap; }
 .kv .v.over { color: var(--error); }

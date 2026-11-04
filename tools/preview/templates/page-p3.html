@@ -6,14 +6,14 @@
 <style>
   :root { /*__SPEC_CSS__*/ }
   /*__BASE_CSS__*/
-  body { padding: 32px 24px; }
+  body { padding: var(--space-6) var(--space-5); }
   .page { width: 100%; max-width: var(--content-width); margin: 0 auto; }
 
-  .board-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
-  .board-head .title-row { display: flex; align-items: baseline; gap: 16px; flex: 1 1 auto; min-width: 0; }
+  .board-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); margin-bottom: var(--space-5); }
+  .board-head .title-row { display: flex; align-items: baseline; gap: var(--space-4); flex: 1 1 auto; min-width: 0; }
   .board-head h1 { font-size: 18px; margin: 0; font-weight: 600; white-space: nowrap; }
   .board-head .meta { font-size: 12px; color: var(--muted); white-space: nowrap; }
-  .actions { display: flex; gap: 6px; align-items: center; }
+  .actions { display: flex; gap: var(--space-2); align-items: center; }
   .actions .btn {
     width: 44px; height: 26px; padding: 0; justify-content: center;
     color: var(--accent); font-size: 13px;
@@ -26,14 +26,14 @@
     display: inline-flex; align-items: center; gap: 4px;
   }
 
-  .block { margin-top: 24px; }
-  .block h2 { font-size: 13px; font-weight: 600; color: var(--text); margin: 0 0 10px; }
+  .block { margin: 0 0 var(--space-5); }
+  .block h2 { font-size: 13px; font-weight: 600; color: var(--text); margin: 0 0 var(--space-3); }
 
-  .range { display: inline-flex; gap: 2px; border: 1px solid var(--border); border-radius: 999px; padding: 2px; margin-bottom: 12px; }
-  .range span { font-size: 12px; padding: 2px 10px; border-radius: 999px; color: var(--muted); }
+  .range { display: inline-flex; gap: 2px; border: 1px solid var(--border); border-radius: 999px; padding: var(--space-1); margin-bottom: var(--space-3); }
+  .range span { font-size: 12px; padding: var(--space-1) var(--space-3); border-radius: 999px; color: var(--muted); }
   .range .on { background: rgba(255, 255, 255, .10); color: var(--text); }
 
-  .box-head { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 16px; }
+  .box-head { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: var(--space-4); }
   .box-meta { font-size: 11px; color: var(--weak); }
 
   /* 总计：整宽摘要带，左右两半 + 中间竖线 */
@@ -42,50 +42,50 @@
     border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
   }
   .summary-half {
-    padding: 12px 14px; display: flex; flex-direction: column; align-items: center;
-    text-align: center; gap: 6px; min-width: 0;
+    padding: var(--space-4); display: flex; flex-direction: column; align-items: center;
+    text-align: center; gap: var(--space-2); min-width: 0;
   }
   .summary-half + .summary-half { border-left: 1px solid var(--border); }
   .summary-half .k { font-size: 12px; color: var(--muted); }
   .summary-half .v {
-    display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 10px;
+    display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: var(--space-2);
     font-size: 26px; font-weight: 600; line-height: 30px; font-variant-numeric: tabular-nums;
   }
   .summary-half .s { font-size: 11px; color: var(--weak); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   @media (max-width: 560px) {
     .board-head { align-items: flex-start; }
-    .title-row { flex-wrap: wrap; gap: 4px 12px; }
+    .title-row { flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
     .board-head .meta { white-space: normal; }
-    .box-head { gap: 8px; }
+    .box-head { gap: var(--space-2); }
     .summary-band { grid-template-columns: 1fr; }
     .summary-half + .summary-half { border-left: 0; border-top: 1px solid var(--border); }
   }
 
   .panel-box {
     border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg);
-    padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;
+    padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3);
   }
   .panel-box .range { margin-bottom: 0; }
-  .table-wrap { overflow-x: auto; border-top: 1px solid var(--border); padding-top: 10px; }
-  .table { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(7, minmax(52px, auto)); gap: 0 8px; font-size: 12px; min-width: 720px; }
-  .table .h { font-size: 11px; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--border); }
-  .table .c { padding: 5px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); }
+  .table-wrap { overflow-x: auto; border-top: 1px solid var(--border); padding-top: var(--space-3); }
+  .table { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(7, minmax(52px, auto)); gap: 0 var(--space-2); font-size: 12px; min-width: 720px; }
+  .table .h { font-size: 11px; color: var(--muted); padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }
+  .table .c { padding: var(--space-1) 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
 
   .capsule {
-    margin-top: 24px; border: 1px solid var(--border);
-    border-radius: 10px; background: var(--card-bg); padding: 4px 14px;
+    margin-top: var(--space-5); border: 1px solid var(--border);
+    border-radius: 10px; background: var(--card-bg); padding: var(--space-1) var(--space-4);
     display: flex; flex-direction: column; font-size: 12px; color: var(--muted);
   }
-  .capsule .row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+  .capsule .row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; }
   .capsule .row + .row { border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent); }
   .capsule .row-k { width: 40px; flex: none; font-size: 11px; color: var(--weak); }
   .capsule .row-label { font-size: 11px; color: var(--muted); }
   .capsule .meta { font-size: 11px; color: var(--weak); }
   .capsule .grow { flex: 1; }
   .capsule .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-  .capsule .seg span { padding: 2px 8px; font-size: 11px; color: var(--muted); }
+  .capsule .seg span { padding: var(--space-1) var(--space-2); font-size: 11px; color: var(--muted); }
   .capsule .seg .on { background: rgba(255, 255, 255, .10); color: var(--text); }
   .capsule .toggle {
     width: 32px; height: 18px; border-radius: 999px; background: var(--accent);

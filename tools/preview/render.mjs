@@ -38,6 +38,12 @@ const card = cardWidth(SPEC.layout.contentWidth, columns, SPEC.layout.gap)
 const css = [
   `--content-width: ${SPEC.layout.contentWidth}px;`,
   `--layout-gap: ${SPEC.layout.gap}px;`,
+  `--space-1: ${SPEC.spacing.xxs}px;`,
+  `--space-2: ${SPEC.spacing.xs}px;`,
+  `--space-3: ${SPEC.spacing.sm}px;`,
+  `--space-4: ${SPEC.spacing.md}px;`,
+  `--space-5: ${SPEC.spacing.lg}px;`,
+  `--space-6: ${SPEC.spacing.xl}px;`,
   `--card-width: ${card}px;`,
   `--card-min: ${SPEC.layout.minCard}px;`,
   `--card-max: ${SPEC.layout.maxCard}px;`,
