@@ -51,6 +51,20 @@ npm run preview:publish gauge    # → docs/pic/gauge.png（仅定稿）
 
 新增模板时补一行；状态用 `draft` / `final`，不写具体日期。
 
+## 改动联动
+
+> 顺序固定：**先改 `spec.mjs` / 模板 → 看预览 → 再回写设计文档与 checklist**，不允许文档先行。
+
+| 改动类型 | 需要同步的位置 | 验证 |
+|---|---|---|
+| 环径、字号、间距、颜色 | `spec.mjs` → 重跑预览 → `ui-design.md` 对应章节 → checklist §九 → 后续 E2E 尺寸断言 | `npm run preview <name>` 目检 |
+| 新增 / 调整卡片状态 | `tools/mock/fixtures.mjs` 数据 + 对应模板 → `cards-*.png` → `tools/mock/AGENTS.md` §2 状态表 | 逐态对照，缺一态即不合格 |
+| 新增 provider | fixtures 六处（provider / windows / usage / todayModels / monthModels / pricingLinks）→ 预览 → 状态覆盖表 | `npm run shots` + 预览 |
+| 改交互（预算输入、展开、编辑） | 模板 JS + `ui-design.md` 交互章节（§5.6 等）+ checklist 对应 D 条目 | 预览里实际改值 / 点击一遍 |
+| 新增或删除模板 | `templates/` + 本文件「模板对照」表；若进 README 另走 publish | `npm run preview <name>` |
+| 定稿图换图 | `preview:publish` → `docs/pic/` → README / README.en 图片链接 | 目检 `docs/pic` 与 README |
+| 只改文档规格 | 先回到原型确认，再改 `ui-design.md`；数字不复制到两处 | 原型与文档逐条对照 |
+
 ## 新增与晋升
 
 **探索**：在 `drafts/` 写 `<name>.html`，`npm run preview drafts/<name>` 直接看效果，不必先接 `spec.mjs`。
