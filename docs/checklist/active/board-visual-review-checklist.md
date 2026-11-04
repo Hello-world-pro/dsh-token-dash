@@ -119,6 +119,7 @@
 | 2026-11-04 | 预算入口 | 按量卡去掉「已用 / 预算」行与 `✎`，改左环右输入框；改预算实时重算环、状态与计划余额；删除 ASCII 草图章节与对应生成脚本 |
 | 2026-11-04 | 目录规范 | 新增 `tools/preview/drafts/` 与四层约定（templates / drafts / .tmp / docs.pic）；手写 HTML 禁入 `.tmp`；`ui-design` §5.3/§5.4/§5.6 按原型回写 |
 | 2026-11-04 | 环状态图 | 抽出 `_ring.js` 统一四份模板的环绘制；新增 `ring.html`（6 态 + 3 组边界 + 3 档尺寸 + 3 种环心）；0% 不再画点 |
+| 2026-11-04 | 配色收敛 | normal 数字改前景色（去业务蓝）；环心文字改 12px/600 `label-secondary`；warn 只染 amber、critical 环与数字同红 |
 | 2026-11-04 | 状态矩阵 | 预览改为「状态穷举」：Gauge 5 / 订阅 4 / 按量 5；新增 `tools/mock/AGENTS.md` 定义假数据覆盖规则 |
 
 ## 九、QuotaGauge 控件要求（P3 按量卡 + 订阅卡共用）
@@ -144,9 +145,9 @@ QuotaGauge({
 
 ```text
 ┌ 环 40 × 40（stroke 4，中间透明）
-│   └ 环心：label 12px / 500 / label-tertiary
+│   └ 环心：label 12px / 600 / label-secondary
 ├ 间距 3px
-├ percent 16px / 600（normal 蓝 / critical 红 / empty 弱）
+├ percent 16px / 600（normal 前景色 / warn amber / critical 红 / empty 弱）
 ├ 间距 4px
 ├ remaining 11px / tertiary
 ├ relative 11px / tertiary
@@ -162,7 +163,7 @@ QuotaGauge({
 
 | 状态 | 弧 | 百分比 | 环心标签 | 辅助行 |
 |---|---|---|---|---|
-| normal | `label-primary` | `business-primary` 蓝 | tertiary（**不随状态变色**） | tertiary |
+| normal | `label-primary` | `label-primary` 前景色（与弧同色） | `label-secondary`（**不随状态变色**） | tertiary |
 | critical（订阅 ≥90 / API ≥100） | `state-error-primary` | 红 | 同上 | tertiary |
 | empty | 不画弧（仅轨道） | `—` | 同上 | `—` 或整块只留百分比 |
 

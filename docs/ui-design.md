@@ -89,7 +89,7 @@
 | 用途 | P1 预算与订阅窗口（14/2）、P2 订阅窗口（20/2.5）、P3 卡片 Gauge（40/4，按量与订阅共用同一个组件） |
 | 几何 | `viewBox="0 0 ${size} ${size}"`、`r = (size - stroke) / 2`、`strokeDasharray = C*p/100 C`、`rotate(-90 size/2 size/2)`、`strokeLinecap="round"`；`percent = 0` 与 `empty` 都不画弧 |
 | 形态 | **描边 donut，中间透明**，不是实心饼 |
-| 颜色 | 轨道 `--dsw-alias-border-l3`；弧 `normal → --dsw-alias-label-primary`、`critical → --dsw-alias-state-error-primary`、`empty` 不画弧 |
+| 颜色 | 轨道 `--dsw-alias-border-l3`；弧 `normal → --dsw-alias-label-primary`、`critical → --dsw-alias-state-error-primary`、`empty` 不画弧；**数字与弧同色**：normal 前景色、warn 只染数字 amber、critical 红、empty 用 `label-tertiary` |
 | 阈值 | 由调用方给：订阅 `≥90` → critical；API 预算 `≥100` → critical（80–100 只染数字，不染环） |
 | 无障碍 | 装饰用法 `aria-hidden`，数值由相邻文本承担；独立使用时 `role="progressbar"` |
 
@@ -141,6 +141,7 @@ API    [API] 预算 ◔ 25.4% · 今日 ¥11.37 · 余额 ¥8.74 ⌃
 - 两处槽位：首页工作区行；会话活动行左侧。都不撑开输入框。
 - 两态：API / 订阅；判定不了默认 `[API]`；无任何 provider 时 `[API] ◌ --`，不隐藏 Pill。
 - 环：所有百分比前都带**描边环**（14×14、`r=5.5`、`stroke 2`、`rotate(-90 7 7)`），弧为前景色（暗色≈白 / 亮色≈黑），不写死 `#fff`。
+- 常态：环与数字同用前景色（暗色≈白 / 亮色≈黑），**不再用业务蓝**，随主题自动反转。
 - 临界：订阅 ≥90%、API 预算 ≥100% 时环与数字同红；API 80–100% 只染数字；未设置画空环。
 - API 段：预算环 + 百分比 · 今日 · 余额；金额按 provider 币种。
 - 订阅段：`名称 + 短标签(5h/周/月) + 环 + 百分比`，最多 3 窗；**不显示重置时间**（重置只在 P2 / P3）。

@@ -3,7 +3,7 @@
   --card-bg: #242426;
   --border: rgba(235, 235, 235, .18);
   --text: #eeeeee;
-  --muted: rgba(235, 235, 235, .65);
+  --muted: rgba(235, 235, 235, .68);
   --weak: rgba(235, 235, 235, .45);
   --accent: #6ea8ff;
   --warn: #d8a03a;
@@ -43,10 +43,10 @@ section { margin-bottom: 28px; }
 .ring svg { display: block; width: 100%; height: 100%; }
 .ring-label {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-size: var(--gauge-label); font-weight: 500; color: var(--weak); letter-spacing: .2px;
+  font-size: var(--gauge-label); font-weight: 600; color: var(--muted); letter-spacing: .2px;
 }
 .pct { font-size: var(--gauge-percent); font-weight: 600; line-height: 20px; margin-top: var(--gauge-percent-offset); }
-.pct.normal { color: var(--accent); }
+.pct.normal { color: var(--text); }
 .pct.warn { color: var(--warn); }
 .pct.critical { color: var(--error); }
 .pct.empty { color: var(--weak); }

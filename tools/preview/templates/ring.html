@@ -20,7 +20,7 @@
 <div class="page">
   <section>
     <h2>环 · 状态矩阵（P3 40 / stroke 4）</h2>
-    <p class="legend">弧色：normal / warn = 前景色；critical = error；empty = 仅轨道。数字：normal 蓝 / warn amber / critical 红 / empty 弱。warn 只染数字，不动弧。</p>
+    <p class="legend">弧色：normal / warn = 前景色；critical = error；empty = 仅轨道。数字：normal 与弧同色（前景色）/ warn amber / critical 红 / empty 弱。warn 只染数字，不动弧。</p>
     <div class="matrix" id="states"></div>
   </section>
 
@@ -56,7 +56,7 @@
   const ringBox = (size, stroke, percent, state, label = '') => `
     <div class="ring-box" style="--size:${size}px">
       ${ringSvg(size, stroke, percent, state)}
-      ${label === '' ? '' : `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--weak)">${label}</span>`}
+      ${label === '' ? '' : `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--muted)">${label}</span>`}
     </div>`
 
   const pctHtml = (percent, state) => `
@@ -85,14 +85,14 @@
   ].join('')
 
   document.getElementById('api-pair').innerHTML = [
-    sample(79.9, criticalApi, '79.9% · normal（蓝）'),
+    sample(79.9, criticalApi, '79.9% · normal（前景色）'),
     sample(80, criticalApi, '80.0% · warn（amber）'),
     sample(99.9, criticalApi, '99.9% · warn（amber）'),
     sample(100, criticalApi, '100.0% · critical（红）'),
   ].join('')
 
   document.getElementById('sub-pair').innerHTML = [
-    sample(89.9, criticalSub, '89.9% · normal（蓝）'),
+    sample(89.9, criticalSub, '89.9% · normal（前景色）'),
     sample(90, criticalSub, '90.0% · critical（红）'),
   ].join('')
 
