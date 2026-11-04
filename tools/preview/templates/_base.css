@@ -25,9 +25,10 @@ h2 { font-size: 13px; font-weight: 600; margin: 0 0 12px; color: var(--muted); }
 section { margin-bottom: 28px; }
 
 .page { width: var(--content-width); }
-.grid { display: grid; gap: var(--layout-gap); align-items: start; }
-.grid.api { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.grid.sub { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.grid { display: grid; gap: var(--layout-gap); align-items: start; justify-content: center; }
+.grid.api { display: flex; flex-wrap: wrap; justify-content: center; }
+.grid.api .cell { flex: 0 0 var(--card-max); }
+.grid.sub { grid-template-columns: repeat(4, minmax(var(--card-min), var(--card-max))); }
 .cell { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .cap { font-size: 11px; color: var(--weak); padding-left: 2px; }
 
@@ -58,9 +59,9 @@ section { margin-bottom: 28px; }
 .line { font-size: var(--gauge-meta); color: var(--muted); line-height: 15px; white-space: nowrap; }
 
 /* 按量卡：左侧 Gauge，右侧预算输入框，下面三行 label-value */
-.api-body { display: flex; align-items: center; gap: 16px; margin: 12px 0 12px; }
+.api-body { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 12px 0 12px; }
 .api-body .gauge { align-items: flex-start; }
-.budget { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.budget { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .budget .k { font-size: 11px; color: var(--weak); }
 .budget-input {
   display: inline-flex; align-items: center; gap: 2px;

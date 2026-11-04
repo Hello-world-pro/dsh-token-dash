@@ -39,6 +39,8 @@ const css = [
   `--content-width: ${SPEC.layout.contentWidth}px;`,
   `--layout-gap: ${SPEC.layout.gap}px;`,
   `--card-width: ${card}px;`,
+  `--card-min: ${SPEC.layout.minCard}px;`,
+  `--card-max: ${SPEC.layout.maxCard}px;`,
   `--card-radius: ${SPEC.card.radius}px;`,
   `--card-padding: ${SPEC.card.padding}px;`,
   `--card-header-font: ${SPEC.card.headerFont}px;`,

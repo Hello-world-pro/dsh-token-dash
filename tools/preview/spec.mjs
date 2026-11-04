@@ -36,6 +36,7 @@ export const SPEC = {
     contentWidth: 952, // 1000 中栏 − 24 × 2 padding
     gap: 12,
     minCard: 220,
+    maxCard: 260, // 卡片不随剩余宽度无限拉伸，避免 3 家时被拉成 309
     pagePadding: 24,
   },
   card: {
