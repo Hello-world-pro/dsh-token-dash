@@ -40,7 +40,7 @@
 
 - provider id 稳定（`deepseek-official` / `opencode-go` …），状态用后缀表达：`-warn`、`-over`、`-unset`、`-empty`；禁止按日期或序号命名。
 - 顶部展示用的「假数据」不得包含真实 Key、真实会话或真实账号余额。
-- 定稿图走 `npm run shots`（写 `docs/pic/`）；状态图拆三张：`npm run preview gauge` / `cards-sub` / `cards-api`（写 `.tmp/preview/`），两者都从 fixtures 取数。
+- 定稿图走 `npm run shots`（写 `docs/pic/`）；状态图拆三张：`npm run preview ring` / `cards-sub` / `cards-api`（写 `.tmp/preview/`），两者都从 fixtures 取数。
 
 ## 5. 新增 provider 的最小改动
 

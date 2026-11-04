@@ -93,7 +93,7 @@
 | P2 320px 不出横向滚动、宽度 ≤480 | 待执行 | `scrollWidth === clientWidth` |
 | P3 卡片列数：1000px=4 / 760=3 / 520=2 | 待执行 | 三档截图量列数 |
 | 订阅卡窗口列数 = 实际窗口数（两窗不出「月」列） | 待执行 | Kimi / Command Code 各一张 |
-| 三张状态图覆盖 5 / 6 / 5 态 | 待执行 | 目检 gauge / cards-sub / cards-api |
+| 状态图覆盖 6 / 6 / 5 态 | 待执行 | 目检 ring / cards-sub / cards-api |
 | 按量与订阅 Gauge 环直径均 = 40，环心分别为「已用」与周期 | 待执行 | 截图量环与中心文字 |
 | 百分比在环下 16px、剩余/时间 11px | 待执行 | 目检单卡字号层级 |
 | 按量卡左 Gauge、右预算输入框；改预算后环与计划余额即时更新 | 待执行 | 预览中改值目检 |
@@ -127,6 +127,7 @@
 | 2026-11-04 | 配色收敛 | normal 数字改前景色（去业务蓝）；环心文字改 12px/600 `label-secondary`；warn 只染 amber、critical 环与数字同红 |
 | 2026-11-04 | 三色语义 | 环与数字同色：normal 低饱和绿（`--td-state-ok`）/ warn 黄 / critical 红；语义固定、色值走 token；ui-design §2.5.1/§2.6/§3 与预览同步 |
 | 2026-11-04 | 金额决策 | D12：金额改前景色 + 600、负数红，green 只表示正常状态；`ui-design.md` 与 `client.js` 的改动延到模板定稿后统一做（本轮仅文档） |
+| 2026-11-04 | 预览精简 | 删除 `gauge.html` / `gauge.png`（与 `ring` + `cards-sub` 重复）；状态图收敛为 ring / cards-sub / cards-api 三张；README、清单与 mock 规则同步 |
 | 2026-11-04 | 状态矩阵 | 预览改为「状态穷举」：Gauge 5 / 订阅 4 / 按量 5；新增 `tools/mock/AGENTS.md` 定义假数据覆盖规则 |
 
 ## 九、QuotaGauge 控件要求（P3 按量卡 + 订阅卡共用）
@@ -202,10 +203,9 @@ QuotaGauge({
 
 ### 9.7 预览方式（本轮已验证）
 
-- 四张独立状态图（各 2x，按内容高度裁剪）：
+- 三张独立状态图（各 2x，按内容高度裁剪）：
   - `npm run preview ring` → `.tmp/preview/ring.png`：环的全量状态（6 态矩阵 + API/订阅 3 组阈值边界 + P1/P2/P3 三档尺寸 + 无标签/周期/「已用」三种环心）。
-  - `npm run preview gauge` → `.tmp/preview/gauge.png`：QuotaGauge 5 态（42.5 / 边界 89.9·90 / 96 / empty）。
-  - `npm run preview cards-sub` → `.tmp/preview/cards-sub.png`：订阅卡 6 态（三窗 ×2 / 两窗无月 / 两窗 critical / 单窗 / 含空窗），卡顶为真实供应商名。
+  - `npm run preview cards-sub` → `.tmp/preview/cards-sub.png`：订阅卡 6 态（三窗 ×2 / 两窗无月 / 两窗 critical / 单窗 / 含空窗），卡顶为真实供应商名。环 + 三行辅助信息的组合只在这里看，不再单独出 Gauge 状态图。
   - `npm run preview cards-api` → `.tmp/preview/cards-api.png`：按量卡 5 态（normal / warn / over / 预算未设置 / 余额不支持）；右侧预算输入框可改，环与计划余额即时重算，卡下 caption 跟随状态。
 - 状态覆盖口径见 [`tools/mock/AGENTS.md`](../../../tools/mock/AGENTS.md) §2：组件有 N 种状态就出 N 个样本，不合并。
 - 尺寸来源：[`tools/preview/spec.mjs`](../../../tools/preview/spec.mjs)；模板在 [`tools/preview/templates/`](../../../tools/preview/templates/)，公共样式在 `_base.css`。

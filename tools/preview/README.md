@@ -26,7 +26,6 @@ tools/preview/
     _base.css           # 公共样式（卡片、Gauge、kv 行）
     _ring.js            # 环的统一绘制与状态判定（四个模板共用）
     ring.html           # 环全量状态：矩阵 / 阈值边界 / 尺寸档位 / 环心标签
-    gauge.html          # Gauge 5 态
     cards-sub.html      # 订阅卡 6 态（带供应商名）
     cards-api.html      # 按量卡 5 态（预算可编辑）
   drafts/               # 探索稿：允许粗糙，定稿后移入 templates/
@@ -34,12 +33,11 @@ tools/preview/
 
 ```bash
 npm run preview ring             # → .tmp/preview/ring.png（环的全量状态）
-npm run preview gauge            # → .tmp/preview/gauge.png（2x，按内容高度裁剪）
 npm run preview cards-sub
 npm run preview cards-api
 npm run preview drafts/explore   # → .tmp/preview/draft-explore.png
-npm run preview gauge -- --scale 3
-npm run preview:publish gauge    # → docs/pic/gauge.png（仅定稿）
+npm run preview ring -- --scale 3
+npm run preview:publish ring     # → docs/pic/ring.png（仅定稿）
 ```
 
 - `cards-api` 的预算输入框可直接改值，环、状态与计划余额即时重算，用于验证阈值与超支表现。
@@ -49,7 +47,6 @@ npm run preview:publish gauge    # → docs/pic/gauge.png（仅定稿）
 | 模板 | 对应设计章节 | 状态 | 覆盖 |
 |---|---|---|---|
 | `ring.html` | `ui-design.md` §2.5.1 ProgressRing | final | 6 态 + 3 组边界 + 3 档尺寸 + 3 种环心 |
-| `gauge.html` | `ui-design.md` §2.5 公共组件 | final | 5 态 |
 | `cards-sub.html` | §5.4 订阅套餐 | final | 6 态 |
 | `cards-api.html` | §5.3 按量计价 | final | 5 态 |
 

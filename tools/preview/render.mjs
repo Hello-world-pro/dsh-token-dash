@@ -3,7 +3,7 @@
  *
  * 用法：
  *   node tools/preview/render.mjs [template] [--publish] [--out <dir>] [--scale <n>]
- *   npm run preview gauge
+ *   npm run preview ring
  *   npm run preview:publish gauge     # 仅 README / 设计文档定稿图才用
  *
  * 默认输出 .tmp/preview/<template>.html|png（不入库）；
