@@ -29,6 +29,9 @@ tools/preview/
     inline-ring.html    # InlineRing：P1/P2 内联组合 4 态 × 2 尺寸
     cards-sub.html      # 订阅卡 6 态（带供应商名）
     cards-api.html      # 按量卡 5 态（预算可编辑）
+    page-p1.html        # P1 底栏 Pill 状态页（设计稿）
+    page-p2.html        # P2 浮层 + Pill 示例（设计稿）
+    page-p3.html        # P3 整页：两表 + 两格卡 + 明细 + 胶囊（设计稿）
   drafts/               # 探索稿：允许粗糙，定稿后移入 templates/
 ```
 
@@ -37,6 +40,9 @@ npm run preview ring             # → .tmp/preview/ring.html（IDE 直接预览
 npm run preview inline-ring
 npm run preview cards-sub
 npm run preview cards-api
+npm run preview page-p1          # 页面级设计稿：P1 / P2 / P3
+npm run preview page-p2
+npm run preview page-p3
 npm run preview drafts/explore   # → .tmp/preview/draft-explore.html
 npm run preview ring -- --png    # 需要静态图时再截 → ring.png（2x）
 npm run preview ring -- --png --scale 3
@@ -61,6 +67,14 @@ npm run preview:pages     # → .tmp/preview/p*-*.html
 
 实现方式：`tools/mock/shots.mjs --html` 真机打开 mock 宿主，把目标元素的 `outerHTML` 连同**解析后的宿主 token** 导成单文件 HTML。所以它反映"已经写出来的样子"，不反映 `templates/` 里的新稿——改设计时两者要分开看。
 
+想看**新设计的整页**，用 `templates/page-p1|p2|p3.html`：
+
+```bash
+npm run preview page-p3            # IDE 打开 .tmp/preview/page-p3.html
+```
+
+这三个是设计稿（可改样式、可改假数据），不是实现快照；等 `client.js` 落地后再跑 `preview:pages` 对照。
+
 ## 模板对照
 
 | 模板 | 对应设计章节 | 状态 | 覆盖 |
@@ -69,6 +83,9 @@ npm run preview:pages     # → .tmp/preview/p*-*.html
 | `inline-ring.html` | §3 P1 / §4.4 订阅行 | final | 4 态 × 2 尺寸 + 组合示例 |
 | `cards-sub.html` | §5.4 订阅套餐 | final | 6 态 |
 | `cards-api.html` | §5.3 按量计价 | final | 5 态 |
+| `page-p1.html` | §3 P1 Pill | final | 8 种形态（normal/warn/over/未设置/无余额/2窗/3窗/临界） |
+| `page-p2.html` | §4 P2 浮层 | final | 四列主区 + 范围 + 用量表 + 底部；附 Pill 示例 |
+| `page-p3.html` | §5 P3 整页 | final | 两表 + 两格卡 + 8 列明细 + 设置胶囊 |
 
 新增模板时补一行；状态用 `draft` / `final`，不写具体日期。
 

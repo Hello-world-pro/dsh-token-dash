@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>P2 浮层（设计稿）</title>
+<style>
+  :root { /*__SPEC_CSS__*/ }
+  /*__BASE_CSS__*/
+  body { padding: 32px 24px; }
+  .page { width: var(--content-width); margin: 0 auto; }
+
+  .stage { display: flex; flex-direction: column; gap: 24px; align-items: flex-start; }
+  .stage-note { font-size: 11px; color: var(--weak); margin: 0 0 -12px; }
+
+  .panel {
+    width: 420px; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--card-bg); padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .ph { display: flex; align-items: center; justify-content: space-between; }
+  .ph .t { font-size: 13px; font-weight: 600; }
+  .ph .acts { display: flex; gap: 6px; color: var(--muted); font-size: 12px; }
+
+  .summary { display: flex; align-items: center; gap: 16px; justify-content: space-between; }
+  .summary .cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .summary .k { font-size: 11px; color: var(--muted); }
+  .summary .v { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .inline { display: inline-flex; align-items: center; gap: 4px; }
+  .inline b { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .range { display: inline-flex; gap: 2px; border: 1px solid var(--border); border-radius: 999px; padding: 2px; align-self: flex-start; }
+  .range span { font-size: 12px; padding: 2px 10px; border-radius: 999px; color: var(--muted); }
+  .range .on { background: rgba(255, 255, 255, .10); color: var(--text); }
+
+  .table { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 0 8px; font-size: 12px; }
+  .table .h { font-size: 11px; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .table .c { padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tokens { display: inline-flex; gap: 4px; justify-content: flex-end; white-space: nowrap; }
+  .tokens .sub { color: var(--muted); }
+
+  .foot { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); }
+  .foot .btn {
+    height: 22px; padding: 0 8px; border-radius: 6px;
+    border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 11px;
+  }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px;
+    border-radius: 999px; border: 1px solid var(--border); font-size: 12px;
+    font-variant-numeric: tabular-nums; color: var(--text);
+  }
+  .pill .tag { font-weight: 600; }
+  .pill .label { color: var(--muted); }
+  .pill .seg { display: inline-flex; align-items: center; gap: 4px; }
+  .pill .caret { color: var(--muted); font-size: 10px; }
+  .pill-row { display: flex; flex-direction: column; gap: 10px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="stage">
+    <p class="stage-note">P2 · 浮层（示例 420px，实际内容自适应 280–480）</p>
+
+    <div class="panel">
+      <div class="ph">
+        <span class="t">当前模型</span>
+        <span class="acts"><span>ⓘ</span><span>⟳</span><span>×</span></span>
+      </div>
+
+      <div class="summary">
+        <span id="used-inline"></span>
+        <span class="cell"><span class="k">已用 / 预算</span><span class="v">¥91.90 / ¥100.00</span></span>
+        <span class="cell"><span class="k">真实余额</span><span class="v">¥87.66</span></span>
+        <span class="cell"><span class="k">本月已花</span><span class="v">¥91.90</span></span>
+      </div>
+
+      <div class="range"><span>当天</span><span>近7天</span><span>近30天</span><span class="on">全部</span></div>
+
+      <div class="table">
+        <div class="h">模型</div><div class="h num">Tokens</div><div class="h num">请求</div><div class="h num">命中</div>
+        <div class="c">DeepSeek-V4.1-Flash</div>
+        <div class="c num"><span class="tokens"><b>128.4k</b><span class="sub">[8.0k/12.0k/1.2k]</span></span></div>
+        <div class="c num">4</div><div class="c num">100%</div>
+        <div class="c">deepseek-reasoner</div>
+        <div class="c num"><span class="tokens"><b>3.2k</b><span class="sub">[3.1k/0/120]</span></span></div>
+        <div class="c num">2</div><div class="c num">42%</div>
+      </div>
+
+      <div class="foot"><span>更新于 12:30</span><button class="btn" type="button">全量看板</button></div>
+    </div>
+
+    <p class="stage-note">P1 · 底栏 Pill（同一套 InlineRing，14/2）</p>
+    <div class="pill-row">
+      <span class="pill" id="pill-api"></span>
+      <span class="pill" id="pill-sub"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.__SPEC__ = /*__SPEC_JSON__*/
+</script>
+<script>
+/*__RING_JS__*/
+</script>
+<script>
+  const { p1, p2, criticalApi } = window.__SPEC__.ring
+
+  const inline = (size, stroke, percent, critical) => {
+    const state = percent === null ? 'empty' : ringStateOf(percent, critical)
+    return `<span class="inline">${ringSvg(size, stroke, percent, state)}<b class="pct ${state}">${percent === null ? '—' : percent.toFixed(1) + '%'}</b></span>`
+  }
+
+  document.getElementById('used-inline').innerHTML = inline(p2.size, p2.stroke, 91.9, criticalApi)
+  document.getElementById('pill-api').innerHTML = `
+    <span class="tag">[API]</span>
+    <span class="seg"><span class="label">预算</span>${inline(p1.size, p1.stroke, 91.9, criticalApi)}</span>
+    <span class="seg"><span class="label">今日</span><b>¥0.16</b></span>
+    <span class="seg"><span class="label">余额</span><b>¥87.66</b></span>
+    <span class="caret">⌄</span>`
+  document.getElementById('pill-sub').innerHTML = `
+    <span class="tag">[订阅]</span>
+    <span class="seg"><span class="label">GLM 5h</span>${inline(p1.size, p1.stroke, 42.5, 90)}</span>
+    <span class="label">·</span>
+    <span class="seg"><span class="label">周</span>${inline(p1.size, p1.stroke, 18.2, 90)}</span>
+    <span class="caret">⌄</span>`
+</script>
+</body>
+</html>

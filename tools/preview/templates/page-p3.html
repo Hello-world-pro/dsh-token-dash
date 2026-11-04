@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>P3 整页看板（设计稿）</title>
+<style>
+  :root { /*__SPEC_CSS__*/ }
+  /*__BASE_CSS__*/
+  body { padding: 32px 24px; }
+  .page { width: var(--content-width); margin: 0 auto; }
+
+  .board-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+  .board-head h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
+  .board-head .meta { font-size: 12px; color: var(--muted); }
+  .actions { display: flex; gap: 8px; align-items: center; }
+  .btn {
+    height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); font-size: 12px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+
+  .block { margin-top: 24px; }
+  .block h2 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 10px; }
+
+  .range { display: inline-flex; gap: 2px; border: 1px solid var(--border); border-radius: 999px; padding: 2px; margin-bottom: 12px; }
+  .range span { font-size: 12px; padding: 2px 10px; border-radius: 999px; color: var(--muted); }
+  .range .on { background: rgba(255, 255, 255, .10); color: var(--text); }
+
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 16px; }
+  .tile { border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); padding: 12px; }
+  .tile .k { font-size: 11px; color: var(--muted); }
+  .tile .v { font-size: 18px; font-weight: 600; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .tile .s { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .table { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(7, minmax(52px, auto)); gap: 0 8px; font-size: 12px; }
+  .table .h { font-size: 11px; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .table .c { padding: 5px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .capsule {
+    position: sticky; bottom: 12px; margin-top: 24px; border: 1px solid var(--border);
+    border-radius: 10px; background: var(--card-bg); padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--muted);
+  }
+  .capsule .row { display: flex; align-items: center; gap: 10px; }
+  .capsule .grow { flex: 1; }
+  .capsule .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .capsule .seg span { padding: 2px 8px; }
+  .capsule .seg .on { background: rgba(255, 255, 255, .10); color: var(--text); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="board-head">
+    <div>
+      <h1>Token 看板</h1>
+      <div class="meta">数据来自本机会话记录 · 更新于 12:30</div>
+    </div>
+    <div class="actions">
+      <a class="btn" href="#" title="GitHub">★</a>
+      <button class="btn" type="button" title="刷新">⟳</button>
+      <button class="btn" type="button" title="说明">ⓘ</button>
+    </div>
+  </header>
+
+  <section class="block">
+    <h2>按量计价（按供应商）</h2>
+    <div class="grid api" id="api"></div>
+  </section>
+
+  <section class="block">
+    <h2>订阅套餐（按供应商）</h2>
+    <div class="grid sub" id="sub"></div>
+  </section>
+
+  <section class="block">
+    <div class="range"><span>当天</span><span>近7天</span><span>近30天</span><span class="on">全部</span></div>
+
+    <div class="tiles">
+      <div class="tile">
+        <div class="k">总费用</div>
+        <div class="v">¥12.68　$19.00</div>
+      </div>
+      <div class="tile">
+        <div class="k">真实 Tokens</div>
+        <div class="v">1.24M</div>
+        <div class="s">输入 620k · 缓存 520k · 输出 100k</div>
+      </div>
+    </div>
+
+    <div class="table" id="detail"></div>
+  </section>
+
+  <div class="capsule">
+    <div class="row">
+      <button class="btn" type="button">⟳ 立即刷新</button>
+      <span class="seg"><span class="on">30 秒</span><span>1 分钟</span><span>5 分钟</span></span>
+      <span class="grow"></span>
+      <span>账户余额</span>
+      <span class="seg"><span class="on">开</span><span>关</span></span>
+    </div>
+    <div class="row">
+      <button class="btn" type="button">打开日志文件夹</button>
+      <button class="btn" type="button">导出日志</button>
+      <button class="btn" type="button">导出数据</button>
+      <button class="btn" type="button">导入数据</button>
+    </div>
+    <div class="row">
+      <span>价格表 2026-11-04 · 内置 · 版本 1.2.0</span>
+      <span class="grow"></span>
+      <button class="btn" type="button">⤓ 检查更新</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.__SPEC__ = /*__SPEC_JSON__*/
+</script>
+<script>
+/*__RING_JS__*/
+</script>
+<script>
+  const { p3, criticalApi, criticalSub } = window.__SPEC__.ring
+
+  const stateOf = (percent, critical) => percent === null ? 'empty' : ringStateOf(percent, critical)
+  const money = (cur, value) => value < 0 ? `-${cur}${Math.abs(value).toFixed(2)}` : `${cur}${value.toFixed(2)}`
+
+  const apiCard = (data, index) => `
+    <div class="cell">
+      <div class="card" data-index="${index}">
+        <div class="head"><span class="name">${data.name}</span><span class="chip">[ 按量 API ]</span></div>
+        <div class="api-body">
+          <div class="gauge">
+            <div class="ring">${ringSvg(p3.size, p3.stroke, null, 'empty')}<span class="ring-label">已用</span></div>
+            <div class="pct empty" data-role="pct">—</div>
+          </div>
+          <div class="budget">
+            <span class="k">月度预算</span>
+            <span class="budget-input"><span class="cur">${data.cur}</span><input data-role="budget" value="${data.budget}" inputmode="decimal" /></span>
+          </div>
+        </div>
+        <div class="kv"><span class="k">计划余额</span><span class="v" data-role="plan">—</span></div>
+        <div class="kv"><span class="k">真实余额</span><span class="v">${data.real}</span></div>
+        <div class="kv"><span class="k">本月已花</span><span class="v">${data.month}</span></div>
+      </div>
+      <span class="cap" data-role="cap"></span>
+    </div>`
+
+  const apiData = [
+    { name: 'OpenRouter', cur: '$', used: 19, budget: '50.00', real: '$7.66', month: '$22.80' },
+    { name: 'DeepSeek', cur: '¥', used: 91.9, budget: '100.00', real: '¥87.66', month: '¥91.90' },
+    { name: '通义千问', cur: '¥', used: 6.43, budget: '5.00', real: '—', month: '¥6.43' },
+  ]
+
+  const subData = [
+    { name: 'GLM Coding', windows: [
+      { key: '5h', pct: 42.5, state: 'normal', left: '剩余 58%', rel: '3 小时后', abs: '22:51' },
+      { key: '周', pct: 18.2, state: 'normal', left: '剩余 82%', rel: '1 天后', abs: '11-05' },
+      { key: '月', pct: 3, state: 'normal', left: '剩余 97%', rel: '18 天后', abs: '11-22' },
+    ] },
+    { name: 'Kimi Coding', windows: [
+      { key: '5h', pct: 96, state: 'critical', left: '剩余 4%', rel: '10 分钟后', abs: '20:02' },
+      { key: '周', pct: 12, state: 'normal', left: '剩余 88%', rel: '1 天后', abs: '11-05' },
+    ] },
+    { name: 'OpenCode Go', windows: [
+      { key: '5h', pct: 12, state: 'normal', left: '剩余 88%', rel: '2 小时后', abs: '21:51' },
+      { key: '周', pct: 34, state: 'normal', left: '剩余 66%', rel: '4 天后', abs: '11-08' },
+      { key: '月', pct: 58, state: 'normal', left: '剩余 42%', rel: '18 天后', abs: '11-22' },
+    ] },
+    { name: 'Command Code', windows: [
+      { key: '5h', pct: 96, state: 'critical', left: '剩余 4%', rel: '1 小时后', abs: '20:32' },
+      { key: '周', pct: 61, state: 'normal', left: '剩余 39%', rel: '5 天后', abs: '11-09' },
+    ] },
+  ]
+
+  const gaugeCell = (win) => `
+    <div class="gauge">
+      <div class="ring">
+        ${ringSvg(p3.size, p3.stroke, win.pct, win.state)}
+        <span class="ring-label">${win.key}</span>
+      </div>
+      <div class="pct ${win.state}">${win.pct.toFixed(1)}%</div>
+      <div class="line">${win.left}</div>
+      <div class="line">${win.rel}</div>
+      <div class="line">${win.abs}</div>
+    </div>`
+
+  const subCard = (data) => `
+    <div class="cell">
+      <div class="card">
+        <div class="head"><span class="name">${data.name}</span><span class="chip">[ 订阅 ]</span></div>
+        <div class="windows" style="grid-template-columns: repeat(${data.windows.length}, minmax(0, 1fr))">
+          ${data.windows.map(gaugeCell).join('')}
+        </div>
+      </div>
+      <span class="cap">${data.windows.length} 窗</span>
+    </div>`
+
+  const detailRows = [
+    ['DeepSeek-V4.1-Flash · DeepSeek', '128.4k', '8.0k', '12.0k', '1.2k', '4', '100%', '¥0.04'],
+    ['DeepSeek-V4.1-Flash · OpenRouter', '12.5k', '3.0k', '2.0k', '0.8k', '2', '42%', '$0.12'],
+    ['GLM-5.3 · GLM Coding', '52.0k', '20.0k', '30.0k', '2.0k', '6', '—', '—'],
+  ]
+
+  document.getElementById('api').innerHTML = apiData.map(apiCard).join('')
+  document.getElementById('sub').innerHTML = subData.map(subCard).join('')
+
+  const updateApi = (index) => {
+    const data = apiData[index]
+    const card = document.querySelector(`.card[data-index="${index}"]`)
+    if (card === null) return
+    const raw = card.querySelector('[data-role=budget]').value.replace(/[^\d.]/g, '')
+    const budget = raw === '' ? null : Number(raw)
+    const percent = budget === null || budget <= 0 ? null : (data.used / budget) * 100
+    const state = stateOf(percent, criticalApi)
+    card.querySelector('.ring').innerHTML = `${ringSvg(p3.size, p3.stroke, percent, state)}<span class="ring-label">已用</span>`
+    const pct = card.querySelector('[data-role=pct]')
+    pct.className = `pct ${state}`
+    pct.textContent = percent === null ? '—' : `${percent.toFixed(1)}%`
+    const plan = card.querySelector('[data-role=plan]')
+    const planValue = budget === null || budget <= 0 ? null : budget - data.used
+    plan.textContent = planValue === null ? '—' : money(data.cur, planValue)
+    plan.className = `v${planValue !== null && planValue < 0 ? ' over' : ''}`
+    card.parentElement.querySelector('[data-role=cap]').textContent = state === 'empty'
+      ? '预算未设置'
+      : `${state} · ${percent.toFixed(1)}%`
+  }
+
+  apiData.forEach((_, index) => {
+    const input = document.querySelector(`.card[data-index="${index}"] [data-role=budget]`)
+    input.addEventListener('input', () => updateApi(index))
+    updateApi(index)
+  })
+
+  document.getElementById('detail').innerHTML = `
+    <div class="h">模型</div><div class="h">Tokens</div><div class="h num">输入</div><div class="h num">缓存</div>
+    <div class="h num">输出</div><div class="h num">请求</div><div class="h num">命中</div><div class="h num">费用</div>
+    ${detailRows.map((row) => row.map((cell, index) => `<div class="c${index > 1 ? ' num' : ''}">${cell}</div>`).join('')).join('')}
+  `
+</script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>P1 底栏 Pill（设计稿）</title>
+<style>
+  :root { /*__SPEC_CSS__*/ }
+  /*__BASE_CSS__*/
+  body { padding: 32px 24px; }
+  .page { width: var(--content-width); margin: 0 auto; }
+
+  .rows { display: flex; flex-direction: column; gap: 14px; }
+  .row { display: flex; align-items: center; gap: 16px; }
+  .row .k { width: 96px; flex: none; font-size: 11px; color: var(--weak); }
+  .row .demo { display: flex; align-items: center; gap: 10px; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px;
+    border-radius: 999px; border: 1px solid var(--border); font-size: 12px;
+    font-variant-numeric: tabular-nums; color: var(--text); background: rgba(255, 255, 255, .04);
+  }
+  .pill .tag { font-weight: 600; }
+  .pill .label { color: var(--muted); }
+  .pill .seg { display: inline-flex; align-items: center; gap: 4px; }
+  .pill .caret { color: var(--muted); font-size: 10px; }
+  .inline { display: inline-flex; align-items: center; gap: 4px; }
+  .inline b { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .inline b.normal { color: var(--ok); }
+  .inline b.warn { color: var(--warn); }
+  .inline b.critical { color: var(--error); }
+  .inline b.empty { color: var(--weak); }
+
+  .legend { margin: 24px 0 0; font-size: 11px; color: var(--weak); line-height: 18px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="rows" id="rows"></div>
+  <p class="legend">环与数字同色：normal 低饱和绿 / warn 黄 / critical 红；empty 只留轨道 + 弱灰 —。订阅窗口 ≥90 转红，API 预算 ≥100 转红。</p>
+</div>
+
+<script>
+  window.__SPEC__ = /*__SPEC_JSON__*/
+</script>
+<script>
+/*__RING_JS__*/
+</script>
+<script>
+  const { p1, criticalApi, criticalSub } = window.__SPEC__.ring
+
+  const inline = (percent, critical) => {
+    const state = percent === null ? 'empty' : ringStateOf(percent, critical)
+    const text = percent === null ? '—' : `${percent.toFixed(1)}%`
+    return `<span class="inline">${ringSvg(p1.size, p1.stroke, percent, state)}<b class="${state}">${text}</b></span>`
+  }
+
+  const apiPill = ({ percent, critical = criticalApi, today = '¥0.16', balance = '¥87.66' }) => `
+    <span class="pill">
+      <span class="tag">[API]</span>
+      <span class="seg"><span class="label">预算</span>${inline(percent, critical)}</span>
+      <span class="seg"><span class="label">今日</span><b>${today}</b></span>
+      <span class="seg"><span class="label">余额</span><b>${balance}</b></span>
+      <span class="caret">⌄</span>
+    </span>`
+
+  const subPill = (windows) => `
+    <span class="pill">
+      <span class="tag">[订阅]</span>
+      <span class="seg"><span class="label">GLM 5h</span>${inline(windows[0], criticalSub)}</span>
+      ${windows[1] === undefined ? '' : `<span class="label">·</span><span class="seg"><span class="label">周</span>${inline(windows[1], criticalSub)}</span>`}
+      ${windows[2] === undefined ? '' : `<span class="label">·</span><span class="seg"><span class="label">月</span>${inline(windows[2], criticalSub)}</span>`}
+      <span class="caret">⌄</span>
+    </span>`
+
+  const rows = [
+    ['API · 正常', apiPill({ percent: 12.3 })],
+    ['API · warn', apiPill({ percent: 91.9 })],
+    ['API · 超支', apiPill({ percent: 128.6, today: '¥6.43', balance: '—' })],
+    ['API · 未设预算', apiPill({ percent: null, today: '¥3.20', balance: '¥12.00' })],
+    ['API · 余额不支持', apiPill({ percent: 8, today: '¥0.04', balance: '—' })],
+    ['订阅 · 两窗', subPill([42.5, 18.2])],
+    ['订阅 · 三窗', subPill([12, 34, 58])],
+    ['订阅 · 临界', subPill([96, 12])],
+  ]
+
+  document.getElementById('rows').innerHTML = rows
+    .map(([label, pill]) => `<div class="row"><span class="k">${label}</span><span class="demo">${pill}</span></div>`)
+    .join('')
+</script>
+</body>
+</html>
