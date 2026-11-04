@@ -1,6 +1,6 @@
 # Plan 目录规则
 
-- 本仓是单项目仓，计划直接放 `docs/plan/active/`，不再使用项目域子目录。
-- active：`docs/plan/active/feature_<topic>.md`；archived：`docs/plan/archived/`。
+- 本仓单产品，沿用 `dsh` 项目域：active 放 `docs/plan/active/dsh/`，archived 放 `docs/plan/archived/dsh/`。
+- active：`docs/plan/active/dsh/feature_<topic>.md`；archived：`docs/plan/archived/dsh/`；当前 active 为空。
 - 操作前加载全局 `plan-workflow` skill；命名、状态、压缩、归档以该 skill 为准。
-- 最近归档：`docs/plan/archived/feature_subscription_row_polish.md`（2026-11-02，订阅行与预算行排版修正）。
+- 最近归档：`docs/plan/archived/dsh/feature_board_cards_redesign.md`（2026-11-05，卡片化与三色环，`1.3.0-local.7`）。

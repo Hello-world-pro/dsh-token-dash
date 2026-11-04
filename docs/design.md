@@ -102,7 +102,7 @@ SummaryVM（core.js → client 的唯一 DTO）
 
 ## Provider 扩展（目标形态）
 
-> 现状五家固定、逐家 if 分支；扩到第七家前先把取数收敛成表。详细条目见 [后端能力清单](checklist/active/backend-capability-checklist.md) §4。
+> 现状五家固定、逐家 if 分支；扩到第七家前先把取数收敛成表。详细条目见 [后端能力清单](checklist/archived/backend-capability-checklist.md) §4。
 
 ```text
 quota-sources.js（新增）
@@ -176,7 +176,7 @@ dsh-token-dash/
 | 页面 | `Pill` / `Panel` / `BoardPage` | 布局、取数、交互 | 重画弧或格式化百分比 |
 
 - 公共函数：`stateOf(percent, critical)` 判状态、`percentText(percent)` 格式化；三页共用。
-- 设计契约与状态矩阵见 [`ui-design.md`](ui-design.md) §2.5 与 [`ring.html`](../tools/preview/templates/ring.html)；实现方案见 [`feature_board_cards_redesign.md`](plan/active/dsh/feature_board_cards_redesign.md)。
+- 设计契约与状态矩阵见 [`ui-design.md`](ui-design.md) §2.5 与 [`ring.html`](../tools/preview/templates/ring.html)；实现方案见 [`feature_board_cards_redesign.md`](plan/archived/dsh/feature_board_cards_redesign.md)（已归档）。
 
 ## 模块职责速查
 

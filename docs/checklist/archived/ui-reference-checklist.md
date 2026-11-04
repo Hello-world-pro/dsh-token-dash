@@ -3,7 +3,7 @@
 > 状态：已归档（2026-11-04，方案已落地并回写 `ui-design.md` v3.1）<br>
 > 参考档案：[`invisiblesirius-dsh-quota-dashboard.md`](../../reference/invisiblesirius-dsh-quota-dashboard.md)、[`shy3130-dsh-quota.md`](../../reference/shy3130-dsh-quota.md)、[`2026heshao-dsh-armory.md`](../../reference/2026heshao-dsh-armory.md)<br>
 > 视觉真源：`docs/ui-design.md` v3.1（本文件只保留结论与取舍，细则以设计文档为准）<br>
-> 后续：新问题记录在 [`board-visual-review-checklist.md`](../active/board-visual-review-checklist.md)
+> 后续：新问题记录在 [`board-visual-review-checklist.md`](board-visual-review-checklist.md)（已归档）
 
 ## 0. 页面分层
 

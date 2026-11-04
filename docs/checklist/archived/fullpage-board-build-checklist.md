@@ -51,6 +51,6 @@
 
 ## 五、回写去向
 
-- 需求结论 → `docs/plan/active/dsh/feature_fullpage_board.md` §五 验收结果。
+- 需求结论 → `docs/plan/archived/dsh/feature_fullpage_board.md` §五 验收结果。
 - 复用知识 → `docs/knowledge/`（宿主 `main` / `sidebar.panellist` 注册与 `selectPanel` 抛错口径）。
 - 版本记录 → `CHANGELOG.md` 顶部 `[1.2.0-local.1]`。

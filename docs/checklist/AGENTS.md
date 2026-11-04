@@ -4,12 +4,13 @@
 - `archived/` 同为单层，不建项目域子目录（`archived/dsh/` 已撤除，历史文档上移一层）；归档时同名移入即可，不改名。
 - 施工稿命名遵循 `<topic>-<阶段>-checklist.md`；操作前加载全局 `checklist` skill。
 - 第三方参考项目**不写进 checklist**：现状描述放 `docs/reference/<repo>.md`（不带 `-checklist` 后缀），只写「定位 / 规模 / 现状 / 特点 / 已知取舍」，不写我方改造结论。
-- 参考类清单**只定能力与形态，不写实现步骤**，且**不构成施工授权**；实施步骤、验收项、测试用例一律写 `docs/plan/active/feature_*.md`，按 plan-workflow 批准后执行。
+- 参考类清单**只定能力与形态，不写实现步骤**，且**不构成施工授权**；实施步骤、验收项、测试用例一律写 `docs/plan/active/dsh/feature_*.md`，按 plan-workflow 批准后执行。
 - 回写 plan 时走 `docs/plan/`，并先加载全局 `plan-workflow` skill。
-- 当前 active：
-  - `docs/checklist/active/board-visual-review-checklist.md`：视觉走查与设计决策（设计定稿，D1–D18）
-  - `docs/checklist/active/board-redesign-build-checklist.md`：卡片化重构施工稿（待施工，配 `feature_board_cards_redesign.md`）
-- 已归档：`docs/checklist/archived/fullpage-board-build-checklist.md`（整页看板 S0–S6，对应 plan 已归档）
+- 当前 active：无（卡片化与视觉走查均随 plan 归档）。
+- 已归档：
+  - `docs/checklist/archived/board-redesign-build-checklist.md`（卡片化施工，`1.3.0-local.7`）
+  - `docs/checklist/archived/board-visual-review-checklist.md`（视觉决策 D1–D20，`1.3.0-local.7`）
+  - `docs/checklist/archived/fullpage-board-build-checklist.md`（整页看板 S0–S6，对应 plan 已归档）
 - 参考类清单已归档（细则以 `docs/ui-design.md` v3.1 与 `docs/design.md` 为准）：
   - `docs/checklist/archived/ui-reference-checklist.md`
   - `docs/checklist/archived/backend-capability-checklist.md`
