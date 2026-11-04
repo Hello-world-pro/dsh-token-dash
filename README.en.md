@@ -61,7 +61,7 @@ Screenshots use mock data so the full layout is visible at once.
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-sub.png" alt="Subscription pill" />
 </p>
 
-**P2 · Floating panel (current model)**: fixed 380, one row with three groups — used ring / used-budget / real balance — a trailing empty slot, a full-width range control and the usage table.
+**P2 · Floating panel (current model)**: fixed 380, one row with three groups — used ring / used-budget / real balance — with the balance right-aligned to the panel edge, a full-width range control and the usage table.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-api.png" alt="Floating panel - pay-as-you-go" />
@@ -87,6 +87,7 @@ Screenshots use mock data so the full layout is visible at once.
 - Pay-as-you-go card: budget input, planned balance, real balance, month-to-date spend; subscription card: one ring per window with remaining percentage and countdown.
 - Breakdown: model / Tokens / input / cache / output / requests / hit rate / cost; everything except the model column is right-aligned.
 - Settings capsule: refresh interval + account-balance toggle; logs, export/import, price table and version below.
+- The settings section has an external "Settings and data" title above the capsule; the capsule itself keeps the refresh interval, logs/data controls and version row.
 - Spacing uses only 4 / 8 / 12 / 16 / 24 / 32; P2 and P3 share the same tokens.
 
 ## Install
