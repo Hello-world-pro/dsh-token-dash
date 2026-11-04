@@ -45,6 +45,7 @@
     "logs": "node tools/logs.mjs",
     "shots": "node tools/mock/shots.mjs",
     "preview": "node tools/preview/render.mjs",
+    "preview:pages": "node tools/mock/shots.mjs --html",
     "preview:png": "node tools/preview/render.mjs --png",
     "preview:publish": "node tools/preview/render.mjs --publish",
     "icon": "node tools/mock/icon.mjs",

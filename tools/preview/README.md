@@ -45,6 +45,22 @@ npm run preview:publish ring     # → docs/pic/ring.png（仅定稿）
 
 - `cards-api` 的预算输入框可直接改值，环、状态与计划余额即时重算，用于验证阈值与超支表现。
 
+## 页面级预览（真实 DOM）
+
+`templates/` 是**新设计**的手绘稿；要看**当前实现**的 P1/P2/P3，用：
+
+```bash
+npm run preview:pages     # → .tmp/preview/p*-*.html
+```
+
+| 文件 | 页面 |
+|---|---|
+| `p1-pill-api.html` / `p1-pill-sub.html` | P1 底栏 Pill（按量 / 订阅） |
+| `p2-panel-api.html` / `p2-panel-sub-2.html` / `p2-panel-sub-3.html` | P2 浮层（按量 / 订阅两窗 / 订阅三窗） |
+| `p3-board.html` | P3 整页看板 |
+
+实现方式：`tools/mock/shots.mjs --html` 真机打开 mock 宿主，把目标元素的 `outerHTML` 连同**解析后的宿主 token** 导成单文件 HTML。所以它反映"已经写出来的样子"，不反映 `templates/` 里的新稿——改设计时两者要分开看。
+
 ## 模板对照
 
 | 模板 | 对应设计章节 | 状态 | 覆盖 |

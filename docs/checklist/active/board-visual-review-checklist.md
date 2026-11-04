@@ -134,6 +134,7 @@
 | 2026-11-04 | 预览流程 | 默认只生成 `.tmp/preview/<name>.html` 在 IDE 预览，不再默认截图；`--png` 才出图，publish 仍写 `docs/pic/` |
 | 2026-11-04 | 卡片宽度 | 上限 260px（3 家不再拉到 309），按量区末行居中；环与预算改居中成组（gap 20） |
 | 2026-11-04 | 按量对齐 | 放弃「圆对横条」的左右分栏，改竖排居中：环 → 百分比 → `月度预算` → 输入框；字段标签 45%→68% |
+| 2026-11-04 | 页面预览 | 新增 `preview:pages`：真机导出 P1/P2/P3 的真实 DOM + 宿主 token 到 `.tmp/preview/*.html`；与 templates 的新设计分开看 |
 | 2026-11-04 | 状态矩阵 | 预览改为「状态穷举」：Gauge 5 / 订阅 4 / 按量 5；新增 `tools/mock/AGENTS.md` 定义假数据覆盖规则 |
 
 ## 九、环与组合层控件要求（P1 / P2 / P3 共用）
@@ -244,6 +245,7 @@ InlineRing({
   - `npm run preview inline-ring` → `.tmp/preview/inline-ring.html`：InlineRing 4 态 × P1/P2 两档尺寸，附「预算」「订阅窗口」组合示例。
   - `npm run preview cards-sub` → `.tmp/preview/cards-sub.html`：订阅卡 6 态（三窗 ×2 / 两窗无月 / 两窗 critical / 单窗 / 含空窗），卡顶为真实供应商名。环 + 三行辅助信息的组合只在这里看，不再单独出 Gauge 状态图。
   - `npm run preview cards-api` → `.tmp/preview/cards-api.html`：按量卡 5 态（normal / warn / over / 预算未设置 / 余额不支持）；右侧预算输入框可改，环与计划余额即时重算，卡下 caption 跟随状态。
+- 页面级预览：`npm run preview:pages` → `.tmp/preview/p1-pill-*.html` / `p2-panel-*.html` / `p3-board.html`，是**当前实现**的真实 DOM + 宿主 token；与 `templates/` 的新设计分开看，不能当验收依据。
 - 状态覆盖口径见 [`tools/mock/AGENTS.md`](../../../tools/mock/AGENTS.md) §2：组件有 N 种状态就出 N 个样本，不合并。
 - 尺寸来源：[`tools/preview/spec.mjs`](../../../tools/preview/spec.mjs)；模板在 [`tools/preview/templates/`](../../../tools/preview/templates/)，公共样式在 `_base.css`。
 - 探索稿放 `tools/preview/drafts/`（入库，可粗糙），定稿时接 `spec.mjs` 再移入 `templates/`；手写 HTML 不落 `.tmp/`。
