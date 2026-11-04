@@ -47,7 +47,7 @@ window.__ModuleLoader__.load({
       '周': 'Week', '月': 'Month', '重置': 'Reset',
       '按量 API': 'Pay-as-you-go', '订阅': 'Subscription', '账户套餐': 'Account plan',
       '预算': 'Budget', '未设置': 'Not set', '今日 {value}': 'Today {value}',
-      '余额 {value}': 'Balance {value}', '预算已用 {value}': 'Budget used {value}',
+      '余额': 'Balance', '余额 {value}': 'Balance {value}', '预算已用 {value}': 'Budget used {value}',
       '预算未设置': 'Budget not set', '收起': 'Collapse', '展开': 'Expand',
       'Token 看板': 'Token dashboard', '点击查看 Token 看板': 'Click to view Token dashboard',
       'Token 看板：{text}': 'Token dashboard: {text}',
@@ -61,7 +61,7 @@ window.__ModuleLoader__.load({
       '名称': 'Name', '已用': 'Used', '已用 / 预算': 'Used / budget', '计划余额': 'Planned left', '真实余额': 'Real balance',
       '剩余 {value}': '{value} left', '本月已花': 'Spent this month',
       '今日': 'Today', '总费用': 'Total cost', '重试': 'Retry',
-      '模型': 'Model', '共 {n} 个模型': 'Total {n} models', '窗': 'windows', '数据来源': 'Data source', '数据来自本机会话记录，费用与 Tokens 均在本地估算': 'Estimated locally from local session records', '范围与明细': 'Range & details', '输入': 'In', '缓存': 'Cache', '输出': 'Out', '费用': 'Cost',
+      '模型用量明细': 'Model usage details', '模型': 'Model', '共 {n} 个模型': 'Total {n} models', '窗': 'windows', '数据来源': 'Data source', '数据来自本机会话记录，费用与 Tokens 均在本地估算': 'Estimated locally from local session records', '范围与明细': 'Range & details', '输入': 'In', '缓存': 'Cache', '输出': 'Out', '费用': 'Cost',
       '费用（API 计价估算）': 'Cost (API estimate)',
       '重新检测订阅配额': 'Recheck subscription quota',
       '未检测到已配置供应商': 'No configured provider detected',
@@ -85,6 +85,7 @@ window.__ModuleLoader__.load({
       '日志已导出': 'Logs exported', '日志导出失败': 'Log export failed',
       '数据': 'Data', '备份与恢复': 'Backup and restore',
       '{n} 分钟后': 'in {n} min', '{n} 小时后': 'in {n} h', '{n} 天后': 'in {n} d',
+      '导出数据': 'Export data', '导入数据': 'Import data',
       '导入中…': 'Importing…', '数据已导出': 'Data exported', '数据导出失败': 'Data export failed',
       '已导入 {month} 数据': 'Imported {month} data', '导入失败：{reason}': 'Import failed: {reason}',
       '检查失败': 'Check failed', '未发布': 'Not published', '已是最新': 'Up to date',
@@ -95,7 +96,7 @@ window.__ModuleLoader__.load({
       '已更新到 {version}，重启 DSH 后生效': 'Updated to {version}; restart DSH to apply',
       '已更新，重启 DSH 后生效': 'Updated; restart DSH to apply',
       '发现 {version}，点击更新': 'Found {version}; click to update',
-      '版本 {version}': 'Version {version}',
+      '版本': 'Version', '版本 {version}': 'Version {version}',
       '{name} · {action} Token 看板': '{name} · {action} Token dashboard',
       '{name} 月度预算': '{name} monthly budget',
       '{name}，按量 API，{budget}，今日 {today}{balance}': '{name}, pay-as-you-go, {budget}, today {today}{balance}',
@@ -109,7 +110,149 @@ window.__ModuleLoader__.load({
       '提示': 'Note',
     }
     const ZH = Object.fromEntries(Object.keys(EN).map((key) => [key, key]))
-    const MESSAGES = { zh: ZH, en: EN }
+    /** Russian dictionary; registered separately so an external ru pack may own it instead. */
+    const RU = {
+      '当天': 'Сегодня',
+      '近7天': '7 дней',
+      '近30天': '30 дней',
+      '全部': 'Всё',
+      '30秒': '30 с',
+      '1分钟': '1 мин',
+      '5分钟': '5 мин',
+      '社区': 'Сообщество',
+      '内置兜底': 'Встроенные цены',
+      '查询失败': 'Ошибка запроса',
+      '套餐查询失败': 'Ошибка запроса квоты',
+      '周': 'Неделя',
+      '月': 'Месяц',
+      '重置': 'сброс',
+      '按量 API': 'По расходу',
+      '订阅': 'Подписка',
+      '账户套餐': 'Тариф аккаунта',
+      '预算': 'Бюджет',
+      '未设置': 'не задан',
+      '今日 {value}': 'Сегодня {value}',
+      '余额': 'Баланс',
+      '余额 {value}': 'Баланс {value}',
+      '预算已用 {value}': 'Использовано {value}',
+      '预算未设置': 'Бюджет не задан',
+      '收起': 'свернуть',
+      '展开': 'развернуть',
+      'Token 看板': 'Панель токенов',
+      '点击查看 Token 看板': 'Нажмите, чтобы открыть панель токенов',
+      'Token 看板：{text}': 'Панель токенов: {text}',
+      '当前模型': 'Текущая модель',
+      '全量看板': 'Полная панель',
+      '查看仓库': 'Репозиторий',
+      '查看支持的 API Key 范围': 'Какие API-ключи поддерживаются',
+      '目前支持 DeepSeek / Kimi / GLM / OpenRouter / Qwen API Key': 'Поддерживаются API-ключи DeepSeek / Kimi / GLM / OpenRouter / Qwen',
+      '刷新': 'Обновить',
+      '关闭': 'Закрыть',
+      '未定价': 'Нет цены',
+      '请求': 'Запросы',
+      '命中': 'Хиты',
+      '按量计价（按供应商）': 'По расходу (по поставщикам)',
+      '订阅套餐（按供应商）': 'Подписки (по поставщикам)',
+      '名称': 'Название',
+      '已用': 'Использовано',
+      '已用 / 预算': 'Использовано / бюджет',
+      '计划余额': 'Плановый остаток',
+      '真实余额': 'Фактический баланс',
+      '剩余 {value}': 'Осталось {value}',
+      '本月已花': 'Потрачено за месяц',
+      '今日': 'Сегодня',
+      '总费用': 'Общая стоимость',
+      '重试': 'Повторить',
+      '模型用量明细': 'Детализация по моделям',
+      '模型': 'Модель',
+      '共 {n} 个模型': 'Моделей: {n}',
+      '窗': 'шт.',
+      '数据来源': 'Источник данных',
+      '数据来自本机会话记录，费用与 Tokens 均在本地估算': 'Из локальных записей сессий; стоимость и Tokens оценены локально',
+      '范围与明细': 'Период и детализация',
+      '输入': 'Вход',
+      '缓存': 'Кэш',
+      '输出': 'Выход',
+      '费用': 'Стоимость',
+      '费用（API 计价估算）': 'Стоимость (оценка по API)',
+      '重新检测订阅配额': 'Перепроверить квоту подписки',
+      '未检测到已配置供应商': 'Настроенные поставщики не найдены',
+      '供应商探测失败': 'Не удалось опросить поставщиков',
+      '时间范围': 'Период',
+      '刷新失败，保留上次数据': 'Обновление не удалось, показаны прошлые данные',
+      '范围数据加载失败': 'Не удалось загрузить данные за период',
+      '范围数据加载中…': 'Загрузка данных за период…',
+      '范围内暂无消耗': 'За выбранный период расхода нет',
+      'Tokens 括号说明': 'Пояснение к записи Tokens',
+      'Tokens 括号顺序：输入 / 缓存（读+写）/ 输出': 'Порядок в скобках Tokens: вход / кэш (чтение+запись) / выход',
+      '真实 Tokens': 'Фактические Tokens',
+      'Token 数据不可用': 'Данные о токенах недоступны',
+      'Token 数据加载中…': 'Загрузка данных о токенах…',
+      '设置加载失败': 'Не удалось загрузить настройки',
+      '已保存': 'Сохранено',
+      '保存失败：{reason}': 'Не удалось сохранить: {reason}',
+      '请输入 0 或正数': 'Введите 0 или положительное число',
+      '月度预算': 'Месячный бюджет',
+      '账户余额': 'Баланс аккаунта',
+      '刷新间隔': 'Интервал обновления',
+      '立即刷新': 'Обновить сейчас',
+      '日志': 'Журнал',
+      '查看日志': 'Просмотр журнала',
+      '打开日志文件夹': 'Открыть папку журналов',
+      '导出日志': 'Экспорт журнала',
+      '价格与版本': 'Цены и версия',
+      '价格表': 'Таблица цен',
+      '已重新检测': 'Квота перепроверена',
+      '已打开日志文件夹': 'Папка журналов открыта',
+      '无法打开，已复制路径': 'Не удалось открыть, путь скопирован',
+      '打开日志失败': 'Не удалось открыть журнал',
+      '日志已导出': 'Журнал экспортирован',
+      '日志导出失败': 'Не удалось экспортировать журнал',
+      '数据': 'Данные',
+      '备份与恢复': 'Резервные копии',
+      '{n} 分钟后': 'через {n} мин',
+      '{n} 小时后': 'через {n} ч',
+      '{n} 天后': 'через {n} дн.',
+      '导出数据': 'Экспорт данных',
+      '导入数据': 'Импорт данных',
+      '导入中…': 'Импорт…',
+      '数据已导出': 'Данные экспортированы',
+      '数据导出失败': 'Не удалось экспортировать данные',
+      '已导入 {month} 数据': 'Импортированы данные за {month}',
+      '导入失败：{reason}': 'Не удалось импортировать: {reason}',
+      '检查失败': 'Ошибка проверки',
+      '未发布': 'Не опубликовано',
+      '已是最新': 'Установлена последняя версия',
+      '发现 {version}': 'Доступна {version}',
+      '更新': 'Обновить',
+      '取消': 'Отмена',
+      '复制命令': 'Скопировать команду',
+      '命令已复制': 'Команда скопирована',
+      '复制失败': 'Не удалось скопировать',
+      '设置加载中…': 'Загрузка настроек…',
+      '检查更新': 'Проверить обновления',
+      '更新失败（{reason}）': 'Ошибка обновления ({reason})',
+      '已更新到 {version}，重启 DSH 后生效': 'Обновлено до {version}, перезапустите DSH',
+      '已更新，重启 DSH 后生效': 'Обновлено, перезапустите DSH',
+      '发现 {version}，点击更新': 'Доступна {version}, нажмите, чтобы обновить',
+      '版本': 'Версия',
+      '版本 {version}': 'Версия {version}',
+      '{name} · {action} Token 看板': '{name} · {action} панель токенов',
+      '{name} 月度预算': '{name}: месячный бюджет',
+      '{name}，按量 API，{budget}，今日 {today}{balance}': '{name}, по расходу, {budget}, сегодня {today}{balance}',
+      '{name}，订阅，账户套餐，{value}': '{name}, подписка, тариф аккаунта, {value}',
+      '更新于 {time}': 'Обновлено {time}',
+      '数据来自本机会话记录': 'Из локальных записей сессий',
+      '未配置凭据': 'Нет учётных данных',
+      '刷新中': 'Обновление…',
+      '编辑预算': 'Изменить бюджет',
+      '退出编辑': 'Готово',
+      '设置与数据管理': 'Настройки и данные',
+      '账户真实余额，不受预算影响': 'Баланс аккаунта; бюджет на него не влияет',
+      '本月累计消耗，等于已用/预算 的分子': 'Расход за месяц; числитель в «Использовано / бюджет»',
+      '提示': 'Примечание',
+    }
+    const MESSAGES = { zh: ZH, en: EN, ru: RU }
     let localeService = null
     let ctxRef = null
     let layoutRef = null
@@ -1825,10 +1968,22 @@ window.__ModuleLoader__.load({
       apply(ctx) {
         if (ctx.locale !== undefined) {
           localeService = ctx.locale
-          try {
-            ctx.effect?.(() => ctx.locale.register('token-dash', MESSAGES), 'locale:dictionaries')
-            activeTranslate = ctx.locale.bind('token-dash')
-          } catch { /* keep built-in zh fallback */ }
+          // Register one locale per effect and swallow a duplicate-locale rejection:
+          // an external language pack (for example a Russian pack) may already own
+          // this namespace. The bound translator still resolves it, so translation
+          // must not depend on our own registration succeeding.
+          const register = (dictionaries, label) => {
+            ctx.effect?.(() => {
+              try {
+                return ctx.locale.register('token-dash', dictionaries)
+              } catch {
+                return () => {}
+              }
+            }, label)
+          }
+          register({ zh: ZH, en: EN }, 'locale:dictionaries')
+          register({ ru: RU }, 'locale:dictionaries:ru')
+          activeTranslate = ctx.locale.bind('token-dash')
         }
         if (!autoUpdateChecked) {
           autoUpdateChecked = true
