@@ -51,13 +51,7 @@
 
 `readSubscriptions`（P3「重新检测」）走同一个 snapshot 出口，不请求余额接口。
 
-```text
-浏览器请求 /repo（P3 头部 star chip）
-  → 固定仓库常量 spartawhy117/dsh-token-dash
-  → GitHub REST /repos/{owner}/{repo}（未认证）
-  → 6h 缓存 + ETag；403 / 429 视作失败并缓存 10 分钟
-  → { ok, stars, fetchedAt } / { ok: false }（不回传原始响应体）
-```
+P3 页头 `★` 是静态链接（`REPO_URL`），点击新窗口打开仓库；不请求 `/repo`，不展示 star 计数。
 
 ## 数据备份（P3 导出 / 导入）
 
@@ -97,7 +91,7 @@ SummaryVM（core.js → client 的唯一 DTO）
 - **Adapters**：只负责外部请求、解析、错误分类；出口用 `toSnapshot` 归一化，不把 `plans` / `_error` 等内部字段带进 VM。
 - **VM**：纯聚合，不做 IO；通过 `providerRegistry` 查元数据，不直接 import provider 数据表；输出 `windows` 和 `pricingLinks`。`windows` 长度 0–3，缺窗不补占位对象。
 - **UI**：只读 `SummaryVM`；按 `kind` / `status` / `currency` 渲染，不出现 provider id、价格页 URL、默认模型等 provider 知识。
-- **页面入口**：P3 走宿主「全局面板」机制——`slots.inject('main')` 注册整页（`key = token-dash`），`sidebar.panellist` 注册同 `id` 的左侧常驻行；`ctx.get('layout').selectPanel('token-dash')` 可从浮层直达（已实测）。
+- **页面入口**：P3 走宿主「全局面板」机制——`slots.inject('main')` 注册整页（`key = token-dash`），`sidebar.panellist` 注册同 `id` 的左侧常驻行；`layout` 通过 `inject` 注入，浮层底部「全量看板」与侧栏入口调用 `selectPanel('token-dash')`（点击时再校验 `hasMainPanel`）。
 - **兼容**：VM 可读取旧 `plans` 输入，但输出只保留 `windows`；`DEFAULT_MODELS` 保留为派生导出，供旧调用方过渡。
 
 ## Provider 扩展（目标形态）
@@ -133,7 +127,7 @@ adapters.readProviders
 | 挂载 | 宿主 `webServer.register({ kind:'prefix', path:'/token-dash/api' })` | 不变 |
 | 鉴权 | **无判断**；e2e 中无 token 的 `PUT /prefs` 返回 200 | 优先 `connection.requestRejection`，无则校验 `remoteAddress` + `host` + `origin` |
 | 脱敏 | 日志已过滤，响应未统一 | 错误消息 / `source` / `raw` 三处统一 |
-| 附加路由 | 无 `/repo` | `/repo` 固定仓库、6h 缓存 + ETag，失败静默 |
+| 附加路由 | 无 `/repo` | 不新增；仓库入口为静态 `REPO_URL` 链接 |
 
 ## 文件目录组织
 
@@ -165,7 +159,7 @@ dsh-token-dash/
 └── reference/third-party/ 本地调研用的第三方插件源码（.gitignore 忽略）
 ```
 
-## client.js 组件分层（v3.2）
+## client.js 组件分层（v3.3）
 
 | 层 | 组件 | 职责 | 不负责 |
 |---|---|---|---|
@@ -207,9 +201,10 @@ dsh-token-dash/
 6. **Provider 边界收口**：现有五家、目标七家（+OpenCode Go / Command Code）；adapter 输出 `ProviderSnapshot`，VM 输出 `SummaryVM`，UI 只消费 VM；provider 差异留在 descriptor/adapter，不扩散到 VM/UI
 7. **不做 provider 插件系统**：不拆 per-provider 文件、不引入 DI；七家规模用单文件源表 + 三个可选钩子，避免过度抽象
 8. **配置面收口**：`prefs` 只保留 `budgets` / `billingModes` / `refreshMs` / `showBalance`（+ `version`）；legacy `budget`、`showMonthTokens`、`logLevel` 只做读取兼容，不参与计算，保存时自然消失；预算未配置时默认 100（provider 币种，不写盘）
-9. **整页入口走宿主全局面板**：P3 不再塞进浮层，改用 `main` + `sidebar.panellist` 同 key 注册；浮层只保留当前模型，避免同一套表格两处维护（v3.0）
-10. **仓库元信息单独出口**：star 计数走 `/repo`（6h 缓存 + ETag，失败静默），不进 `SummaryVM`——它是展示性元数据，与用量/预算无关
+9. **整页入口走宿主全局面板**：P3 不再塞进浮层，改用 `main` + `sidebar.panellist` 同 key 注册；浮层只保留当前模型，避免同一套用量组件两处维护（v3.0）
+10. **仓库入口是静态链接**：`REPO_URL` 直接新窗口打开，不请求 `/repo`、不展示 star 计数；与用量/预算无关
 11. **取数收敛成源表**：provider 元数据、凭据形态与归一化集中到 `quota-sources.js`，`readProviders` 按表迭代；新增家只加表行与可选钩子，`adapters.js` 不再新增 if 分支（待实施，见后端清单 B8）
 12. **不做 Cookie / 本机登录态**：百炼 Token Plan、小米 MiMo、Codex `~/.codex/auth.json` 均不接入——凭据会过期或越界读用户目录
 13. **升级不迁移数据**：账本与设置在 `$DSH_HOME/dsh-token-dash/`，与 profile 的 `node_modules` 分离，`dsh plugin add` 不触碰；跨机迁移走 P3「导出 / 导入」，导出只含设置与当月使用，不含配额、余额与日志
+14. **P3 自持滚动与 4px 间距**：`BoardPage` 外层 `board-scroll` 负责纵向滚动，不改宿主 `main`；间距只用 4 / 8 / 12 / 16 / 24 / 32 六档
 

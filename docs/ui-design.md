@@ -1,7 +1,7 @@
 # Token 看板 UI 设计
 
 > 唯一 UI 设计真源：视觉、信息层级、文案与交互以本文件为准。<br>
-> **当前版本：v3.2（2026-11-04 卡片化与三色环定稿）**——四组件分层（ProgressRing / PercentValue / InlineRing / QuotaGauge）；P3 两区改为每 provider 一张卡，新增摘要带、明细底框与三行设置胶囊；P2 支持按量 / 订阅两形态；环改低饱和绿 / 黄 / 红三色语义。<br>
+> **当前版本：v3.3（2026-11-05 按代码校准）**——四组件分层（ProgressRing / PercentValue / InlineRing / QuotaGauge）；P3 卡片网格、摘要带、明细底框、自持滚动与两段设置胶囊；P2 固定 380、单行摘要、三槽位订阅与右对齐表格；间距统一 4px 六档。<br>
 > 底框层级：`Panel → Section`；P3 用「卡片网格 + 摘要底框」，分区不靠色相，状态色只给环、百分比与超支。<br>
 > 架构与数据流见 [design.md](design.md)；本轮迭代的需求与实施细节见 [UI 迭代计划](plan/archived/feature_ui_refresh.md)。
 
@@ -11,7 +11,8 @@
 
 | 日期 | 版本 | 变更 | 状态 |
 |---|---|---|---|
-| 2026-11-04 | **v3.2** | **卡片化与三色环**：四组件分层；P3 每 provider 一卡（按量竖排 / 订阅窗口一排）、摘要带、明细底框、三行胶囊；P2 两形态；环改绿 / 黄 / 红；响应式 4/3/2 列 | 已实现（1.3.0-local.1） |
+| 2026-11-05 | **v3.3** | **按代码校准**：P2 固定 380 / 单行摘要 / 三槽位 / 表格列距 8；P3 页头两按钮 44×26、胶囊无立即刷新、自持滚动、明细 240 + 1fr / 13px；间距 4px 六档 | 已实现（1.3.0-local.7） |
+| 2026-11-04 | v3.2 | **卡片化与三色环**：四组件分层；P3 每 provider 一卡（按量竖排 / 订阅窗口一排）、摘要带、明细底框、三行胶囊；P2 两形态；环改绿 / 黄 / 红；响应式 4/3/2 列 | 已实现（1.3.0-local.1） |
 | 2026-11-04 | v3.1 | **组件与字号定稿**：新增 §2.5（ProgressRing 14/20、ResetClock 拆 relative+absolute、TokenTable 全自适应 + `[` 交界基线）与 §2.6（`--td-fs-*` / `--td-lh-*` 六个 token） | 已实现（1.2.0-local.2） |
 | 2026-11-04 | v3.0 | **结构重构**：P3 改左侧常驻 + 中栏整页（`main` + `sidebar.panellist`）；P2 只留当前模型、宽度自适应、去进度条与设置开关；P1 订阅段加环；关闭入口加 Esc | 已实现（1.2.0-local.2） |
 | 2026-11-03 | v2.40 | **面板宽度调整**：320→360 CSS px；M 级 Tokens/请求/命中单行完整显示；窄视口仍按 `100vw - 16px` 收缩 | 已实现，待桌面验证 |
@@ -48,18 +49,18 @@
 
 | 项 | 规格 |
 |---|---|
-| 面板宽 | P2 **固定 380**（`max-width: calc(100vw - 16px)`），贴 pill 上方 8px、右缘不足向左翻转、最大高 `min(70vh, pillTop-16)`；P3 内容宽 `100% / max-width 952`（随中栏收缩） |
-| 字号阶梯 | 见 §2.6：P1 `--td-fs-pill`（12px）；P2 / P3 正文 13px；括号 12px；P3 摘要带「总费用 / 真实 Tokens」**26px / 600** |
+| 面板宽 | P2 **固定 380**（`max-width: calc(100vw - 16px)`），贴 pill 上方 8px、右缘不足向左翻转、最大高 `70vh`；P3 `board` 上限 1000、内容宽 952（随中栏收缩） |
+| 字号阶梯 | 见 §2.6：P1 `--td-fs-pill`（12px）；P2 / P3 正文 13px；Tokens 括号 11px；P3 摘要带「总费用 / 真实 Tokens」**26px / 600** |
 | 主色 | `var(--dsw-alias-state-business-primary, #6ea8ff)`；仅用于按钮、选中、焦点、链接 |
 | 警告 / 超支 | 环与百分比：warn `--dsw-alias-state-warn-primary`、critical `--dsw-alias-state-error-primary`；金额用前景色，负数 / 超支红 |
 | 文字色 | 标题/数值 `--dsw-alias-label-primary`；副行/标签/环心 `label-secondary`（约 68%）；弱提示 `label-tertiary`；不用 opacity 模拟 muted |
 | 色彩纪律 | 蓝只给交互；**环三态：低饱和绿（正常）/ 黄（接近阈值）/ 红（超支）**，环与数字同色；**green 只表示正常状态，不再表示金额**；卡片/分区仍灰阶 |
 | 按钮 | 默认 DSH 蓝：`--td-accent: var(--dsw-alias-state-business-primary, #6ea8ff)`；背景 `color-mix(in srgb, var(--td-accent) 16%, transparent)`、边框 32%、文字/图标 accent；hover 背景 24% / 边框 48%；active 28% / 64%；头部图标按钮、日志、订阅刷新、检查更新都同款；`segmented` 选中项例外 |
-| 控件尺寸 | 全部 `box-sizing:border-box`；header 图标按钮 **22×22**（图标 12–13px）、圆角 6；文字按钮 `height:22`；行内 `ⓘ` 用 20×20 命中区但无按钮底；禁止只设 `width/height` 而保留 `minHeight` 覆盖 |
+| 控件尺寸 | 全部 `box-sizing:border-box`；P1 / P2 header 图标按钮 **22×22**，P3 页头两个按钮 **44×26**（图标 13px）、圆角 6；行内 `ⓘ` 用 20×20 命中区但无按钮底 |
 | 按钮状态 | disabled：`opacity:.5` + `cursor:not-allowed`，不改色；loading：图标旋转，按钮禁用；不新增第二种填充色 |
 | 明细说明 | 模型行不再逐行放 `ⓘ`；P2 只在 `真实 Tokens` 标题右侧放一个 `ⓘ`，tooltip 只说明 `输入 / 缓存 / 输出` 顺序；Tokens 后直接用 `[输入/缓存/输出]` 数值，不写中英文标签 |
 | 输入 | 背景 `color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent)`；边框 `--dsw-alias-border-l3`；focus 边框 `--dsw-alias-state-business-primary`；错误边框 `--dsw-alias-state-error-primary` |
-| 危险操作 | 仅“清空日志/删除类”用 error 色；当前 v2 不做清空，不引入红色主按钮 |
+| 危险操作 | 仅“清空日志/删除类”用 error 色；当前不提供清空操作，不引入红色主按钮 |
 | segmented 主题 | 轨道 `var(--dsw-alias-bg-module-platform, rgba(127,127,127,.10))`；选中 `var(--dsw-alias-button-elevated-fill, #fff)` + `box-shadow: var(--dsw-shadow-lv1, 0 2px 4px rgba(0,0,0,.08))`；选中文字 `--dsw-alias-label-primary`；未选中 `--dsw-alias-label-secondary`，hover `--dsw-alias-interactive-bg-hover`；暗色由宿主 `body[data-ds-dark-theme]` 自动切换，不硬编码白底 |
 | 底框层级 | P2 为 `Panel → Section`；P3 为「卡片网格 + 摘要底框（范围 + 摘要带 + 明细）+ 设置胶囊」。卡片圆角 8 / 1px `border-l3` / padding 16；底框圆角 10 / padding 16；亮暗跟随 token |
 | 描边纪律 | 卡片与底框不重复包裹；行内靠间距 / 1px 弱分隔；描边只给卡片、输入框、胶囊、focus |
@@ -96,25 +97,26 @@
 
 - 全量状态（6 态、3 组阈值边界、3 档尺寸、3 种环心）见 [`tools/preview/templates/ring.html`](../tools/preview/templates/ring.html)。
 
-### 2.5.2 ResetClock
+### 2.5.2 resetParts
 
 | 项 | 规格 |
 |---|---|
+| 输入 | `ts`（重置时间戳） |
 | 输出 | `{ relative, absolute }`；`ts` 非有限值或 ≤0 时两者均为 `null` |
 | 相对 | `<60 分钟` → `{n} 分钟后`（最小 1）；`<1440` → `{n} 小时后`；否则 `{n} 天后` |
 | 绝对 | `MM-DD HH:mm`，月日时分补零，本地时区 |
-| 用途 | P2 分两列排版；P3 只用 `absolute`；P1 不使用（已定不显示重置） |
+| 用途 | P2 窗口第二行 `剩余 N% · X 后`；P3 Gauge 的 relative / absolute；P1 不使用 |
 
 ### 2.5.3 TokenTable
 
 | 项 | 规格 |
 |---|---|
-| 列模板 | `minmax(0,1fr) auto auto auto`（模型 / Tokens / 请求 / 命中），**除模型列外全按内容自适应** |
+| 列模板 | `minmax(0,1fr) auto auto auto`（模型 / Tokens / 请求 / 命中），**除模型列外全按内容自适应**；模型列上限 150 + 省略号 |
 | Tokens 单元格 | 两段 flex：总量右对齐 + `[输入/缓存/输出]` 左对齐，间距 4 |
 | 对齐基线 | 以**「单位」与 `[` 的交界**为对齐线，所有行的 `[` 落在同一竖线 |
 | 单位 | 复用 `fmtTokens`：`<1000` 整数、`k` / `M` / `B`，保留 1 位小数并去尾随 `.0` |
 | 行数 | 最多 5 行，超出内部滚动；空态 `范围内暂无消耗`，不渲染表头 |
-| 费用 | 不含；P3 在末尾追加一列「费用（API 计价估算）」 |
+| 费用 | 不含；P3 由独立的 DetailTable 输出 8 列（末尾「费用」），不在本表追加 |
 
 ### 2.5.4 PercentValue
 
@@ -139,7 +141,7 @@
 
 | 项 | 规格 |
 |---|---|
-| 结构 | 环 40/4 → 环心标签 12px → 3px → 百分比 16px / 600 → 4px → 三行辅助 11px |
+| 结构 | 环 40/4 → 环心标签 12px → 间距 4px → 百分比 16px / 600 → 4px → 三行辅助 11px |
 | 参数 | `{ label, percent, state, remaining, relative, absolute, size = 40, stroke = 4 }` |
 | 颜色 | 环与百分比同色（绿 / 黄 / 红）；环心与辅助用 `label-secondary`，不参与告警色 |
 | 用途 | P3 按量卡（环心「已用」）与订阅卡（环心周期） |
@@ -150,7 +152,7 @@
 |---|---|---|
 | `--td-fs-pill` | `calc(var(--dsh-content-font-size-secondary, 13px) - 1px)` → **12px** | P1 全部文字与数字 |
 | `--td-fs-body` | `var(--dsh-content-font-size-secondary, 13px)` → **13px** | P2 / P3 正文、表格、数字 |
-| `--td-fs-micro` | `calc(--td-fs-body - 1px)` → **12px** | P2 表格括号 `[x/y/z]` |
+| `--td-fs-micro` | `calc(--td-fs-body - 2px)` → **11px** | P2 表格括号 `[x/y/z]` |
 | `--td-lh-pill` | `calc(20px + var(--dsh-content-font-delta-secondary, 0px))` → **20px** | P1 |
 | `--td-lh-body` | `calc(24px + var(--dsh-content-font-delta, 0px))` → **24px** | P2 / P3 正文 |
 | `--td-lh-tight` | **20px** | P2 表格行、底部状态行 |
@@ -219,8 +221,8 @@ DeepSeek-V4.1-F…    12.5k [12.3k/0/195]     1      0%
 
 ### 4.2 尺寸与定位
 
-- 宽 **固定 380**，`max-width: calc(100vw - 16px)`；不再随内容变化，避免切 provider / 金额时跳宽；模型名 `max-width: 150px` + 省略号。
-- 高 `max(200, min(70vh, pillTop - 16))`；贴 pill 上方 8px；宽度变化 120ms 过渡 + `ResizeObserver` 重定位。
+- 宽 **固定 380**，`max-width: calc(100vw - 16px)`；面板 padding 16，内容宽 346（380 − 32 − 2 边框）；不再随内容变化，避免切 provider / 金额时跳宽；模型名 `max-width: 150px` + 省略号。
+- 高 `max-height: 70vh`；贴 pill 上方 8px；宽度变化 120ms 过渡 + `ResizeObserver` 重定位。
 - 取消「用量 / 设置」双 tab；取消预算进度条；取消刷新间隔 / 余额开关。
 
 ### 4.3 主区四列
@@ -249,7 +251,7 @@ DeepSeek-V4.1-F…    12.5k [12.3k/0/195]     1      0%
 
 ### 4.6 底部
 
-- 左「更新于 HH:mm」（12px tertiary）；右「**全量看板**」蓝色文字按钮。
+- 左「更新于 HH:mm」（12px tertiary）；右「**全量看板**」蓝色按钮（16% 底 / 32% 边）。
 - 按钮样式复用现有蓝色按钮（accent 文字 + 16% 底色 + 32% 边框，hover 24%/48%）。
 - 点击直接 `ctx.get('layout').selectPanel('token-dash')`（实测可行）。
 
@@ -264,7 +266,7 @@ DeepSeek-V4.1-F…    12.5k [12.3k/0/195]     1      0%
 | 范围切换 / 取数失败 | 保留旧数据；范围旁出现 `⟳` 重试 |
 | 窗口缺失 | 空环 + `—` |
 | stale | `⟳` 加 4px amber 点 |
-| 窄屏 ≤520 | `left/right: 12`、`width: auto`、限高 `min(100vh - 96px, 72vh)` |
+| 窄屏 ≤520 | `width: min(380px, 100vw - 16px)`、`max-height: 70vh` |
 | 关闭中 | `opacity` + `translateY(4px)` 120ms 后卸载，焦点归还 Pill |
 
 ## 5. P3 整页面板
@@ -290,14 +292,14 @@ Token 看板   数据来自本机会话记录 · 更新于 12:30        [ ★ ] 
 │ 摘要带（总费用 / 真实 Tokens）                            │
 │ 模型 / Tokens / 输入 / 缓存 / 输出 / 请求 / 命中 / 费用   │
 └──────────────────────────────────────────────────────────┘
-设置与数据管理         刷新 / 日志 / 版本 三行
+设置与数据管理         刷新间隔 / 日志 / 版本 三行
 ```
 
 原型：[`page-p3.html`](../tools/preview/templates/page-p3.html)。
 
 ### 5.3 按量计价（按供应商）
 
-- **每个 provider 一张卡**：flex 布局，卡宽上限 260（3 家一行 3 张、末行居中），gap 12；卡内 padding 14、圆角 8、1px `border-l3`。
+- **每个 provider 一张卡**：flex 布局，卡宽上限 260（3 家一行 3 张、末行居中），gap 12；卡内 padding 16、圆角 8、1px `border-l3`。
 - 卡顶：供应商名 + `[ 按量 API ]`；卡内**竖排居中**：`QuotaGauge(40)`（环心「已用」）→ 环下百分比 → `月度预算` 标签 → 输入框。
 - 卡内三行：计划余额（预算 − 已用，可为负）/ 真实余额 / 本月已花；不再单列「已用 / 预算」。
 - 改预算后环、状态、计划余额即时重算：80–100% 环与数字同黄，≥100% 同红；金额不用状态色，负值红。
@@ -314,11 +316,11 @@ Token 看板   数据来自本机会话记录 · 更新于 12:30        [ ★ ] 
 
 ### 5.5 范围与明细
 
-- 时间范围胶囊、摘要带、模型明细共用一个底框（1px / 圆角 10 / padding 12–14），框内 10px 分区 + 1px 分隔线。
+- 时间范围胶囊、摘要带、模型明细共用一个底框（1px / 圆角 10 / padding 16），框内 12px 分区 + 1px 分隔线。
 - 顶部行：范围胶囊与「共 N 个模型 · 更新于」同行、**整行左对齐**（16px 间距）。
-- 摘要带：整宽、左右两半 + 1px 竖线；总费用与多币种 26px / 600（10px 间距）、真实 Tokens 26px / 600 + 11px 拆分；两半内容水平居中，单币种金额居中。
-- 明细表：模型 / Tokens / 输入 / 缓存 / 输出 / 请求 / 命中 / 费用（API 计价估算），8 列；模型列上限 240，数值列 `minmax(56px, 1fr)`、字号 13，Tokens 沿用「单位 / `[` 交界」基线；窄屏内部横向滚动（`min-width: 720px`）。
-- 只列范围内有消耗的模型；模型名前加 provider 徽标，列距 8。
+- 摘要带：整宽、左右两半 + 1px 竖线；总费用与多币种 26px / 600（8px 间距）、真实 Tokens 26px / 600 + 11px 拆分；两半内容水平居中，单币种金额居中。
+- 明细表：模型 / Tokens / 输入 / 缓存 / 输出 / 请求 / 命中 / 费用，8 列；模型列上限 240，数值列 `minmax(56px, 1fr)`、字号 13，Tokens 沿用「单位 / `[` 交界」基线；窄屏内部横向滚动（`min-width: 720px`）。
+- 只列范围内有消耗的模型；模型名后追加 ` · 供应商`，列距 8。
 - 除模型列外，表头与数值全部右对齐到列右缘（含 Tokens）。
 
 ### 5.6 预算编辑
@@ -332,11 +334,11 @@ Token 看板   数据来自本机会话记录 · 更新于 12:30        [ ★ ] 
 
 | 行 | 标签 | 内容 |
 |---|---|---|
-| 1 | 刷新 | 刷新间隔 segmented（左对齐）；右端账户余额 toggle；**不再提供「立即刷新」** |
+| 1 | — | 刷新间隔 segmented（左对齐）；右端账户余额 toggle；**无行标签、无「立即刷新」** |
 | 2 | 日志 | 打开日志文件夹 / 导出日志 / 导出数据 / 导入数据（ghost 按钮） |
 | 3 | 版本 | `vX.Y.Z · 价格表 YYYY-MM-DD`；右端 `⤓ 检查更新`（ghost） |
 
-- 行标签固定 40px，三行控件左对齐成列；行间 1px 6% 分隔线。
+- 日志 / 版本两行标签固定 40px；第一行无行标签，间隔组直接从内容左缘开始；行间 1px 6% 分隔线。
 - 第一行无按钮：刷新间隔 segmented 左对齐，账户余额 toggle 右对齐。
 - 日志与检查更新为 ghost（蓝字、透明底 / 透明边），不再使用主按钮。
 - 胶囊底部留 `--space-6`（32px）空白，页面不贴底。
@@ -351,10 +353,10 @@ Token 看板   数据来自本机会话记录 · 更新于 12:30        [ ★ ] 
 
 | 状态 | 表现 |
 |---|---|
-| 首屏加载 | 各区块 muted 占位；两格卡 `—` |
+| 首屏加载 | 各区块 muted 占位；摘要带 `—` |
 | 刷新中 | 保留旧数据；`⟳` 旋转禁用 |
 | 全量失败 | 头部 error strip + `重试`，保留旧数据 |
-| 范围失败 | 两格卡与明细提示失败 + `重试` |
+| 范围失败 | 摘要带与明细提示失败 + `重试` |
 | 无消耗 | 明细不渲染表头 |
 | 未配置凭据 | 该 provider 不进表，原因只在空态卡 |
 | 只有一类 provider | 另一类区块整体不渲染 |
@@ -382,7 +384,7 @@ Token 看板   数据来自本机会话记录 · 更新于 12:30        [ ★ ] 
 | 预算行 | `25%   ¥12.68 / ¥50.00` |
 | 订阅失败 | `套餐查询失败` |
 | 未定价 | `未定价`（近似价加 `≈`） |
-| 空明细 | 组行/模型行不渲染；两格卡显示 `¥0.00` |
+| 空明细 | 组行/模型行不渲染；摘要带显示 `¥0.00` |
 | 空订阅 | 订阅段整体隐藏 |
 | 无 provider | `未检测到已配置供应商`；P1 显示 `[API] --` |
 | 更新成功 | `已更新到 X.Y.Z，重启 DSH 后生效` |
@@ -421,8 +423,8 @@ Token 看板   数据来自本机会话记录 · 更新于 12:30        [ ★ ] 
 ## 8. 响应式与溢出
 
 - P2 宽固定 380，`max-width: calc(100vw - 16px)`，贴近窗口右缘时向左翻转；320px 视口按可用宽度收缩、不横向滚动。
-- P3 内容宽 `100% / max-width 952`，页面不产生横向滚动；卡片列数 1000=4 / 760=3 / 520=2，明细表窄屏内部滚动（`min-width: 720px`）。
-- P2 最大高 `max(200, min(70vh, pillTop-16))`；P3 由宿主中栏滚动。
+- P3 `board` 上限 1000、内容宽 952，外层 `board-scroll` 自持纵向滚动；卡片列数 1000=4 / 760=3 / 520=2，明细表窄屏内部滚动（`min-width: 720px`）。
+- P2 最大高 `70vh`；P3 由 `board-scroll` 自持滚动。
 - provider / 模型名称单行截断 `text-overflow:ellipsis`（P2 模型列上限 150px）；金额、百分比、币种不截断。
 - 价格链接已从 P3 移除（只保留价格表时间与来源）；查价走 P2 的 `ⓘ`。
 - tooltip 最大宽 220px；默认向上，上方空间不足时向下翻转；右侧不足时向左对齐，不超出面板。
