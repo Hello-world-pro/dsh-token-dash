@@ -330,11 +330,11 @@ window.__ModuleLoader__.load({
         position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
         width: 'min(380px, calc(100vw - 16px))', maxWidth: 'calc(100vw - 16px)',
         boxSizing: 'border-box', maxHeight: '70vh', transition: 'width 120ms ease-out',
-        overflow: 'auto', zIndex: 9999, padding: 12, borderRadius: 12,
+        overflow: 'auto', zIndex: 9999, padding: 16, borderRadius: 12,
         background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))', color: T.text,
         border: `1px solid ${T.border}`, boxShadow: '0 12px 40px rgba(0,0,0,.35)', fontSize: 13, outline: 'none',
       },
-      header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, minHeight: 28 },
+      header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 28 },
       headerTabs: { flex: 1, minWidth: 0 },
       headerActions: { display: 'flex', alignItems: 'center', gap: 4, flex: '0 0 auto' },
       row: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
@@ -391,7 +391,7 @@ window.__ModuleLoader__.load({
       link: { color: T.text, textDecoration: 'underline', cursor: 'pointer' },
       status: { minHeight: 15, fontSize: 10.5, color: T.muted, textAlign: 'right' },
       summaryRow: { display: 'flex', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 24, fontSize: 12 },
-      summaryCell: { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, whiteSpace: 'nowrap' },
+      summaryCell: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, whiteSpace: 'nowrap' },
       summaryLabel: { color: T.muted, fontSize: 11 },
       summaryValue: { fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
       providerLine: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0, minHeight: 24 },
@@ -399,19 +399,27 @@ window.__ModuleLoader__.load({
       windowRow: { display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', columnGap: 8, alignItems: 'center', minHeight: 24, fontSize: 13 },
       windowKey: { display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' },
       table: { display: 'grid', minWidth: 0 },
-      tableHead: { display: 'grid', columnGap: 8, alignItems: 'center', color: T.weak, fontSize: 12, paddingBottom: 6, borderBottom: `1px solid ${T.border}` },
+      tableHead: { display: 'grid', columnGap: 8, alignItems: 'center', color: T.weak, fontSize: 12, paddingBottom: 8, borderBottom: `1px solid ${T.border}` },
       tableRow: { display: 'grid', columnGap: 8, alignItems: 'baseline', minHeight: 28, padding: '4px 0', fontSize: 13, borderBottom: '1px solid color-mix(in srgb, currentColor 6%, transparent)' },
       cellNum: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
       cellName: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-      footer: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 10, minHeight: 22 },
+      footer: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12, minHeight: 22 },
       board: {
         padding: 24, display: 'grid', gap: 24, paddingBottom: PAGE_PADDING_BOTTOM,
         color: T.text, fontSize: 13, minWidth: 0, width: '100%', maxWidth: 1000, margin: '0 auto', boxSizing: 'border-box',
       },
-      boardHead: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
-      boardTitle: { fontSize: 18, fontWeight: 600 },
-      boardMeta: { color: T.muted, fontSize: 12, marginTop: 4 },
-      boardSection: { display: 'grid', gap: 10, minWidth: 0 },
+      boardHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' },
+      boardTitleRow: { display: 'flex', alignItems: 'baseline', gap: 16, flex: '1 1 auto', minWidth: 0 },
+      boardTitle: { fontSize: 18, fontWeight: 600, whiteSpace: 'nowrap' },
+      boardMeta: { color: T.muted, fontSize: 12, whiteSpace: 'nowrap' },
+      boardAction: {
+        boxSizing: 'border-box', width: 44, height: 26, padding: 0, borderRadius: 6,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        color: T.accent, fontSize: 13, textDecoration: 'none', cursor: 'pointer',
+        border: `1px solid color-mix(in srgb, ${T.accent} 32%, transparent)`,
+        background: `color-mix(in srgb, ${T.accent} 16%, transparent)`,
+      },
+      boardSection: { display: 'grid', gap: 12, minWidth: 0 },
       boardSectionHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 24 },
       sectionTitle: { fontSize: 13, fontWeight: 600 },
       cardBox: {
@@ -420,14 +428,19 @@ window.__ModuleLoader__.load({
       },
       cards: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 },
       capsule: {
-        padding: '4px 14px', borderRadius: 10, display: 'grid', gap: 0,
+        padding: '4px 16px', marginBottom: 32, borderRadius: 10, display: 'grid', gap: 0,
         background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))',
         border: `1px solid ${T.border}`,
       },
       settingsRow: {
-        display: 'grid', gridTemplateColumns: '40px minmax(0,1fr)', alignItems: 'center', gap: 10,
+        display: 'grid', gridTemplateColumns: '40px minmax(0,1fr)', alignItems: 'center', gap: 12,
         padding: '8px 0', minHeight: 24, borderTop: '1px solid color-mix(in srgb, currentColor 6%, transparent)',
       },
+      settingsRowRefresh: { gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)' },
+      settingsGroup: { display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 },
+      settingsGroupLeft: { justifySelf: 'start' },
+      settingsGroupCenter: { justifySelf: 'center' },
+      settingsGroupRight: { justifySelf: 'end' },
       settingsLabel: { color: T.weak, fontSize: 11 },
       repoChip: {
         display: 'inline-flex', alignItems: 'center', gap: 4, height: 24, padding: '0 8px', borderRadius: 999,
@@ -438,17 +451,17 @@ window.__ModuleLoader__.load({
       apiCards: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 },
       apiCard: {
         flex: '1 1 220px', maxWidth: 260, minWidth: 220, boxSizing: 'border-box',
-        border: `1px solid ${T.border}`, borderRadius: 8, background: T.section, padding: 14,
+        border: `1px solid ${T.border}`, borderRadius: 8, background: T.section, padding: 16,
         display: 'grid', gap: 8, alignContent: 'start',
       },
       apiCardHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 },
       apiCardName: { fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
       apiChip: { color: T.muted, fontSize: 11, whiteSpace: 'nowrap' },
-      apiGaugeWrap: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 },
+      apiGaugeWrap: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 },
       budgetLabel: { color: T.muted, fontSize: 11 },
       budgetInputWrap: {
-        display: 'inline-flex', alignItems: 'center', gap: 2, border: `1px solid ${T.border}`,
-        borderRadius: 6, padding: '2px 6px', background: T.input,
+        display: 'inline-flex', alignItems: 'center', gap: 4, border: `1px solid ${T.border}`,
+        borderRadius: 6, padding: '4px 8px', background: T.input,
       },
       budgetInput: {
         width: 72, border: 0, background: 'transparent', color: T.text, font: 'inherit',
@@ -461,34 +474,34 @@ window.__ModuleLoader__.load({
         display: 'grid', gridTemplateColumns: '1fr 1fr', border: `1px solid ${T.border}`,
         borderRadius: 8, overflow: 'hidden',
       },
-      summaryHalf: { padding: '12px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 6, minWidth: 0 },
+      summaryHalf: { padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8, minWidth: 0 },
       summaryK: { color: T.muted, fontSize: 12 },
-      summaryV: { display: 'flex', alignItems: 'baseline', justifyContent: 'center', flexWrap: 'wrap', gap: 10, fontSize: 26, fontWeight: 600, lineHeight: '30px', fontVariantNumeric: 'tabular-nums' },
+      summaryV: { display: 'flex', alignItems: 'baseline', justifyContent: 'center', flexWrap: 'wrap', gap: 8, fontSize: 26, fontWeight: 600, lineHeight: '30px', fontVariantNumeric: 'tabular-nums' },
       summarySub: { color: T.weak, fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' },
       rangeBox: {
         border: `1px solid ${T.border}`, borderRadius: 10, background: T.section,
-        padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0,
+        padding: 16, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0,
       },
       rangeHead: { display: 'flex', alignItems: 'center', justifyContent: 'flex-start', flexWrap: 'wrap', gap: 16 },
       rangeMeta: { color: T.weak, fontSize: 11 },
-      detailWrap: { overflowX: 'auto', borderTop: `1px solid ${T.border}`, paddingTop: 10 },
+      detailWrap: { overflowX: 'auto', borderTop: `1px solid ${T.border}`, paddingTop: 12 },
       quotaCards: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 },
       quotaCard: {
-        border: `1px solid ${T.border}`, borderRadius: 8, background: T.section, padding: 14,
-        display: 'grid', gap: 10, alignContent: 'start', minWidth: 0,
+        border: `1px solid ${T.border}`, borderRadius: 8, background: T.section, padding: 16,
+        display: 'grid', gap: 12, alignContent: 'start', minWidth: 0,
       },
       quotaWindows: { display: 'grid', gap: 12, minWidth: 0 },
-      cardCaption: { color: T.weak, fontSize: 11, textAlign: 'center', marginTop: 2, whiteSpace: 'nowrap' },
+      cardCaption: { color: T.weak, fontSize: 11, textAlign: 'center', marginTop: 4, whiteSpace: 'nowrap' },
       rangeCapsule: { width: '100%', minWidth: 0 },
     }
     styles.button['--td-accent'] = T.accent
     styles.iconButton = { ...styles.button, ...styles.iconButton, minHeight: 22, boxSizing: 'border-box' }
     styles.primary = {
-      ...styles.button, color: T.text,
-      borderColor: 'color-mix(in srgb, var(--dsw-alias-label-primary, #eee) 26%, transparent)',
-      background: 'rgba(255,255,255,.08)',
+      ...styles.button, color: T.accent,
+      borderColor: 'color-mix(in srgb, var(--td-accent) 32%, transparent)',
+      background: 'color-mix(in srgb, var(--td-accent) 16%, transparent)',
     }
-    styles.ghost = { ...styles.button, color: T.muted, borderColor: 'transparent', background: 'transparent' }
+    styles.ghost = { ...styles.button, color: T.accent, borderColor: 'transparent', background: 'transparent' }
     styles.outline = { ...styles.button, color: T.text, borderColor: T.border, background: 'transparent' }
 
     function Icon({ name, size = 14, style }) {
@@ -749,7 +762,7 @@ window.__ModuleLoader__.load({
       return h('div', {
         'data-testid': 'token-dash-usage-table',
         role: 'table',
-        style: { ...styles.table, gridTemplateColumns: TOKEN_COLS, columnGap: 6, maxHeight: maxRows * 32, overflowY: 'auto' },
+        style: { ...styles.table, gridTemplateColumns: TOKEN_COLS, columnGap: 8, maxHeight: maxRows * 32, overflowY: 'auto' },
       },
         h('div', { style: { display: 'contents' } },
           headCell(tr('模型'), 'left'), headCell('Tokens'), headCell(tr('请求')), headCell(tr('命中'))),
@@ -767,7 +780,10 @@ window.__ModuleLoader__.load({
           h('span', {
             role: 'cell',
             'data-testid': 'token-dash-usage-line',
-            style: { ...cell, display: 'inline-flex', alignItems: 'baseline', gap: 4, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', justifySelf: 'end' },
+            style: {
+              ...cell, display: 'inline-flex', alignItems: 'baseline', gap: 4,
+              fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', justifySelf: 'end', textAlign: 'right',
+            },
           },
             h('span', { style: { minWidth: '5ch', textAlign: 'right', fontWeight: 600 } }, fmtTokens(row.tokens?.total ?? 0)),
             h('span', { style: { color: T.muted, fontSize: 11 } }, `[${fmtTokens(row.tokens?.input ?? 0)}/${fmtTokens(row.tokens?.cache ?? 0)}/${fmtTokens(row.tokens?.output ?? 0)}]`)),
@@ -787,7 +803,7 @@ window.__ModuleLoader__.load({
       }, text)
       const cell = { padding: '5px 0', borderBottom: TABLE_BORDER, fontSize: 12, minWidth: 0 }
       return h('div', { role: 'table', 'aria-label': tr('模型用量明细') },
-        h('div', { 'data-testid': 'token-dash-detail-table', style: { ...styles.table, gridTemplateColumns: DETAIL_COLS, columnGap: 12, minWidth: 720 } },
+        h('div', { 'data-testid': 'token-dash-detail-table', style: { ...styles.table, gridTemplateColumns: DETAIL_COLS, columnGap: 8, minWidth: 720 } },
         h('div', { style: { display: 'contents' } },
           headCell(tr('模型'), 'left'),
           headCell('Tokens'), headCell(tr('输入')), headCell(tr('缓存')), headCell(tr('输出')),
@@ -1153,7 +1169,7 @@ window.__ModuleLoader__.load({
           current.kind === 'subscription'
             ? h(P2Windows, { provider: current })
             : h(P2Summary, { provider: current, summary }),
-          h('div', { style: { marginTop: 10, ...styles.rangeCapsule } }, h(Segmented, {
+          h('div', { style: { marginTop: 12, ...styles.rangeCapsule } }, h(Segmented, {
             value: range, onChange: setRange, label: tr('时间范围'),
             options: RANGES.map(([value, label]) => ({ value, label: tr(label) })),
           })),
@@ -1429,13 +1445,23 @@ window.__ModuleLoader__.load({
 
       const statusText = update.text ?? status?.text ?? ''
       return h('div', { 'data-testid': 'token-dash-settings', style: { display: 'grid', minWidth: 0 } },
-        h('div', { 'data-testid': 'token-dash-settings-row-1', style: styles.settingsRow },
-          h('span', { style: styles.settingsLabel }, tr('刷新')),
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0 } },
+        h('div', {
+          'data-testid': 'token-dash-settings-row-1',
+          style: { ...styles.settingsRow, ...styles.settingsRowRefresh },
+        },
+          h('div', {
+            'data-testid': 'token-dash-settings-refresh-left',
+            style: { ...styles.settingsGroup, ...styles.settingsGroupLeft },
+          },
+            h('span', { style: styles.settingsLabel }, tr('刷新')),
             h('button', {
               type: 'button', 'data-testid': 'token-dash-board-refresh',
               style: { ...styles.primary, gap: 4 }, onClick: () => { void onRefresh?.() },
-            }, h(Icon, { name: 'refresh', size: 12 }), tr('立即刷新')),
+            }, h(Icon, { name: 'refresh', size: 12 }), tr('立即刷新'))),
+          h('div', {
+            'data-testid': 'token-dash-settings-refresh-center',
+            style: { ...styles.settingsGroup, ...styles.settingsGroupCenter },
+          },
             h('span', { style: styles.settingsLabel }, tr('刷新间隔')),
             h('div', {
               'data-testid': 'token-dash-refresh-segment',
@@ -1443,8 +1469,11 @@ window.__ModuleLoader__.load({
             }, h(Segmented, {
               value: prefs.refreshMs, onChange: (ms) => savePrefs({ refreshMs: ms }), label: tr('刷新间隔'),
               kind: 'radiogroup', options: REFRESH_OPTIONS.map(([value, label]) => ({ value, label: tr(label) })),
-            })),
-            h('span', { style: { flex: 1 } }),
+            }))),
+          h('div', {
+            'data-testid': 'token-dash-settings-refresh-right',
+            style: { ...styles.settingsGroup, ...styles.settingsGroupRight },
+          },
             h('span', { style: styles.settingsLabel }, tr('账户余额')),
             h(Toggle, { checked: prefs.showBalance, label: tr('账户余额'), onChange: (next) => savePrefs({ showBalance: next }) }))),
         h('div', { 'data-testid': 'token-dash-settings-row-2', style: styles.settingsRow },
@@ -1730,23 +1759,21 @@ window.__ModuleLoader__.load({
       return h('div', { 'data-testid': 'token-dash-board', style: styles.board },
         h('style', null, TD_CSS),
         h('div', { style: styles.boardHead },
-          h('div', null,
+          h('div', { style: styles.boardTitleRow },
             h('div', { style: styles.boardTitle }, tr('Token 看板')),
             h('div', { style: styles.boardMeta },
               `${tr('数据来自本机会话记录')}${updated === null ? '' : ` · ${tr('更新于 {time}', { time: updated })}`}`)),
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
             h('a', {
               href: REPO_URL, target: '_blank', rel: 'noopener',
-              'data-testid': 'token-dash-repo', title: tr('查看仓库'), style: styles.repoChip,
+              'data-testid': 'token-dash-repo', title: tr('查看仓库'), style: styles.boardAction,
             }, '★'),
-            h(IconButton, {
-              label: tr('刷新'), testid: 'token-dash-board-head-refresh',
-              disabled: refreshing, onClick: () => { void refresh() },
-            }, h(Icon, { name: refreshing ? 'loader' : 'refresh', size: 12 })),
-            h(InfoTip, {
-              label: tr('数据来源'),
-              text: tr('数据来自本机会话记录，费用与 Tokens 均在本地估算'),
-            }, h(Icon, { name: 'info', size: 12 })))),
+            h('button', {
+              type: 'button', 'data-testid': 'token-dash-board-head-refresh',
+              'aria-label': tr('刷新'), title: tr('刷新'), disabled: refreshing,
+              style: { ...styles.boardAction, cursor: refreshing ? 'default' : 'pointer', opacity: refreshing ? 0.6 : 1 },
+              onClick: () => { void refresh() },
+            }, h(Icon, { name: refreshing ? 'loader' : 'refresh', size: 13 })))),
         error ? h('div', { style: styles.errorStrip, role: 'alert' },
           h('span', null, tr('刷新失败，保留上次数据')),
           h('button', { type: 'button', style: styles.button, onClick: () => { void refresh() } }, tr('重试'))) : null,

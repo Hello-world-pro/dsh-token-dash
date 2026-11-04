@@ -254,14 +254,18 @@ try {
   assert.match(await summaryRow.innerText(), /已用 \/ 预算/)
   const rangeBox = await panel.locator('[role=tablist]').first().boundingBox()
   assert.ok(
-    rangeBox !== null && panelBox !== null && rangeBox.width >= panelBox.width - 32,
+    rangeBox !== null && panelBox !== null && rangeBox.width >= panelBox.width - 34,
     `range capsule width ${rangeBox?.width} should fill the panel`,
   )
   const monthBox = await panel.getByTestId('token-dash-summary-month').boundingBox()
   assert.ok(
     monthBox !== null && panelBox !== null
-      && panelBox.x + panelBox.width - (monthBox.x + monthBox.width) <= 16,
+      && panelBox.x + panelBox.width - (monthBox.x + monthBox.width) <= 18,
     'month cell should align to the right edge',
+  )
+  assert.equal(
+    await panel.evaluate((node) => getComputedStyle(node).paddingTop), '16px',
+    'P2 panel padding should be 16',
   )
 
   // Usage table: four columns, Tokens bracket, no cost column.
@@ -273,6 +277,14 @@ try {
   assert.ok(!(await panel.innerText()).includes('费用'))
   const usageLineBox = await panel.getByTestId('token-dash-usage-line').first().boundingBox()
   assert.ok(usageLineBox !== null && usageLineBox.height < 30, 'usage metrics should stay on one line')
+  const usageDiff = await panel.getByTestId('token-dash-usage-table').evaluate((table) => {
+    const heads = [...table.querySelectorAll('[role=columnheader]')].slice(1)
+    const cells = [...table.querySelector('[role=row]').querySelectorAll('[role=cell]')].slice(1)
+    return heads.map((head, index) => Math.abs(
+      head.getBoundingClientRect().right - cells[index].getBoundingClientRect().right,
+    ))
+  })
+  assert.ok(usageDiff.every((diff) => diff <= 1), `P2 numeric columns should right-align: ${usageDiff}`)
   assert.match(await panel.innerText(), /更新于/)
   assert.equal(await panel.getByTestId('token-dash-open-board').count(), 1, 'board entry should render once main is registered')
 
@@ -394,6 +406,25 @@ try {
   assert.equal(await board.locator('[data-testid^=token-dash-detail-row-]').count(), models.length)
   assert.equal(await board.getByTestId('token-dash-board-head-refresh').count(), 1)
   assert.match(await board.locator('[data-testid^=token-dash-detail-row-]').first().innerText(), /·/)
+  const [repoBox, headRefreshBox] = await Promise.all([
+    board.getByTestId('token-dash-repo').boundingBox(),
+    board.getByTestId('token-dash-board-head-refresh').boundingBox(),
+  ])
+  assert.ok(repoBox !== null && Math.abs(repoBox.width - 44) <= 1, `repo button width ${repoBox?.width} should be 44`)
+  assert.ok(headRefreshBox !== null && Math.abs(headRefreshBox.width - 44) <= 1, `refresh button width ${headRefreshBox?.width} should be 44`)
+  assert.equal(
+    await board.locator('[data-testid^=token-dash-budget-row-]').first().evaluate((node) => getComputedStyle(node).paddingTop),
+    '16px',
+    'P3 card padding should be 16',
+  )
+  const detailDiff = await detailTable.evaluate((table) => {
+    const heads = [...table.querySelectorAll('[role=columnheader]')].slice(1)
+    const cells = [...table.querySelector('[role=row]').querySelectorAll('[role=cell]')].slice(1)
+    return heads.map((head, index) => Math.abs(
+      head.getBoundingClientRect().right - cells[index].getBoundingClientRect().right,
+    ))
+  })
+  assert.ok(detailDiff.every((diff) => diff <= 1), `P3 numeric columns should right-align: ${detailDiff}`)
   // Settings capsule: three rows and expected controls.
   const rangeSection = board.locator('section').last()
   const [rangeSectionBox, capsuleBox] = await Promise.all([
@@ -408,6 +439,27 @@ try {
   assert.equal(await board.getByTestId('token-dash-settings-row-1').count(), 1)
   assert.equal(await board.getByTestId('token-dash-settings-row-2').count(), 1)
   assert.equal(await board.getByTestId('token-dash-settings-row-3').count(), 1)
+  const [leftGroup, centerGroup, rightGroup] = await Promise.all([
+    board.getByTestId('token-dash-settings-refresh-left').boundingBox(),
+    board.getByTestId('token-dash-settings-refresh-center').boundingBox(),
+    board.getByTestId('token-dash-settings-refresh-right').boundingBox(),
+  ])
+  assert.ok(leftGroup !== null && centerGroup !== null && rightGroup !== null)
+  assert.ok(leftGroup.x < centerGroup.x && centerGroup.x < rightGroup.x, 'refresh row groups should be left / center / right')
+  assert.ok(
+    Math.abs((centerGroup.x + centerGroup.width / 2) - (capsuleBox.x + capsuleBox.width / 2)) <= 2,
+    'refresh interval group should be centered',
+  )
+  assert.ok(
+    Math.abs((rightGroup.x + rightGroup.width) - (capsuleBox.x + capsuleBox.width - 16)) <= 2,
+    'account balance group should align to the right edge',
+  )
+  const boardBox = await board.boundingBox()
+  assert.ok(
+    boardBox !== null && capsuleBox !== null
+      && boardBox.y + boardBox.height - (capsuleBox.y + capsuleBox.height) >= 24,
+    'capsule should keep bottom spacing',
+  )
   const refreshSegment = board.getByTestId('token-dash-refresh-segment')
   const refreshSegmentBox = await refreshSegment.boundingBox()
   assert.ok(refreshSegmentBox !== null && refreshSegmentBox.width <= 170, `refresh segment width ${refreshSegmentBox?.width} should be <= 170`)
