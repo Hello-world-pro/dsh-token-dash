@@ -1,6 +1,6 @@
 # dsh-token-dash 设计文档
 
-> 更新时间：2026-11-05（v3.4，1.3.0 定稿；已在 DSH 0.2.2-rc.1 验证）<br>
+> 更新时间：2026-11-05（v3.5，2.0.0 定稿；已在 DSH 0.2.2-rc.1 验证）<br>
 > 面向贡献者的一页式架构说明。需求背景见 [token-dash 计划（已归档）](plan/archived/feature_token_dash.md)，已归档的 UI 迭代见 [UI 迭代计划](plan/archived/feature_ui_refresh.md)；Provider/VM/UI 边界收口见 [边界计划](plan/archived/feature_provider_boundary.md)；UI 视觉以 [UI 设计](ui-design.md) 为唯一真源。
 
 ## 总体架构

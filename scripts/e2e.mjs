@@ -249,19 +249,21 @@ try {
   assert.match(await summaryRow.innerText(), /12\.3%/)
   assert.match(await summaryRow.innerText(), /¥12\.34 \/ ¥100\.00/)
   assert.match(await summaryRow.innerText(), /¥49\.86/)
-  assert.match(await summaryRow.innerText(), /¥12\.34/)
   assert.equal(await panel.getByTestId('token-dash-summary-ring').locator('svg').count(), 1)
   assert.match(await summaryRow.innerText(), /已用 \/ 预算/)
+  assert.ok(!(await summaryRow.innerText()).includes('本月已花'))
+  assert.equal(await panel.getByTestId('token-dash-summary-month').count(), 0)
+  assert.equal(await summaryRow.locator('[data-testid^=token-dash-summary-]').count(), 3)
   const rangeBox = await panel.locator('[role=tablist]').first().boundingBox()
   assert.ok(
     rangeBox !== null && panelBox !== null && rangeBox.width >= panelBox.width - 34,
     `range capsule width ${rangeBox?.width} should fill the panel`,
   )
-  const monthBox = await panel.getByTestId('token-dash-summary-month').boundingBox()
+  const balanceBox = await panel.getByTestId('token-dash-summary-balance').boundingBox()
   assert.ok(
-    monthBox !== null && panelBox !== null
-      && panelBox.x + panelBox.width - (monthBox.x + monthBox.width) <= 18,
-    'month cell should align to the right edge',
+    balanceBox !== null && panelBox !== null
+      && balanceBox.x + balanceBox.width < panelBox.x + panelBox.width - 80,
+    'balance cell should keep the trailing slot empty',
   )
   assert.equal(
     await panel.evaluate((node) => getComputedStyle(node).paddingTop), '16px',

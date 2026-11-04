@@ -61,7 +61,7 @@
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-sub.png" alt="订阅 Pill" />
 </p>
 
-**P2 · 浮层（当前模型）**：固定 380，单行四组「已用环 / 已用·预算 / 真实余额 / 本月已花」；时间范围撑满，下面是用量表。
+**P2 · 浮层（当前模型）**：固定 380，单行三组「已用环 / 已用·预算 / 真实余额」，尾部留空；时间范围撑满，下面是用量表。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-api.png" alt="浮层 · 按量形态" />

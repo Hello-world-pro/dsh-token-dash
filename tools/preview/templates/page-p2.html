@@ -41,14 +41,13 @@
   .win .k { font-size: 11px; color: var(--muted); }
   .win .meta { font-size: 11px; color: var(--weak); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* 摘要一行四列，两端与中间均匀分布 */
+  /* 摘要一行三组，第四格留空，避免余额被推到最右 */
   .summary {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: var(--space-3);
+    display: grid; grid-template-columns: auto minmax(120px, 1.2fr) minmax(80px, 1fr) minmax(0, 1fr);
+    align-items: center; column-gap: var(--space-3);
   }
-  .summary .ring-cell { flex: 0 0 auto; }
+  .summary .ring-cell { justify-self: start; }
   .summary .cell { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
-  .summary .cell:last-child { align-items: flex-end; text-align: right; }
   .summary .k { font-size: 11px; color: var(--muted); }
   .summary .v { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
@@ -80,7 +79,7 @@
 <body>
 <div class="page">
   <div class="stage">
-    <p class="stage-note">P2 · 按量浮层（固定 380，摘要单行四列，长模型名截断）</p>
+    <p class="stage-note">P2 · 按量浮层（固定 380，摘要单行三组 + 尾部空槽）</p>
     <div class="panel">
       <div class="ph">
         <span class="t">当前模型</span>
@@ -91,7 +90,6 @@
         <span id="used-inline" class="ring-cell"></span>
         <span class="cell"><span class="k">已用 / 预算</span><span class="v">¥91.90 / ¥100.00</span></span>
         <span class="cell"><span class="k">真实余额</span><span class="v">¥87.66</span></span>
-        <span class="cell"><span class="k">本月已花</span><span class="v">¥91.90</span></span>
       </div>
 
       <div class="range"><span>当天</span><span>近7天</span><span>近30天</span><span class="on">全部</span></div>

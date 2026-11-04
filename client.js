@@ -393,7 +393,7 @@ window.__ModuleLoader__.load({
       card: { background: T.section, borderRadius: 10, padding: 10, marginTop: 10, display: 'grid', gap: 8 },
       link: { color: T.text, textDecoration: 'underline', cursor: 'pointer' },
       status: { minHeight: 15, fontSize: 10.5, color: T.muted, textAlign: 'right' },
-      summaryRow: { display: 'flex', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 24, fontSize: 12 },
+      summaryRow: { display: 'grid', gridTemplateColumns: 'auto minmax(120px,1.2fr) minmax(80px,1fr) minmax(0,1fr)', alignItems: 'center', columnGap: 12, minHeight: 24, fontSize: 12 },
       summaryCell: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, whiteSpace: 'nowrap' },
       summaryLabel: { color: T.muted, fontSize: 11 },
       summaryValue: { fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
@@ -1215,7 +1215,7 @@ window.__ModuleLoader__.load({
       }, suffix === '' ? text : `${text} ${suffix}`)
     }
 
-    /** P2 API 主区：环+% / 已用·预算 / 真实余额 / 本月已花。 */
+    /** P2 API 主区：环+% / 已用·预算 / 真实余额；第四格留空。 */
     function P2Summary({ provider, summary }) {
       const budget = provider.budget
       const hasBudget = budget !== undefined && budget.state !== 'unset' && budget.amount > 0
@@ -1242,14 +1242,7 @@ window.__ModuleLoader__.load({
             title: tr('账户真实余额，不受预算影响'),
           },
             h('span', { style: styles.summaryLabel }, tr('真实余额')),
-            h('span', { style: styles.summaryValue }, balance ?? '—')),
-          h('span', {
-            'data-testid': 'token-dash-summary-month',
-            style: { ...styles.summaryCell, alignItems: 'flex-end', textAlign: 'right' },
-            title: tr('本月累计消耗，等于已用/预算 的分子'),
-          },
-            h('span', { style: styles.summaryLabel }, tr('本月已花')),
-            h('span', { style: styles.summaryValue }, fmtMoney(provider.usage?.monthCost, provider.currency)))))
+            h('span', { style: styles.summaryValue }, balance ?? '—'))))
     }
 
     /** P2 订阅窗口行：两段数字 + 倒计时 + 绝对时间（无「重置」后缀）。 */

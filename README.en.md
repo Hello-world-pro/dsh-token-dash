@@ -61,7 +61,7 @@ Screenshots use mock data so the full layout is visible at once.
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/pill-sub.png" alt="Subscription pill" />
 </p>
 
-**P2 · Floating panel (current model)**: fixed 380, one row with four groups — used ring / used-budget / real balance / month-to-date spend — a full-width range control and the usage table.
+**P2 · Floating panel (current model)**: fixed 380, one row with three groups — used ring / used-budget / real balance — a trailing empty slot, a full-width range control and the usage table.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/panel-api.png" alt="Floating panel - pay-as-you-go" />

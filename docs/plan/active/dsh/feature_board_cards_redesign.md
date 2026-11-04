@@ -1,9 +1,9 @@
 # Token 看板卡片化与三色环（前端重构）
 
-> 状态：已实施<br>
-> 完成时间：2026-11-05（`1.3.0-local.7`）<br>
+> 状态：待验收<br>
+> 完成时间：2026-11-05（2.0.0 候选；基线 `1.3.0`，未正式发布）<br>
 > 关联逻辑根：`dsh-token-dash`（`client.js`）<br>
-> 关联资料：[`ui-design.md`](../../../ui-design.md)（v3.2）、施工稿（已归档）[`board-redesign-build-checklist.md`](../../../checklist/archived/board-redesign-build-checklist.md)、设计决策（已归档）[`board-visual-review-checklist.md`](../../../checklist/archived/board-visual-review-checklist.md)、原型 [`tools/preview/templates/`](../../../../tools/preview/templates/)、历史方案 [`feature_fullpage_board.md`](feature_fullpage_board.md)
+> 关联资料：[`ui-design.md`](../../../ui-design.md)（v3.4）、施工稿（已归档）[`board-redesign-build-checklist.md`](../../../checklist/archived/board-redesign-build-checklist.md)、设计决策（已归档）[`board-visual-review-checklist.md`](../../../checklist/archived/board-visual-review-checklist.md)、原型 [`tools/preview/templates/`](../../../../tools/preview/templates/)、历史方案 [`feature_fullpage_board.md`](../archived/dsh/feature_fullpage_board.md)
 
 ## 一、最终需求与范围
 
@@ -135,8 +135,72 @@ flowchart LR
 
 ## 六、关联资料
 
-- 设计契约：[`ui-design.md`](../../../ui-design.md) v3.2
+- 设计契约：[`ui-design.md`](../../../ui-design.md) v3.4
 - 视觉决策：[`board-visual-review-checklist.md`](../../../checklist/archived/board-visual-review-checklist.md)
 - 施工记录：[`board-redesign-build-checklist.md`](../../../checklist/archived/board-redesign-build-checklist.md)
 - 原型：[`tools/preview/templates/`](../../../../tools/preview/templates/)
-- 历史方案：[`feature_fullpage_board.md`](feature_fullpage_board.md)
+- 历史方案：[`feature_fullpage_board.md`](../archived/dsh/feature_fullpage_board.md)
+
+## 九、自测反馈台
+
+### Issue #5 · P2 按量摘要移除「本月已花」（[已修复]）
+
+> 只改 P2 按量形态；订阅 P2、P3、预算与 VM 数据口径不动。
+
+**现象**
+
+- P2 按量摘要当前四组：环 + 已用/预算 + 真实余额 + 本月已花。
+- 用户要求删除最后的「本月已花」，前面的槽位不变动。
+
+**规则**
+
+- P2 摘要保留前三组：`环+百分比 / 已用·预算 / 真实余额`；第四组不再渲染。
+- 前三个槽位保持原顺序与列位置，尾部留空；不能把「真实余额」推到面板最右。
+- 实现用 4 列网格 `auto 1fr 1fr 1fr`：前三列放三组，第四列空；列距 12、标签 11 / 值 12。
+- 订阅 P2 不渲染摘要，不受影响；P3 卡片的「本月已花」保留。
+- 删除 `token-dash-summary-month` 测试 id 与对应文案；`本月已花` 词条仍供 P3 使用，不能删。
+
+**VM / 数据**
+
+- **VM 不改**：P2 读 `provider.usage.monthCost`，但该字段同时供预算 `budget.used` 与 P3 卡片；删字段会破坏预算与 P3。
+- `SummaryVM` 结构、`/summary`、`/usage` 均不变；本轮只删 P2 的一个渲染节点。
+
+**设计文档**
+
+| 章节 | 改动 |
+|---|---|
+| `ui-design.md` §4.1 | 结构图从四组改为三组，尾部留空 |
+| `ui-design.md` §4.3 | 标题改「主区三列（尾部空槽）」；删除本月已花与右对齐规则 |
+| `ui-design.md` §8 | 不改，仍为固定 380 |
+
+**Preview**
+
+- `tools/preview/templates/page-p2.html`：删除 `.summary` 第四组；`.summary` 改四列网格；`npm run preview page-p2` 重渲染并目检。
+
+**代码**
+
+| 落点 | 改动 |
+|---|---|
+| `client.js` · `P2Summary` | 删除 `token-dash-summary-month` 整个 span |
+| `client.js` · `styles.summaryRow` | `flex space-between` → `grid-template-columns: auto 1fr 1fr 1fr`，列距 12 |
+| `client.js` · 文案 | `本月已花` 词条保留（P3 仍在用） |
+| `e2e` | 删除 month 断言；断言摘要仅 3 组、无「本月已花」、真实余额未贴右 |
+
+**测试**
+
+- e2e：`summaryRow` 不含「本月已花」；`token-dash-summary-month` 数量 0；前三个 `summaryCell` 存在；真实余额右边缘 < 面板右边缘 − 80；删除原来的 `monthBox` 右缘断言。
+- `npm test`：VM / budget 断言不变，79 通过。
+- `npm run e2e`：全绿。
+- 截图：P2 按量面板与 `page-p2.html` 三组一致；P3 截图不受影响。
+
+**验证结果（2026-11-05）**
+
+- `npm test`：79 通过 / 0 失败；`npm run e2e`：UI assertions passed；
+- P2 预览 `page-p2` 三组 + 尾部空槽；实际面板截图已重出；
+- `docs/ui-design.md` v3.5、软件设计 v3.5；版本 2.0.0，未 tag / 未发布。
+
+**版本与发布（用户 2026-11-05 追加约束）**
+
+- 目标版本 **2.0.0**；CHANGELOG 以 1.3.0 正式块为基线，保持同样条目，追加本次 P2 摘要调整；不使用 1.3.1。
+- **不正式发布**：不改 tag、不触发 `release` / `publish`、不 npm publish；只做提交、推送与 `npm run pack` 生成的 2.0.0 候选包。
+- 完成后 `npm test` + `npm run e2e` + `npm run pack`，版本记录停在 2.0.0 待发布。
