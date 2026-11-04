@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>InlineGauge 状态全量</title>
+<title>InlineRing 状态全量</title>
 <style>
   :root { /*__SPEC_CSS__*/ }
   /*__BASE_CSS__*/
@@ -20,13 +20,13 @@
 <body>
 <div class="page">
   <section>
-    <h2>InlineGauge · P1 尺寸 14 / stroke 2</h2>
+    <h2>InlineRing · P1 尺寸 14 / stroke 2</h2>
     <p class="legend">环只画几何，数字由外层给；状态色与环一致。empty 时环只留轨道、数字为 —。</p>
     <div class="inline-row" id="p1"></div>
   </section>
 
   <section>
-    <h2>InlineGauge · P2 尺寸 20 / stroke 2.5</h2>
+    <h2>InlineRing · P2 尺寸 20 / stroke 2.5</h2>
     <div class="inline-row" id="p2"></div>
   </section>
 
@@ -48,14 +48,14 @@
 
   const cell = (html, cap) => `<div class="state-cell">${html}<span class="cap">${cap}</span></div>`
 
-  const inlineGauge = (size, stroke, percent, critical) => {
+  const inlineRing = (size, stroke, percent, critical) => {
     const state = percent === null ? 'empty' : ringStateOf(percent, critical)
     const text = percent === null ? '—' : `${percent.toFixed(1)}%`
     return `<span class="inline-gauge">${ringSvg(size, stroke, percent, state)}<span class="inline-pct ${state}">${text}</span></span>`
   }
 
   const sample = (size, stroke, percent, critical, cap) => cell(
-    inlineGauge(size, stroke, percent, critical),
+    inlineRing(size, stroke, percent, critical),
     cap,
   )
 
@@ -69,9 +69,9 @@
   document.getElementById('p1').innerHTML = states(p1.size, p1.stroke)
   document.getElementById('p2').innerHTML = states(p2.size, p2.stroke)
 
-  document.getElementById('api-inline').innerHTML = inlineGauge(p1.size, p1.stroke, 12.3, criticalApi)
-  document.getElementById('sub-inline-5h').innerHTML = inlineGauge(p1.size, p1.stroke, 42.5, 90)
-  document.getElementById('sub-inline-week').innerHTML = inlineGauge(p1.size, p1.stroke, 18.2, 90)
+  document.getElementById('api-inline').innerHTML = inlineRing(p1.size, p1.stroke, 12.3, criticalApi)
+  document.getElementById('sub-inline-5h').innerHTML = inlineRing(p1.size, p1.stroke, 42.5, 90)
+  document.getElementById('sub-inline-week').innerHTML = inlineRing(p1.size, p1.stroke, 18.2, 90)
 </script>
 </body>
 </html>

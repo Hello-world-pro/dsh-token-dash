@@ -62,7 +62,7 @@ export const SPEC = {
     label: '已用',
   },
   /** P1 / P2 的内联组合：环 + 右侧数字（数字由调用方给） */
-  inlineGauge: {
+  inlineRing: {
     font: 12, // 数字字号（P1/P2 一致）
     gap: 4, // 环与数字间距
   },
