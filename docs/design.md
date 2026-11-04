@@ -140,7 +140,7 @@ adapters.readProviders
 ```text
 dsh-token-dash/
 ├── index.js               host 端入口：服务注册、web 路由、spawn 更新、日志接线
-├── client.js              client 端 bundle：Pill / Panel（P2）/ BoardPage（P3）/ 公共组件与样式
+├── client.js              client 端 bundle：Pill / Panel（P2）/ BoardPage（P3）/ 公共组件（ProgressRing / PercentValue / InlineRing / QuotaGauge）
 ├── src/
 │   ├── core.js            纯聚合：buildSummary（VM）、addRecord、月/日键、排序、预算
 │   ├── collect.js         会话事件采集：recordFromEvent / headerFromEvent / ingest / backfill
@@ -164,6 +164,19 @@ dsh-token-dash/
 ├── build/                 生成物（npm pack tarball 等），.gitignore 忽略不入库
 └── reference/third-party/ 本地调研用的第三方插件源码（.gitignore 忽略）
 ```
+
+## client.js 组件分层（v3.2）
+
+| 层 | 组件 | 职责 | 不负责 |
+|---|---|---|---|
+| 几何 | `ProgressRing` | 弧长、描边、尺寸 `{ percent, state, size, stroke }` | 任何文字 |
+| 文本 | `PercentValue` | `0.425 → 42.5%`、`null → —`、按状态上色 | 位置与间距 |
+| 组合 | `InlineRing` | 环 + 右侧数字（P1 / P2 内联） | 拼词条（`text` 由调用方给） |
+| 组合 | `QuotaGauge` | 环心标签 + 环下数字 + 三行辅助（P3 卡片） | 解析数值 |
+| 页面 | `Pill` / `Panel` / `BoardPage` | 布局、取数、交互 | 重画弧或格式化百分比 |
+
+- 公共函数：`stateOf(percent, critical)` 判状态、`percentText(percent)` 格式化；三页共用。
+- 设计契约与状态矩阵见 [`ui-design.md`](ui-design.md) §2.5 与 [`ring.html`](../tools/preview/templates/ring.html)；实现方案见 [`feature_board_cards_redesign.md`](plan/active/dsh/feature_board_cards_redesign.md)。
 
 ## 模块职责速查
 
