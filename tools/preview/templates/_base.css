@@ -6,8 +6,13 @@
   --muted: rgba(235, 235, 235, .68);
   --weak: rgba(235, 235, 235, .45);
   --accent: #6ea8ff;
-  --warn: #d8a03a;
-  --error: #e05a5a;
+  /* 三态语义色：语义固定、色值走 token，不散落 hex */
+  --td-state-ok: #86c79a;
+  --dsw-alias-state-warn-primary: #d8a03a;
+  --dsw-alias-state-error-primary: #e05a5a;
+  --ok: var(--td-state-ok);
+  --warn: var(--dsw-alias-state-warn-primary);
+  --error: var(--dsw-alias-state-error-primary);
   --track: rgba(235, 235, 235, .22);
 }
 * { box-sizing: border-box; }
@@ -46,7 +51,7 @@ section { margin-bottom: 28px; }
   font-size: var(--gauge-label); font-weight: 600; color: var(--muted); letter-spacing: .2px;
 }
 .pct { font-size: var(--gauge-percent); font-weight: 600; line-height: 20px; margin-top: var(--gauge-percent-offset); }
-.pct.normal { color: var(--text); }
+.pct.normal { color: var(--ok); }
 .pct.warn { color: var(--warn); }
 .pct.critical { color: var(--error); }
 .pct.empty { color: var(--weak); }

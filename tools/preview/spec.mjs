@@ -21,6 +21,12 @@ export const RING = {
   criticalApi: 100,
   /** 订阅窗口：≥90 环与数字转红 */
   criticalSub: 90,
+  /** 三态语义色：语义固定、色值走宿主 token，不散落 hex */
+  colors: {
+    normal: 'var(--td-state-ok)',
+    warn: 'var(--dsw-alias-state-warn-primary)',
+    critical: 'var(--dsw-alias-state-error-primary)',
+  },
 }
 
 export const SPEC = {

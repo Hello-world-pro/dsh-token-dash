@@ -120,6 +120,7 @@
 | 2026-11-04 | 目录规范 | 新增 `tools/preview/drafts/` 与四层约定（templates / drafts / .tmp / docs.pic）；手写 HTML 禁入 `.tmp`；`ui-design` §5.3/§5.4/§5.6 按原型回写 |
 | 2026-11-04 | 环状态图 | 抽出 `_ring.js` 统一四份模板的环绘制；新增 `ring.html`（6 态 + 3 组边界 + 3 档尺寸 + 3 种环心）；0% 不再画点 |
 | 2026-11-04 | 配色收敛 | normal 数字改前景色（去业务蓝）；环心文字改 12px/600 `label-secondary`；warn 只染 amber、critical 环与数字同红 |
+| 2026-11-04 | 三色语义 | 环与数字同色：normal 低饱和绿（`--td-state-ok`）/ warn 黄 / critical 红；语义固定、色值走 token；ui-design §2.5.1/§2.6/§3 与预览同步 |
 | 2026-11-04 | 状态矩阵 | 预览改为「状态穷举」：Gauge 5 / 订阅 4 / 按量 5；新增 `tools/mock/AGENTS.md` 定义假数据覆盖规则 |
 
 ## 九、QuotaGauge 控件要求（P3 按量卡 + 订阅卡共用）
@@ -147,7 +148,7 @@ QuotaGauge({
 ┌ 环 40 × 40（stroke 4，中间透明）
 │   └ 环心：label 12px / 600 / label-secondary
 ├ 间距 3px
-├ percent 16px / 600（normal 前景色 / warn amber / critical 红 / empty 弱）
+├ percent 16px / 600（normal 低饱和绿 / warn 黄 / critical 红 / empty 弱）
 ├ 间距 4px
 ├ remaining 11px / tertiary
 ├ relative 11px / tertiary
@@ -163,12 +164,16 @@ QuotaGauge({
 
 | 状态 | 弧 | 百分比 | 环心标签 | 辅助行 |
 |---|---|---|---|---|
-| normal | `label-primary` | `label-primary` 前景色（与弧同色） | `label-secondary`（**不随状态变色**） | tertiary |
-| critical（订阅 ≥90 / API ≥100） | `state-error-primary` | 红 | 同上 | tertiary |
+| normal | 低饱和绿 `--td-state-ok` | 同绿（与弧同色） | `label-secondary`（**不随状态变色**） | tertiary |
+| warn（80–100） | 黄 `state-warn-primary` | 同黄 | 同上 | tertiary |
+| critical（订阅 ≥90 / API ≥100） | 红 `state-error-primary` | 同红 | 同上 | tertiary |
 | empty | 不画弧（仅轨道） | `—` | 同上 | `—` 或整块只留百分比 |
 
-- 轨道 `border-l3`；零 hex；中心标签不参与告警色，避免整块糊红。
+- 轨道 `border-l3`；颜色只走 token（`--td-state-ok` / `--dsw-alias-state-warn-primary` / `--dsw-alias-state-error-primary`），不散落业务 hex；中心标签不参与告警色，避免整块糊红。
+- 语义固定（绿=正常 / 黄=接近阈值 / 红=超支），色值随主题调亮度但保持色相；normal 用低饱和绿，避免整页「全绿看板」。
 - 空态只在 `percent` 为 `null` 时出现；窗口缺失不渲染列，不产生空态列。
+- 色盲提示：绿/红组合对红绿色弱不友好，**百分比数字与弧长才是主线索**，颜色只用于加速识别；不得用颜色替代阈值文案。
+- 待拍板：金额目前仍用 green，与「环 normal 绿」语义重叠；可选把金额改为前景色，或环改用青绿（teal）区分。
 
 ### 9.4 卡内约束
 

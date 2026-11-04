@@ -20,13 +20,13 @@
 <div class="page">
   <section>
     <h2>环 · 状态矩阵（P3 40 / stroke 4）</h2>
-    <p class="legend">弧色：normal / warn = 前景色；critical = error；empty = 仅轨道。数字：normal 与弧同色（前景色）/ warn amber / critical 红 / empty 弱。warn 只染数字，不动弧。</p>
+    <p class="legend">弧与数字同色：normal 低饱和绿（<code>--td-state-ok</code>）/ warn 黄（<code>state-warn-primary</code>）/ critical 红（<code>state-error-primary</code>）/ empty 仅轨道 + 弱灰数字。语义固定，色值走宿主 token。</p>
     <div class="matrix" id="states"></div>
   </section>
 
   <section>
     <h2>阈值边界（成对）</h2>
-    <p class="pair-cap">API 预算：79.9 → 80 只染数字；99.9 → 100 环与数字转红</p>
+    <p class="pair-cap">API 预算：79.9 → 80 环与数字转黄；99.9 → 100 环与数字转红</p>
     <div class="pair" id="api-pair"></div>
     <p class="pair-cap">订阅窗口：89.9 → 90 环与数字同时转红</p>
     <div class="pair" id="sub-pair"></div>
@@ -79,20 +79,20 @@
     sample(null, criticalSub, 'empty · percent = null'),
     sample(0, criticalSub, '0% · 空弧但保留轨道'),
     sample(42.5, criticalSub, 'normal 42.5%'),
-    sample(85, criticalSub, 'warn 85% · 只染数字'),
+    sample(85, criticalSub, 'warn 85% · 环与数字黄'),
     sample(96, criticalSub, 'critical 96% · 订阅阈值'),
     sample(128.6, criticalApi, 'over 128.6% · 弧满转红'),
   ].join('')
 
   document.getElementById('api-pair').innerHTML = [
-    sample(79.9, criticalApi, '79.9% · normal（前景色）'),
+    sample(79.9, criticalApi, '79.9% · normal（绿）'),
     sample(80, criticalApi, '80.0% · warn（amber）'),
     sample(99.9, criticalApi, '99.9% · warn（amber）'),
     sample(100, criticalApi, '100.0% · critical（红）'),
   ].join('')
 
   document.getElementById('sub-pair').innerHTML = [
-    sample(89.9, criticalSub, '89.9% · normal（前景色）'),
+    sample(89.9, criticalSub, '89.9% · normal（绿）'),
     sample(90, criticalSub, '90.0% · critical（红）'),
   ].join('')
 

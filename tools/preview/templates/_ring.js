@@ -14,7 +14,7 @@ function ringSvg(size, stroke, percent, state) {
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
   const center = size / 2
-  const arc = state === 'critical' ? 'var(--error)' : 'var(--text)'
+  const arc = window.__SPEC__.ring.colors[state] ?? 'var(--text)'
   const filled = state === 'empty' || percent === null || percent === undefined
     ? 0
     : Math.max(0, Math.min(100, percent))

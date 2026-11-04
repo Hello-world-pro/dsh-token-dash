@@ -52,7 +52,7 @@
 | 主色 | `var(--dsw-alias-state-business-primary, #6ea8ff)` |
 | 警告 / 超支 | `--dsw-alias-state-warn-primary` / `--dsw-alias-state-error-primary`；tile 金额强调 `var(--td-accent)`（主蓝）；回退 `#f0a020` / `#e05a5a` |
 | 文字色 | 标题/数值 `--dsw-alias-label-primary`；副行/标签 `--dsw-alias-label-secondary`；弱提示 `--dsw-alias-label-tertiary`；不再用 opacity 模拟 muted |
-| 色彩纪律 | 蓝用于按钮、选中、焦点和 MiniBar；amber 警告、green 金额、红超支；**卡片/分区仍灰阶**；分区不靠色相区分 |
+| 色彩纪律 | 蓝用于按钮、选中、焦点和 MiniBar；**进度环三态：低饱和绿（正常）/ 黄（接近阈值）/ 红（超支）**；amber 警告、green 金额、红超支；**卡片/分区仍灰阶**；分区不靠色相区分 |
 | 按钮 | 默认 DSH 蓝：`--td-accent: var(--dsw-alias-state-business-primary, #6ea8ff)`；背景 `color-mix(in srgb, var(--td-accent) 16%, transparent)`、边框 32%、文字/图标 accent；hover 背景 24% / 边框 48%；active 28% / 64%；头部图标按钮、日志、订阅刷新、检查更新都同款；`segmented` 选中项例外 |
 | 控件尺寸 | 全部 `box-sizing:border-box`；header 图标按钮 **22×22**（图标 12–13px）、圆角 6；文字按钮 `height:22`；行内 `ⓘ` 用 20×20 命中区但无按钮底；禁止只设 `width/height` 而保留 `minHeight` 覆盖 |
 | 按钮状态 | disabled：`opacity:.5` + `cursor:not-allowed`，不改色；loading：图标旋转，按钮禁用；不新增第二种填充色 |
@@ -89,7 +89,7 @@
 | 用途 | P1 预算与订阅窗口（14/2）、P2 订阅窗口（20/2.5）、P3 卡片 Gauge（40/4，按量与订阅共用同一个组件） |
 | 几何 | `viewBox="0 0 ${size} ${size}"`、`r = (size - stroke) / 2`、`strokeDasharray = C*p/100 C`、`rotate(-90 size/2 size/2)`、`strokeLinecap="round"`；`percent = 0` 与 `empty` 都不画弧 |
 | 形态 | **描边 donut，中间透明**，不是实心饼 |
-| 颜色 | 轨道 `--dsw-alias-border-l3`；弧 `normal → --dsw-alias-label-primary`、`critical → --dsw-alias-state-error-primary`、`empty` 不画弧；**数字与弧同色**：normal 前景色、warn 只染数字 amber、critical 红、empty 用 `label-tertiary` |
+| 颜色 | 轨道 `--dsw-alias-border-l3`；**弧与数字同色**：normal 低饱和绿（`--td-state-ok`，回退 `--dsw-alias-state-success-primary`）、warn 黄（`--dsw-alias-state-warn-primary`）、critical 红（`--dsw-alias-state-error-primary`）、empty 不画弧 + 数字 `label-tertiary`；语义固定，色值走 token、不写死 hex |
 | 阈值 | 由调用方给：订阅 `≥90` → critical；API 预算 `≥100` → critical（80–100 只染数字，不染环） |
 | 无障碍 | 装饰用法 `aria-hidden`，数值由相邻文本承担；独立使用时 `role="progressbar"` |
 
@@ -141,8 +141,8 @@ API    [API] 预算 ◔ 25.4% · 今日 ¥11.37 · 余额 ¥8.74 ⌃
 - 两处槽位：首页工作区行；会话活动行左侧。都不撑开输入框。
 - 两态：API / 订阅；判定不了默认 `[API]`；无任何 provider 时 `[API] ◌ --`，不隐藏 Pill。
 - 环：所有百分比前都带**描边环**（14×14、`r=5.5`、`stroke 2`、`rotate(-90 7 7)`），弧为前景色（暗色≈白 / 亮色≈黑），不写死 `#fff`。
-- 常态：环与数字同用前景色（暗色≈白 / 亮色≈黑），**不再用业务蓝**，随主题自动反转。
-- 临界：订阅 ≥90%、API 预算 ≥100% 时环与数字同红；API 80–100% 只染数字；未设置画空环。
+- 常态：环与数字同为**低饱和绿**（`--td-state-ok`，回退 `--dsw-alias-state-success-primary`），不用业务蓝。
+- 临界：订阅 ≥90%、API 预算 ≥100% 时环与数字同红；API 80–100% 环与数字同黄；未设置画空环。
 - API 段：预算环 + 百分比 · 今日 · 余额；金额按 provider 币种。
 - 订阅段：`名称 + 短标签(5h/周/月) + 环 + 百分比`，最多 3 窗；**不显示重置时间**（重置只在 P2 / P3）。
 - 取值三级兜底：会话内 `modelSelection` 投影 `next ?? lastUsed` → 首页默认模型 → 账本 `currentProviderId`；都不命中时 `[API] ◌ --`，Pill 不隐藏。
