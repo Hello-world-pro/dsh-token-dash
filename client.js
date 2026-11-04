@@ -328,7 +328,7 @@ window.__ModuleLoader__.load({
       num: { fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
       panel: {
         position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
-        width: 'min(420px, calc(100vw - 16px))', minWidth: 280, maxWidth: 'min(480px, calc(100vw - 16px))',
+        width: 'min(380px, calc(100vw - 16px))', maxWidth: 'calc(100vw - 16px)',
         boxSizing: 'border-box', maxHeight: '70vh', transition: 'width 120ms ease-out',
         overflow: 'auto', zIndex: 9999, padding: 12, borderRadius: 12,
         background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))', color: T.text,
@@ -390,7 +390,7 @@ window.__ModuleLoader__.load({
       card: { background: T.section, borderRadius: 10, padding: 10, marginTop: 10, display: 'grid', gap: 8 },
       link: { color: T.text, textDecoration: 'underline', cursor: 'pointer' },
       status: { minHeight: 15, fontSize: 10.5, color: T.muted, textAlign: 'right' },
-      summaryRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 16px', minHeight: 24, fontSize: 12 },
+      summaryRow: { display: 'flex', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 24, fontSize: 12 },
       summaryCell: { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, whiteSpace: 'nowrap' },
       summaryLabel: { color: T.muted, fontSize: 11 },
       summaryValue: { fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
@@ -479,7 +479,7 @@ window.__ModuleLoader__.load({
       },
       quotaWindows: { display: 'grid', gap: 12, minWidth: 0 },
       cardCaption: { color: T.weak, fontSize: 11, textAlign: 'center', marginTop: 2, whiteSpace: 'nowrap' },
-      rangeCapsule: { width: 220, maxWidth: '100%', flex: '0 0 auto' },
+      rangeCapsule: { width: '100%', minWidth: 0 },
     }
     styles.button['--td-accent'] = T.accent
     styles.iconButton = { ...styles.button, ...styles.iconButton, minHeight: 22, boxSizing: 'border-box' }
@@ -749,7 +749,7 @@ window.__ModuleLoader__.load({
       return h('div', {
         'data-testid': 'token-dash-usage-table',
         role: 'table',
-        style: { ...styles.table, gridTemplateColumns: TOKEN_COLS, columnGap: 8, maxHeight: maxRows * 32, overflowY: 'auto' },
+        style: { ...styles.table, gridTemplateColumns: TOKEN_COLS, columnGap: 6, maxHeight: maxRows * 32, overflowY: 'auto' },
       },
         h('div', { style: { display: 'contents' } },
           headCell(tr('模型'), 'left'), headCell('Tokens'), headCell(tr('请求')), headCell(tr('命中'))),
@@ -759,14 +759,18 @@ window.__ModuleLoader__.load({
           'data-testid': `token-dash-usage-row-${row.providerId}-${row.modelId}`,
           style: { display: 'contents' },
         },
-          h('span', { role: 'cell', style: { ...styles.cellName, ...cell }, title: row.displayName ?? row.modelId }, row.displayName ?? row.modelId),
+          h('span', {
+            role: 'cell',
+            style: { ...styles.cellName, ...cell, maxWidth: 150 },
+            title: row.displayName ?? row.modelId,
+          }, row.displayName ?? row.modelId),
           h('span', {
             role: 'cell',
             'data-testid': 'token-dash-usage-line',
             style: { ...cell, display: 'inline-flex', alignItems: 'baseline', gap: 4, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', justifySelf: 'end' },
           },
             h('span', { style: { minWidth: '5ch', textAlign: 'right', fontWeight: 600 } }, fmtTokens(row.tokens?.total ?? 0)),
-            h('span', { style: { color: T.muted } }, `[${fmtTokens(row.tokens?.input ?? 0)}/${fmtTokens(row.tokens?.cache ?? 0)}/${fmtTokens(row.tokens?.output ?? 0)}]`)),
+            h('span', { style: { color: T.muted, fontSize: 11 } }, `[${fmtTokens(row.tokens?.input ?? 0)}/${fmtTokens(row.tokens?.cache ?? 0)}/${fmtTokens(row.tokens?.output ?? 0)}]`)),
           h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right' } }, row.requests),
           h('span', { role: 'cell', style: { ...styles.cellNum, ...cell, textAlign: 'right' } },
             row.hitRate === null || row.hitRate === undefined ? '—' : fmtRatio(row.hitRate)))))
@@ -1216,7 +1220,8 @@ window.__ModuleLoader__.load({
             h('span', { style: styles.summaryLabel }, tr('真实余额')),
             h('span', { style: styles.summaryValue }, balance ?? '—')),
           h('span', {
-            'data-testid': 'token-dash-summary-month', style: styles.summaryCell,
+            'data-testid': 'token-dash-summary-month',
+            style: { ...styles.summaryCell, alignItems: 'flex-end', textAlign: 'right' },
             title: tr('本月累计消耗，等于已用/预算 的分子'),
           },
             h('span', { style: styles.summaryLabel }, tr('本月已花')),
@@ -1224,7 +1229,7 @@ window.__ModuleLoader__.load({
     }
 
     /** P2 订阅窗口行：两段数字 + 倒计时 + 绝对时间（无「重置」后缀）。 */
-    function WindowRow({ providerId, plan }) {
+    function WindowRow({ providerId, plan, align = 'left' }) {
       const percent = plan === undefined || plan === null ? null : Number(plan.usedPercent)
       const hasValue = Number.isFinite(percent)
       const parts = hasValue ? resetParts(plan.resetAt) : { relative: null, absolute: null }
@@ -1233,7 +1238,12 @@ window.__ModuleLoader__.load({
       return h('div', {
         'data-testid': `token-dash-sub-window-${testKey}`,
         title: parts.absolute ?? undefined,
-        style: { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 },
+        style: {
+          display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0,
+          alignItems: align === 'right' ? 'flex-end' : align === 'center' ? 'center' : 'flex-start',
+          textAlign: align,
+          justifySelf: align === 'right' ? 'end' : align === 'center' ? 'center' : 'start',
+        },
       },
         h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' } },
           h('span', { style: styles.summaryLabel }, plan?.key ? windowLabel(plan.key) : '—'),
@@ -1258,8 +1268,13 @@ window.__ModuleLoader__.load({
         windows.length === 0
           ? h('div', { style: styles.empty }, tr('套餐查询失败'))
           : h('div', {
-            style: { display: 'grid', gridTemplateColumns: `repeat(${windows.length}, minmax(0,1fr))`, gap: 12 },
-          }, windows.map((plan) => h(WindowRow, { key: plan.key, providerId: provider.id, plan }))))
+            style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 },
+          }, windows.map((plan, index) => h(WindowRow, {
+            key: plan.key,
+            providerId: provider.id,
+            plan,
+            align: ['left', 'center', 'right'][index] ?? 'left',
+          }))))
     }
 
     /** P3 底部胶囊：三行设置；prefs 由 BoardPage 持有。 */

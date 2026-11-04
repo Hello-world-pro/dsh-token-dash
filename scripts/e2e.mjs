@@ -238,7 +238,7 @@ try {
 
   // P2: adaptive width, no tabs, current-model four columns.
   const panelBox = await panel.boundingBox()
-  assert.ok(panelBox !== null && panelBox.width >= 280 && panelBox.width <= 480, `panel width ${panelBox?.width} should be in 280..480`)
+  assert.ok(panelBox !== null && Math.abs(panelBox.width - 380) <= 2, `panel width ${panelBox?.width} should be 380`)
   assert.match(await panel.innerText(), /当前模型/)
   assert.match(await panel.innerText(), /按量 API/)
   assert.equal(await panel.getByRole('tab').count(), 4) // range capsule only
@@ -253,7 +253,16 @@ try {
   assert.equal(await panel.getByTestId('token-dash-summary-ring').locator('svg').count(), 1)
   assert.match(await summaryRow.innerText(), /已用 \/ 预算/)
   const rangeBox = await panel.locator('[role=tablist]').first().boundingBox()
-  assert.ok(rangeBox !== null && rangeBox.width <= 240, `range capsule width ${rangeBox?.width} should be compact`)
+  assert.ok(
+    rangeBox !== null && panelBox !== null && rangeBox.width >= panelBox.width - 32,
+    `range capsule width ${rangeBox?.width} should fill the panel`,
+  )
+  const monthBox = await panel.getByTestId('token-dash-summary-month').boundingBox()
+  assert.ok(
+    monthBox !== null && panelBox !== null
+      && panelBox.x + panelBox.width - (monthBox.x + monthBox.width) <= 16,
+    'month cell should align to the right edge',
+  )
 
   // Usage table: four columns, Tokens bracket, no cost column.
   assert.match(await panel.innerText(), /DeepSeek-V4\.1-Flash/)
