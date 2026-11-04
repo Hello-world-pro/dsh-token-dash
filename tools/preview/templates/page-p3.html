@@ -26,24 +26,29 @@
   .range span { font-size: 12px; padding: 2px 10px; border-radius: 999px; color: var(--muted); }
   .range .on { background: rgba(255, 255, 255, .10); color: var(--text); }
 
-  .box-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .box-meta { font-size: 11px; color: var(--weak); }
+  .box-head { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 12px; }
+  .box-head .range { justify-self: center; }
+  .box-meta { font-size: 11px; color: var(--weak); justify-self: center; }
 
   /* 总计：整宽摘要带，左右两半 + 中间竖线 */
   .summary-band {
     display: grid; grid-template-columns: 1fr 1fr;
     border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
   }
-  .summary-half { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .summary-half {
+    padding: 12px 14px; display: flex; flex-direction: column; align-items: center;
+    text-align: center; gap: 6px; min-width: 0;
+  }
   .summary-half + .summary-half { border-left: 1px solid var(--border); }
   .summary-half .k { font-size: 12px; color: var(--muted); }
   .summary-half .v {
-    display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px;
+    display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 10px;
     font-size: 26px; font-weight: 600; line-height: 30px; font-variant-numeric: tabular-nums;
   }
   .summary-half .s { font-size: 11px; color: var(--weak); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   @media (max-width: 560px) {
+    .box-head { grid-template-columns: 1fr; justify-items: center; }
     .summary-band { grid-template-columns: 1fr; }
     .summary-half + .summary-half { border-left: 0; border-top: 1px solid var(--border); }
   }
