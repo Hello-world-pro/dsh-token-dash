@@ -179,3 +179,10 @@ flowchart LR
 - 根因：`P2Summary` 沿用旧四列、`Segmented` 默认撑满、按钮复用 accent；`BoardPage` 头部与卡片未补设计稿的辅助信息。
 - 修复：`P2Summary` 改四列 label/value；范围胶囊限宽 220；按钮改 `styles.outline`；页头补 `IconButton` + `InfoTip`；卡片补 11px caption；`DetailTable` 接收 `providerNames`。
 - 验证：`npm test` 75 通过 / 1 跳过；`npm run e2e` 通过（新增标签列、胶囊宽度、页头刷新、明细 provider 后缀断言）；P2/P3 截图与模板逐项对齐。
+
+### Issue #2 · 全量看板按钮颜色与胶囊贴住表格（[已修复]）
+
+- 现象：「全量看板」变成中性描边；P3 设置胶囊紧贴范围/明细底框，没有间距。
+- 根因：上一轮按模板把按钮改成 `styles.outline`；胶囊 `position: sticky`，滚动时覆盖在表格下方，且自带重复标题。
+- 修复：按钮恢复 `styles.button`；胶囊改静态、去掉重复标题，由页面网格 gap 24 提供间距。
+- 验证：`npm test` 75 通过；`npm run e2e` 通过（新增胶囊与范围区间距 ≥20px 断言）。

@@ -420,9 +420,9 @@ window.__ModuleLoader__.load({
       },
       cards: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 },
       capsule: {
-        position: 'sticky', bottom: 12, zIndex: 20, padding: '4px 14px', borderRadius: 10, display: 'grid', gap: 0,
+        padding: '4px 14px', borderRadius: 10, display: 'grid', gap: 0,
         background: 'var(--dsw-alias-bg-layer-2, var(--dsh-bg-elevated, #1f1f1f))',
-        border: `1px solid ${T.border}`, boxShadow: '0 8px 24px rgba(0,0,0,.18)',
+        border: `1px solid ${T.border}`,
       },
       settingsRow: {
         display: 'grid', gridTemplateColumns: '40px minmax(0,1fr)', alignItems: 'center', gap: 10,
@@ -1162,8 +1162,8 @@ window.__ModuleLoader__.load({
               updated === null ? '' : tr('更新于 {time}', { time: updated })),
             canOpen
               ? h('button', {
-                type: 'button', 'data-testid': 'token-dash-open-board',
-                style: styles.outline, onClick: openBoardPage,
+                type: 'button', 'data-td-btn': true, 'data-testid': 'token-dash-open-board',
+                style: styles.button, onClick: openBoardPage,
               }, tr('全量看板'))
               : null))
       }
@@ -1768,7 +1768,6 @@ window.__ModuleLoader__.load({
               providerNames: Object.fromEntries(providers.map((provider) => [provider.id, provider.name])),
             })))),
         h('div', { 'data-testid': 'token-dash-settings-capsule', style: styles.capsule },
-          h('div', { style: styles.boardSectionHead }, h('b', { style: styles.sectionTitle }, tr('设置与数据管理'))),
           h(SettingsRows, { summary, prefs, onSave: savePrefs, onRefresh: refresh, onRefreshSubs: refreshSubs })))
     }
 

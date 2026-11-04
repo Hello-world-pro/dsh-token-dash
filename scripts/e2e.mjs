@@ -353,7 +353,7 @@ try {
 
   assert.match(await board.innerText(), /按量计价（按供应商）/)
   assert.match(await board.innerText(), /订阅套餐（按供应商）/)
-  assert.match(await board.innerText(), /设置与数据管理/)
+  assert.equal(await board.getByTestId('token-dash-settings-capsule').count(), 1)
   // Two tables split by kind.
   assert.equal(await board.locator('[data-testid^=token-dash-budget-row-]').count(), apiProviders.length)
   assert.equal(await board.locator('[data-testid^=token-dash-quota-row-]').count(), subProviders.length)
@@ -386,6 +386,16 @@ try {
   assert.equal(await board.getByTestId('token-dash-board-head-refresh').count(), 1)
   assert.match(await board.locator('[data-testid^=token-dash-detail-row-]').first().innerText(), /·/)
   // Settings capsule: three rows and expected controls.
+  const rangeSection = board.locator('section').last()
+  const [rangeSectionBox, capsuleBox] = await Promise.all([
+    rangeSection.boundingBox(),
+    board.getByTestId('token-dash-settings-capsule').boundingBox(),
+  ])
+  assert.ok(
+    rangeSectionBox !== null && capsuleBox !== null
+      && capsuleBox.y - (rangeSectionBox.y + rangeSectionBox.height) >= 20,
+    'settings capsule should keep a gap below the range/detail section',
+  )
   assert.equal(await board.getByTestId('token-dash-settings-row-1').count(), 1)
   assert.equal(await board.getByTestId('token-dash-settings-row-2').count(), 1)
   assert.equal(await board.getByTestId('token-dash-settings-row-3').count(), 1)
