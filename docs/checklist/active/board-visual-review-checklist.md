@@ -29,6 +29,7 @@
 | D10 | 必测回归 | 暗色 / 亮色各一眼；1000px 下卡片列数 = 4 / 760px = 3 / 520px = 2；P2 在 320px 不顶 480、不出横向滚动 |
 | D11 | 三色语义 | 环与数字同色：normal 低饱和绿（`--td-state-ok`）、warn 黄、critical 红；语义固定、色值走 token，不写死业务 hex |
 | D12 | 金额配色 | **金额改前景色 + 600，负数/超支仍红**；green 只表示「正常状态」，不再表示金额。`ui-design.md` §2.6 与 `client.js` 的改动排到模板定稿后 |
+| D13 | 辅助文字 | 卡片内辅助三行（剩余% / 倒计时 / 绝对时间）用 `label-secondary`（约 68%），**与环心同色**；不用状态色，避免时间被误读为告警 |
 
 ## 三、截图证据
 
@@ -107,7 +108,7 @@
 3. REQ-08 补订阅卡片形态（窗口一排、按实际窗口数出列、缺窗不出列）与 `QuotaGauge` 控件要求（§九）。
 4. `ui-design.md` §2.5 增补 `QuotaGauge`（环 40 / 环心周期 / 环下百分比），与 `ProgressRing` 并列但不合并。
 5. 文档约定：分析截图进 `.tmp/shots`，`docs/pic` 仅定稿图。
-6. 待模板定稿后一次性回写 `ui-design.md`：§2.5.1 三色语义、§2.6 金额去绿、§3 P1 配色（D11 / D12）。
+6. 待模板定稿后一次性回写 `ui-design.md`：§2.5.1 三色语义与辅助行 `secondary`、§2.6 金额去绿、§3 P1 配色（D11 / D12 / D13）。
 
 ## 八、执行日志
 
@@ -129,6 +130,7 @@
 | 2026-11-04 | 金额决策 | D12：金额改前景色 + 600、负数红，green 只表示正常状态；`ui-design.md` 与 `client.js` 的改动延到模板定稿后统一做（本轮仅文档） |
 | 2026-11-04 | 预览精简 | 删除 `gauge.html` / `gauge.png`（与 `ring` + `cards-sub` 重复）；状态图收敛为 ring / cards-sub / cards-api 三张；README、清单与 mock 规则同步 |
 | 2026-11-04 | 组件分层 | 环不加数字槽位：`ProgressRing`（几何）+ `PercentValue`（文本/颜色）+ `InlineRing`（P1/P2）+ `QuotaGauge`（P3）；新增 `inline-ring.html` 与 4 态预览 |
+| 2026-11-04 | 辅助文字 | 卡片三行辅助文字 45% → 68%（`label-secondary`），与环心同色；不用状态色（D13） |
 | 2026-11-04 | 状态矩阵 | 预览改为「状态穷举」：Gauge 5 / 订阅 4 / 按量 5；新增 `tools/mock/AGENTS.md` 定义假数据覆盖规则 |
 
 ## 九、环与组合层控件要求（P1 / P2 / P3 共用）
@@ -182,13 +184,14 @@ InlineRing({
 ├ 间距 3px
 ├ percent 16px / 600（normal 低饱和绿 / warn 黄 / critical 红 / empty 弱）
 ├ 间距 4px
-├ remaining 11px / tertiary
-├ relative 11px / tertiary
-└ absolute 11px / tertiary
+├ remaining 11px / secondary（68%）
+├ relative 11px / secondary（68%）
+└ absolute 11px / secondary（68%）
 ```
 
 - 容器 `display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0`。
 - `InlineRing`：`display:inline-flex; align-items:center; gap:4px`，环 14/2 或 20/2.5，数字 12px / 600，与环同色。
+- 辅助三行（剩余 / 倒计时 / 绝对时间）用 `label-secondary`（约 68%），与环心标签同色，形成「标签层」；**不用状态色**，避免时间被误读为告警。
 - 文本 `white-space:nowrap`；列宽 61px 时 `剩余 58%` 与 `22:51` 均不换行。
 - **环绘制与 P1 / P2 共用同一套几何**（P1 14/2、P2 20/2.5、P3 40/4，阈值 warn 80 / API 100 / 订阅 90）；`QuotaGauge` 只是「环 + 环心 + 下方数字」的组合层，不再写第二套弧算法。
 - `percent = 0` 与 `empty` 都不画弧（round linecap 会在 0 处留一个点），只保留轨道。

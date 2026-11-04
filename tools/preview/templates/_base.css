@@ -55,7 +55,7 @@ section { margin-bottom: 28px; }
 .pct.warn { color: var(--warn); }
 .pct.critical { color: var(--error); }
 .pct.empty { color: var(--weak); }
-.line { font-size: var(--gauge-meta); color: var(--weak); line-height: 15px; white-space: nowrap; }
+.line { font-size: var(--gauge-meta); color: var(--muted); line-height: 15px; white-space: nowrap; }
 
 /* 按量卡：左侧 Gauge，右侧预算输入框，下面三行 label-value */
 .api-body { display: flex; align-items: center; gap: 16px; margin: 12px 0 12px; }
