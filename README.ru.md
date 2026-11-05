@@ -38,24 +38,68 @@ PR с русским словарём был отправлен в оригин�
 
 ## Установка
 
-1. Клонируйте форк и перейдите на ветку `feat/ru-locale` (она же ветка по умолчанию):
+Да, форк ставится ровно так же, как любой другой плагин DSH — командой `dsh plugin add`.
+Она является обёрткой над pnpm в каталоге профиля, поэтому в качестве источника принимает
+локальный путь, git-репозиторий или npm-пакет.
+
+```powershell
+dsh plugin --profile desktop add <источник>
+```
+
+`desktop` — имя профиля; если у вас другой, подставьте его.
+
+### Вариант 1. Прямо из GitHub (нужен установленный git)
+
+```powershell
+dsh plugin --profile desktop add github:Hello-world-pro/dsh-token-dash#feat/ru-locale
+```
+
+`#feat/ru-locale` указывать нужно явно: русская версия живёт в этой ветке, а спецификатор
+`github:` без суффикса возьмёт ветку по умолчанию, что менее предсказуемо.
+
+### Вариант 2. Из локальной копии (git не требуется)
+
+1. Откройте [страницу ветки](https://github.com/Hello-world-pro/dsh-token-dash/tree/feat/ru-locale)
+   и скачайте архив: **Code → Download ZIP**.
+2. Распакуйте, например в `C:\dsh-token-dash-ru`.
+3. Добавьте распакованный каталог:
 
    ```powershell
-   git clone https://github.com/Hello-world-pro/dsh-token-dash.git
-   cd dsh-token-dash
-   git checkout feat/ru-locale
+   dsh plugin --profile desktop add "C:\dsh-token-dash-ru\dsh-token-dash-feat-ru-locale"
    ```
 
-2. Установите пакет в DSH как обычный плагин:
+Если репозиторий уже склонирован (ветка `feat/ru-locale`), укажите путь к клону:
 
-   ```powershell
-   dsh plugin --profile desktop add <абсолютный путь к клонированному каталогу>
-   ```
+```powershell
+dsh plugin --profile desktop add "C:\путь\к\dsh-token-dash"
+```
 
-3. Язык интерфейса берётся из локали DSH. Русский словарь активируется, когда хост-локаль
-   приложения — `ru`; при `zh` или `en` показывается соответствующий штатный словарь.
+### Чего делать не нужно
 
-После установки перезагрузите плагин или приложение DSH.
+`dsh plugin --profile desktop add dsh-token-dash` поставит **оригинальный** пакет автора из
+npm — без русского словаря. Форк в npm не публикуется, поэтому имя пакета как источник здесь
+не подходит.
+
+### Если плагин уже был установлен
+
+Сначала уберите прежнюю версию, затем добавьте форк:
+
+```powershell
+dsh plugin --profile desktop remove dsh-token-dash
+dsh plugin --profile desktop add "C:\путь\к\dsh-token-dash"
+```
+
+### После установки
+
+Язык интерфейса берётся из локали DSH: при `ru` показывается русский словарь, при `zh` или
+`en` — соответствующий штатный. Перезагрузите плагин или приложение DSH, чтобы изменения
+вступили в силу.
+
+Проверить, что подхватился именно форк:
+
+```powershell
+dsh plugin --profile desktop why dsh-token-dash
+```
 
 ## Ветки
 
