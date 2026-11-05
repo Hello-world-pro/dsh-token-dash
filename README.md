@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> 🇷🇺 **Russian localization fork.** This repository is a fork of
+> [spartawhy117/dsh-token-dash](https://github.com/spartawhy117/dsh-token-dash) that adds a
+> Russian (`ru`) interface dictionary and Russian docs. The upstream repository, its code and
+> releases are **not** modified, and no pull request is pending.
+> Русская локализация: [README.ru.md](./README.ru.md).
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/spartawhy117/dsh-token-dash/main/docs/pic/icon.png" alt="dsh-token-dash" width="96" height="96" />
 </p>
